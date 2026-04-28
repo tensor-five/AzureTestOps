@@ -1,9 +1,31 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
+import os from "node:os";
 import path from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
+import {
+  AzureCliPreflightAdapter,
+  type PreflightContext,
+  type PreflightResult
+} from "../../adapters/azure-devops/auth/azure-cli-preflight.adapter.js";
+import {
+  LowdbUserPreferencesAdapter
+} from "../../adapters/persistence/settings/lowdb-user-preferences.adapter.js";
+import {
+  sanitizeUserPreferences,
+  type UserPreferences
+} from "../../shared/user-preferences/user-preferences.schema.js";
+import { resolveAzCliExecutablePath } from "../../shared/utils/azure-cli-path.js";
+
+const execFileAsync = promisify(execFile);
+
 const THEME_MODE_STORAGE_KEY = "azure-testops.theme-mode.v1";
+const ADO_CSRF_META_PLACEHOLDER = "__ADO_CSRF_TOKEN__";
+const ADO_CSRF_HEADER = "x-ado-csrf-token";
 
 const FAVICON_SVG = [
   '<?xml version="1.0" encoding="UTF-8"?>',
@@ -15,11 +37,17 @@ const FAVICON_SVG = [
 ].join("");
 const FAVICON_SVG_BUFFER = Buffer.from(FAVICON_SVG, "utf8");
 
+const CONTENT_SECURITY_POLICY =
+  "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; form-action 'self'; " +
+  "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://api.fontshare.com; " +
+  "img-src 'self' data:; font-src 'self' data: https://cdn.fontshare.com; connect-src 'self'";
+
 const ROOT_HTML = `<!doctype html>
 <html lang="de">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="ado-csrf-token" content="${ADO_CSRF_META_PLACEHOLDER}" />
     <title>Azure TestOps</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <script>
@@ -49,29 +77,65 @@ const ROOT_HTML = `<!doctype html>
 </html>
 `;
 
-export type HttpServerOptions = {
-  port: number;
-};
-
 export type HttpServer = {
   close: () => Promise<void>;
 };
 
-const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+export type AzLoginRunner = () => Promise<{ message: string }>;
+
+export type HttpServerOptions = {
+  port: number;
+  preflightAdapter?: AzureCliPreflightAdapter;
+  userPreferences?: LowdbUserPreferencesAdapter;
+  azLoginRunner?: AzLoginRunner;
+  preflightContext?: PreflightContext;
+  distRootPath?: string;
+  userPreferencesFilePath?: string;
+};
+
+const compiledFileDir = path.dirname(fileURLToPath(import.meta.url));
+const fallbackProjectRoot = path.resolve(compiledFileDir, "..", "..", "..", "..");
 
 export function createHttpServer(options: HttpServerOptions): HttpServer {
+  const csrfToken = randomBytes(32).toString("hex");
+  const distRootPath = path.resolve(options.distRootPath ?? path.join(fallbackProjectRoot, "dist"));
+  const userPreferencesFilePath =
+    options.userPreferencesFilePath ?? path.join(os.homedir(), ".azure-testops", "user-preferences.json");
+  const userId = resolveLocalUserId();
+
+  const preflightAdapter = options.preflightAdapter ?? new AzureCliPreflightAdapter();
+  const userPreferences =
+    options.userPreferences ?? new LowdbUserPreferencesAdapter(userPreferencesFilePath, userId);
+  const azLoginRunner = options.azLoginRunner ?? defaultAzLoginRunner;
+
   const server = createServer((req, res) => {
-    void handleRequest(req, res).catch((error) => {
+    void route(req, res, {
+      csrfToken,
+      distRootPath,
+      preflightAdapter,
+      preflightContext: options.preflightContext,
+      userPreferences,
+      azLoginRunner
+    }).catch((error) => {
       console.error("[http-server] unhandled error", error);
       if (!res.headersSent) {
         res.statusCode = 500;
-        res.setHeader("content-type", "text/plain; charset=utf-8");
+        applySecurityHeaders(res);
+        res.setHeader("content-type", "application/json; charset=utf-8");
       }
-      res.end("Internal Server Error");
+      res.end(JSON.stringify({ code: "INTERNAL_ERROR", message: "Unexpected server error." }));
     });
   });
 
-  server.listen(options.port);
+  server.on("error", (error: NodeJS.ErrnoException) => {
+    if (error.code === "EADDRINUSE") {
+      console.error(`[http-server] Port ${options.port} is already in use. Stop the other process or set a different PORT.`);
+      process.exit(1);
+    }
+    throw error;
+  });
+
+  server.listen(options.port, "127.0.0.1");
 
   return {
     close: () =>
@@ -87,68 +151,263 @@ export function createHttpServer(options: HttpServerOptions): HttpServer {
   };
 }
 
-async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+type RouteDeps = {
+  csrfToken: string;
+  distRootPath: string;
+  preflightAdapter: AzureCliPreflightAdapter;
+  preflightContext?: PreflightContext;
+  userPreferences: LowdbUserPreferencesAdapter;
+  azLoginRunner: AzLoginRunner;
+};
+
+async function route(req: IncomingMessage, res: ServerResponse, deps: RouteDeps): Promise<void> {
+  const method = req.method ?? "GET";
   const url = new URL(req.url ?? "/", "http://127.0.0.1");
+  const pathname = url.pathname;
 
-  if (req.method === "GET" && url.pathname === "/health") {
-    res.statusCode = 200;
-    res.setHeader("content-type", "application/json; charset=utf-8");
-    res.end(JSON.stringify({ status: "OK" }));
+  if (isCsrfProtected(method, pathname) && !isValidCsrfRequest(req, deps.csrfToken)) {
+    writeJson(res, 403, { code: "CSRF_INVALID", message: "Missing or invalid CSRF protection." });
     return;
   }
 
-  if (req.method === "GET" && url.pathname === "/favicon.svg") {
-    res.statusCode = 200;
-    res.setHeader("content-type", "image/svg+xml; charset=utf-8");
-    res.end(FAVICON_SVG_BUFFER);
+  if (method === "GET" && pathname === "/health") {
+    writeJson(res, 200, { status: "OK" });
     return;
   }
 
-  if (req.method === "GET" && url.pathname === "/favicon.ico") {
-    res.statusCode = 200;
-    res.setHeader("content-type", "image/svg+xml; charset=utf-8");
-    res.end(FAVICON_SVG_BUFFER);
+  if (method === "GET" && pathname === "/favicon.svg") {
+    writeFaviconSvg(res);
     return;
   }
 
-  if (req.method === "GET" && url.pathname.startsWith("/dist/")) {
-    await serveStaticFile(url.pathname, res);
+  if (method === "GET" && pathname === "/favicon.ico") {
+    writeFaviconSvg(res);
     return;
   }
 
-  if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
-    res.statusCode = 200;
-    res.setHeader("content-type", "text/html; charset=utf-8");
-    res.end(ROOT_HTML);
+  if (method === "GET" && pathname.startsWith("/dist/")) {
+    await serveDistAsset(pathname, deps.distRootPath, res);
     return;
   }
 
-  res.statusCode = 404;
-  res.setHeader("content-type", "text/plain; charset=utf-8");
-  res.end("Not Found");
+  if (method === "GET" && pathname === "/phase2/auth-preflight") {
+    await handleAuthPreflight(res, deps);
+    return;
+  }
+
+  if (method === "GET" && pathname === "/phase2/user-preferences") {
+    await handleGetUserPreferences(res, deps);
+    return;
+  }
+
+  if (method === "POST" && pathname === "/phase2/user-preferences") {
+    await handlePostUserPreferences(req, res, deps);
+    return;
+  }
+
+  if (method === "POST" && pathname === "/phase2/az-login") {
+    await handleAzLogin(res, deps);
+    return;
+  }
+
+  if (method === "GET" && (pathname === "/" || pathname === "/index.html")) {
+    writeHtml(res, 200, renderRootHtml(deps.csrfToken));
+    return;
+  }
+
+  writeJson(res, 404, { code: "NOT_FOUND", message: "Route not found." });
 }
 
-async function serveStaticFile(urlPath: string, res: ServerResponse): Promise<void> {
-  const safePath = urlPath.replace(/^\/+/, "");
-  const absolutePath = path.resolve(projectRoot, safePath);
+function isCsrfProtected(method: string, pathname: string): boolean {
+  if (method !== "POST") {
+    return false;
+  }
+  return pathname === "/phase2/user-preferences" || pathname === "/phase2/az-login";
+}
 
-  if (!absolutePath.startsWith(projectRoot)) {
-    res.statusCode = 403;
-    res.setHeader("content-type", "text/plain; charset=utf-8");
-    res.end("Forbidden");
+function isValidCsrfRequest(req: IncomingMessage, expectedToken: string): boolean {
+  const tokenHeader = req.headers[ADO_CSRF_HEADER];
+  const providedToken = Array.isArray(tokenHeader) ? tokenHeader[0] : tokenHeader;
+  if (typeof providedToken !== "string" || providedToken.length === 0 || providedToken !== expectedToken) {
+    return false;
+  }
+
+  const host = readHeaderValue(req.headers.host);
+  if (!host) {
+    return false;
+  }
+
+  const expectedOrigin = `http://${host}`;
+  const origin = readHeaderValue(req.headers.origin);
+  if (origin && origin !== expectedOrigin) {
+    return false;
+  }
+
+  const referer = readHeaderValue(req.headers.referer);
+  if (referer && !referer.startsWith(`${expectedOrigin}/`) && referer !== expectedOrigin) {
+    return false;
+  }
+
+  return true;
+}
+
+async function handleAuthPreflight(res: ServerResponse, deps: RouteDeps): Promise<void> {
+  const context: PreflightContext = deps.preflightContext ?? readPreflightContextFromEnv();
+  try {
+    const result: PreflightResult = await deps.preflightAdapter.check(context);
+    writeJson(res, 200, { result });
+  } catch (error) {
+    writeJson(res, 500, {
+      code: "PREFLIGHT_FAILED",
+      message: error instanceof Error ? error.message : "Auth preflight failed."
+    });
+  }
+}
+
+async function handleGetUserPreferences(res: ServerResponse, deps: RouteDeps): Promise<void> {
+  try {
+    const preferences = await deps.userPreferences.getPreferences();
+    writeJson(res, 200, { preferences });
+  } catch (error) {
+    writeJson(res, 500, {
+      code: "PREFERENCES_READ_FAILED",
+      message: error instanceof Error ? error.message : "Unable to read user preferences."
+    });
+  }
+}
+
+async function handlePostUserPreferences(
+  req: IncomingMessage,
+  res: ServerResponse,
+  deps: RouteDeps
+): Promise<void> {
+  const body = await readBody(req);
+  const payload = parseJsonBody(body);
+  const patch = parseUserPreferencesPatch(payload);
+
+  if (!patch) {
+    writeJson(res, 400, { code: "INVALID_INPUT", message: "Provide preferences as an object." });
     return;
   }
 
   try {
-    const content = await readFile(absolutePath);
+    const preferences = await deps.userPreferences.mergePreferences(patch);
+    writeJson(res, 200, { status: "OK", preferences });
+  } catch (error) {
+    writeJson(res, 500, {
+      code: "PREFERENCES_WRITE_FAILED",
+      message: error instanceof Error ? error.message : "Unable to persist user preferences."
+    });
+  }
+}
+
+async function handleAzLogin(res: ServerResponse, deps: RouteDeps): Promise<void> {
+  try {
+    const result = await deps.azLoginRunner();
+    writeJson(res, 200, { status: "OK", message: result.message });
+  } catch (error) {
+    writeJson(res, 500, {
+      code: "AZ_LOGIN_FAILED",
+      message: error instanceof Error ? error.message : "Azure CLI login failed."
+    });
+  }
+}
+
+function parseUserPreferencesPatch(payload: unknown): UserPreferences | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const candidate = payload as { preferences?: unknown };
+  if (!candidate.preferences || typeof candidate.preferences !== "object") {
+    return null;
+  }
+
+  return sanitizeUserPreferences(candidate.preferences);
+}
+
+function readPreflightContextFromEnv(): PreflightContext {
+  return {
+    organization: process.env.ADO_ORGANIZATION?.trim() ?? "",
+    project: process.env.ADO_PROJECT?.trim() ?? ""
+  };
+}
+
+async function readBody(req: IncomingMessage): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let totalSize = 0;
+    const limit = 1024 * 1024; // 1 MiB
+
+    req.on("data", (chunk: Buffer) => {
+      totalSize += chunk.length;
+      if (totalSize > limit) {
+        req.destroy();
+        reject(new Error("Request body too large"));
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+    req.on("error", reject);
+  });
+}
+
+function parseJsonBody(body: string): unknown {
+  if (body.length === 0) {
+    return null;
+  }
+  try {
+    return JSON.parse(body);
+  } catch {
+    return null;
+  }
+}
+
+async function serveDistAsset(pathname: string, distRootPath: string, res: ServerResponse): Promise<void> {
+  const assetPath = resolveDistAssetPath(pathname, distRootPath);
+
+  if (!assetPath) {
+    writeJson(res, 404, { code: "NOT_FOUND", message: "Route not found." });
+    return;
+  }
+
+  try {
+    const fileStat = await stat(assetPath);
+
+    if (!fileStat.isFile()) {
+      writeJson(res, 404, { code: "NOT_FOUND", message: "Route not found." });
+      return;
+    }
+
+    const content = await readFile(assetPath);
     res.statusCode = 200;
-    res.setHeader("content-type", contentTypeFor(absolutePath));
+    applySecurityHeaders(res);
+    res.setHeader("content-type", contentTypeFor(assetPath));
     res.end(content);
   } catch {
-    res.statusCode = 404;
-    res.setHeader("content-type", "text/plain; charset=utf-8");
-    res.end("Not Found");
+    writeJson(res, 404, { code: "NOT_FOUND", message: "Route not found." });
   }
+}
+
+function resolveDistAssetPath(pathname: string, distRootPath: string): string | null {
+  const encodedRelativePath = pathname.slice("/dist/".length);
+
+  let decodedRelativePath = "";
+  try {
+    decodedRelativePath = decodeURIComponent(encodedRelativePath);
+  } catch {
+    return null;
+  }
+
+  const normalizedRelativePath = path.normalize(decodedRelativePath);
+  const absolutePath = path.resolve(distRootPath, normalizedRelativePath);
+
+  if (absolutePath === distRootPath || !absolutePath.startsWith(`${distRootPath}${path.sep}`)) {
+    return null;
+  }
+
+  return absolutePath;
 }
 
 function contentTypeFor(filePath: string): string {
@@ -164,5 +423,70 @@ function contentTypeFor(filePath: string): string {
   if (filePath.endsWith(".json")) {
     return "application/json; charset=utf-8";
   }
+  if (filePath.endsWith(".svg")) {
+    return "image/svg+xml; charset=utf-8";
+  }
   return "application/octet-stream";
+}
+
+function renderRootHtml(csrfToken: string): string {
+  return ROOT_HTML.replace(ADO_CSRF_META_PLACEHOLDER, csrfToken);
+}
+
+function writeJson(res: ServerResponse, statusCode: number, payload: unknown): void {
+  res.statusCode = statusCode;
+  applySecurityHeaders(res);
+  res.setHeader("content-type", "application/json; charset=utf-8");
+  res.end(`${JSON.stringify(payload)}\n`);
+}
+
+function writeHtml(res: ServerResponse, statusCode: number, payload: string): void {
+  res.statusCode = statusCode;
+  applySecurityHeaders(res);
+  res.setHeader("content-type", "text/html; charset=utf-8");
+  res.end(payload);
+}
+
+function writeFaviconSvg(res: ServerResponse): void {
+  res.statusCode = 200;
+  applySecurityHeaders(res);
+  res.setHeader("content-type", "image/svg+xml; charset=utf-8");
+  res.end(FAVICON_SVG_BUFFER);
+}
+
+function applySecurityHeaders(res: ServerResponse): void {
+  res.setHeader("content-security-policy", CONTENT_SECURITY_POLICY);
+  res.setHeader("x-frame-options", "DENY");
+  res.setHeader("x-content-type-options", "nosniff");
+  res.setHeader("referrer-policy", "no-referrer");
+}
+
+function readHeaderValue(header: string | string[] | undefined): string | null {
+  if (Array.isArray(header)) {
+    const first = header[0];
+    return typeof first === "string" && first.length > 0 ? first : null;
+  }
+  return typeof header === "string" && header.length > 0 ? header : null;
+}
+
+function resolveLocalUserId(): string {
+  const fromEnv = process.env.USER ?? process.env.USERNAME;
+  if (fromEnv && fromEnv.trim().length > 0) {
+    return fromEnv.trim();
+  }
+
+  try {
+    return os.userInfo().username;
+  } catch {
+    return "local-user";
+  }
+}
+
+async function defaultAzLoginRunner(): Promise<{ message: string }> {
+  const azExecutable = await resolveAzCliExecutablePath();
+  await execFileAsync(azExecutable, ["login", "--use-device-code", "--output", "none"], {
+    timeout: 5 * 60_000,
+    windowsHide: true
+  });
+  return { message: "Azure CLI login completed." };
 }

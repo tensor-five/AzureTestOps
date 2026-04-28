@@ -10,9 +10,33 @@ import {
   readPersistedThemeMode,
   type ThemeMode
 } from "./ui-client-theme.js";
+import {
+  getCachedUserPreferences,
+  hydrateUserPreferences,
+  persistUserPreferencesPatch
+} from "../../shared/user-preferences/user-preferences.client.js";
 
 const THEME_MODE_STORAGE_KEY = "azure-testops.theme-mode.v1";
 const TENSORFIVE_WEBSITE_URL = "https://tensorfive.com";
+
+const PREFLIGHT_LABELS: Record<PreflightStatus, string> = {
+  READY: "Azure CLI ready",
+  CLI_NOT_FOUND: "Install Azure CLI",
+  MISSING_EXTENSION: "Install azure-devops extension",
+  SESSION_EXPIRED: "Run az login",
+  CONTEXT_MISMATCH: "Set ADO defaults",
+  UNKNOWN_ERROR: "Auth check failed",
+  CHECKING: "Checking auth…"
+};
+
+type PreflightStatus =
+  | "READY"
+  | "CLI_NOT_FOUND"
+  | "MISSING_EXTENSION"
+  | "SESSION_EXPIRED"
+  | "CONTEXT_MISMATCH"
+  | "UNKNOWN_ERROR"
+  | "CHECKING";
 
 export type BootstrapUiClientOptions = {
   container: HTMLElement;
@@ -25,13 +49,45 @@ export function bootstrapUiClient(options: BootstrapUiClientOptions): void {
 
 function AppShell(): React.ReactElement {
   const [themeMode, setThemeMode] = React.useState<ThemeMode>(() =>
-    readPersistedThemeMode(THEME_MODE_STORAGE_KEY, null)
+    readPersistedThemeMode(THEME_MODE_STORAGE_KEY, getCachedUserPreferences().themeMode ?? null)
   );
+  const [preflightStatus, setPreflightStatus] = React.useState<PreflightStatus>("CHECKING");
+
+  React.useEffect(() => {
+    void hydrateUserPreferences().then((preferences) => {
+      if (preferences.themeMode) {
+        setThemeMode(preferences.themeMode);
+      }
+    });
+  }, []);
 
   React.useEffect(() => {
     applyThemeMode(themeMode);
     persistThemeMode(THEME_MODE_STORAGE_KEY, themeMode);
+    persistUserPreferencesPatch({ themeMode });
   }, [themeMode]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    void fetch("/phase2/auth-preflight", { headers: { accept: "application/json" } })
+      .then(async (response) => {
+        if (!response.ok) {
+          return { result: { status: "UNKNOWN_ERROR" as PreflightStatus } };
+        }
+        return (await response.json()) as { result: { status: PreflightStatus } };
+      })
+      .then((payload) => {
+        if (cancelled) return;
+        setPreflightStatus(payload.result?.status ?? "UNKNOWN_ERROR");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setPreflightStatus("UNKNOWN_ERROR");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleThemeToggle = React.useCallback(() => {
     setThemeMode((current) => nextThemeMode(current));
@@ -51,6 +107,7 @@ function AppShell(): React.ReactElement {
       React.createElement(
         "div",
         { className: "ui-shell-header-actions" },
+        renderPreflightBadge(preflightStatus),
         React.createElement(
           "button",
           {
@@ -89,5 +146,29 @@ function AppShell(): React.ReactElement {
         "TensorFive GmbH"
       )
     )
+  );
+}
+
+function renderPreflightBadge(status: PreflightStatus): React.ReactElement {
+  const isReady = status === "READY";
+  const isChecking = status === "CHECKING";
+  const className =
+    "ui-preflight-badge " +
+    (isReady
+      ? "ui-preflight-badge-ready"
+      : isChecking
+        ? "ui-preflight-badge-checking"
+        : "ui-preflight-badge-warn");
+
+  return React.createElement(
+    "span",
+    {
+      className,
+      role: "status",
+      "aria-live": "polite",
+      title: PREFLIGHT_LABELS[status]
+    },
+    React.createElement("span", { "aria-hidden": "true", className: "ui-preflight-badge-dot" }),
+    React.createElement("span", null, PREFLIGHT_LABELS[status])
   );
 }
