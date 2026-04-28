@@ -1,0 +1,11 @@
+.planning/
+node_modules/
+dist/
+coverage/
+.claude/
+test-results/
+.idea/
+.last_build_commit
+.DS_Store
+.env
+.env.local
