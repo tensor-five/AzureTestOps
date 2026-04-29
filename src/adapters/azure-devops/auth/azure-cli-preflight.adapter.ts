@@ -2,6 +2,7 @@ import { exec } from "node:child_process";
 import { promisify } from "node:util";
 
 import type { AuthPreflightPort } from "../../../application/ports/auth-preflight.port.js";
+import { parseAdoCliDefaults } from "../../../shared/azure-devops/parse-ado-defaults.js";
 import { resolveAzCliExecutablePath } from "../../../shared/utils/azure-cli-path.js";
 
 const execAsync = promisify(exec);
@@ -71,7 +72,7 @@ export class AzureCliPreflightAdapter implements AuthPreflightPort {
       };
     }
 
-    const parsedDefaults = parseDefaults(defaults.stdout);
+    const parsedDefaults = parseAdoCliDefaults(defaults.stdout);
     logPreflightContext(context, parsedDefaults);
 
     if (!matchesContext(parsedDefaults.organization, parsedDefaults.project, context)) {
@@ -147,23 +148,6 @@ class NodeCliCommandRunner implements CliCommandRunner {
   }
 }
 
-function parseDefaults(stdout: string): { organization: string; project: string } {
-  const organization = getValue(stdout, "organization");
-  const project = getValue(stdout, "project");
-
-  return {
-    organization,
-    project
-  };
-}
-
-function getValue(stdout: string, key: "organization" | "project"): string {
-  const expression = new RegExp(`^\\s*${key}\\s*=\\s*(.+)$`, "m");
-  const match = stdout.match(expression);
-
-  return match ? match[1].trim() : "";
-}
-
 function matchesContext(
   configuredOrganization: string,
   configuredProject: string,
@@ -174,10 +158,10 @@ function matchesContext(
     return true;
   }
 
-  const normalizedConfiguredOrg = configuredOrganization
-    .replace(/^https?:\/\/dev\.azure\.com\//i, "")
-    .replace(/\/$/, "")
-    .toLowerCase();
+  // Azure DevOps organization slugs are case-insensitive in the API, so the
+  // preflight tolerates the same. The configured value is already URL-stripped
+  // by `parseAdoCliDefaults`.
+  const normalizedConfiguredOrg = configuredOrganization.toLowerCase();
   const normalizedExpectedOrg = expected.organization.trim().toLowerCase();
 
   if (normalizedConfiguredOrg !== normalizedExpectedOrg) {

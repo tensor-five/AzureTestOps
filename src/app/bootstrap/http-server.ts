@@ -2,11 +2,11 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { readFile, stat } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import path from "node:path";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
 import { resolveAzCliExecutablePath } from "../../shared/utils/azure-cli-path.js";
+import { runAzCli } from "../../shared/utils/azure-cli-runner.js";
+import { parseAdoCliDefaults, type AdoCliDefaults } from "../../shared/azure-devops/parse-ado-defaults.js";
 import {
   sanitizeUserPreferences,
   type UserPreferences
@@ -33,8 +33,6 @@ import { registerCatalogRoutes } from "./routes/catalog-routes.js";
 import { registerActiveSetSnapshotStreamRoute } from "./routes/active-set-snapshot-route.js";
 import { registerRelationsRoutes } from "./routes/relations-routes.js";
 import type { AdoRuntime } from "../composition/runtime.js";
-
-const execFileAsync = promisify(execFile);
 
 const THEME_MODE_STORAGE_KEY = "azure-testops.theme-mode.v1";
 const ADO_CSRF_META_PLACEHOLDER = "__ADO_CSRF_TOKEN__";
@@ -221,6 +219,10 @@ function buildRouter(deps: RouterDeps): Router {
       await handleAzLogin(res, deps.azLoginRunner);
       return;
     }
+    if (method === "GET" && pathname === "/phase2/az-cli-defaults") {
+      await handleGetAzCliDefaults(res);
+      return;
+    }
     if (await adoContextRoutes(method, pathname, req, res)) return;
     if (await setRoutes(method, pathname, req, res)) return;
     if (catalogRoutes && (await catalogRoutes(method, pathname, url, req, res))) return;
@@ -325,6 +327,30 @@ async function handlePostUserPreferences(
   } catch (error) {
     writeJson(res, 500, errorPayload(error, "PREFERENCES_WRITE_FAILED"));
   }
+}
+
+async function handleGetAzCliDefaults(res: ServerResponse): Promise<void> {
+  try {
+    const azExecutable = await resolveAzCliExecutablePath();
+    const result = await runAzCli(azExecutable, ["devops", "configure", "--list"], {
+      timeoutMs: 10_000
+    });
+
+    if (result.exitCode !== 0) {
+      // Defaults are optional — surface an empty payload so the setup form
+      // simply falls back to manual entry instead of failing loudly.
+      writeJson(res, 200, { defaults: emptyDefaults() });
+      return;
+    }
+
+    writeJson(res, 200, { defaults: parseAdoCliDefaults(result.stdout) });
+  } catch (error) {
+    writeJson(res, 500, errorPayload(error, "AZ_CLI_DEFAULTS_FAILED"));
+  }
+}
+
+function emptyDefaults(): AdoCliDefaults {
+  return { organization: "", project: "" };
 }
 
 async function handleAzLogin(res: ServerResponse, runner: AzLoginRunner): Promise<void> {
@@ -441,9 +467,15 @@ function readHeaderValue(header: string | string[] | undefined): string | null {
 
 async function defaultAzLoginRunner(): Promise<{ message: string }> {
   const azExecutable = await resolveAzCliExecutablePath();
-  await execFileAsync(azExecutable, ["login", "--use-device-code", "--output", "none"], {
-    timeout: 5 * 60_000,
-    windowsHide: true
-  });
+  const result = await runAzCli(
+    azExecutable,
+    ["login", "--use-device-code", "--output", "none"],
+    { timeoutMs: 5 * 60_000 }
+  );
+  if (result.exitCode !== 0) {
+    throw new Error(
+      `Azure CLI login failed (exit ${result.exitCode}): ${result.stderr.trim() || "no stderr"}`
+    );
+  }
   return { message: "Azure CLI login completed." };
 }

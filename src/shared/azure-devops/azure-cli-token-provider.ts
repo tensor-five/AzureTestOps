@@ -1,9 +1,5 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-
 import { resolveAzCliExecutablePath } from "../utils/azure-cli-path.js";
-
-const execFileAsync = promisify(execFile);
+import { runAzCli } from "../utils/azure-cli-runner.js";
 
 /** Azure DevOps resource id for `az account get-access-token --resource`. */
 export const ADO_RESOURCE_ID = "499b84ac-1321-427f-aa17-267ca6975798";
@@ -130,17 +126,5 @@ function parseExpiresOn(value: unknown): number | null {
 }
 
 const defaultRunner: CliTokenRunner = {
-  run: async (executable, args) => {
-    try {
-      const { stdout, stderr } = await execFileAsync(executable, args, {
-        timeout: TOKEN_FETCH_TIMEOUT_MS,
-        windowsHide: true
-      });
-      return { stdout: stdout ?? "", stderr: stderr ?? "", exitCode: 0 };
-    } catch (error) {
-      const nodeError = error as { stdout?: string; stderr?: string; code?: string | number };
-      const exitCode = typeof nodeError.code === "number" ? nodeError.code : 1;
-      return { stdout: nodeError.stdout ?? "", stderr: nodeError.stderr ?? "", exitCode };
-    }
-  }
+  run: (executable, args) => runAzCli(executable, args, { timeoutMs: TOKEN_FETCH_TIMEOUT_MS })
 };

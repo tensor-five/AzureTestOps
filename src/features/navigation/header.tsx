@@ -25,7 +25,7 @@ export const PREFLIGHT_LABELS: Record<PreflightStatus, string> = {
   CLI_NOT_FOUND: "Install Azure CLI",
   MISSING_EXTENSION: "Install azure-devops extension",
   SESSION_EXPIRED: "Run az login",
-  CONTEXT_MISMATCH: "Set ADO defaults",
+  CONTEXT_MISMATCH: "ADO context mismatch — re-run setup",
   UNKNOWN_ERROR: "Auth check failed",
   CHECKING: "Checking auth…"
 };

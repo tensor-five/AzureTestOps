@@ -10,6 +10,8 @@ const ADO_CSRF_HEADER = "x-ado-csrf-token";
 
 export type AdoContext = { organization: string; project: string };
 
+export type AdoCliDefaults = { organization: string; project: string };
+
 export type ListSetsResponse = { sets: Set[]; activeSetId: string | null };
 
 /**
@@ -46,6 +48,13 @@ export async function setAdoContext(context: AdoContext): Promise<AdoContext> {
     body: context
   });
   return payload.context;
+}
+
+export async function getAdoCliDefaults(): Promise<AdoCliDefaults> {
+  const payload = await jsonFetch<{ defaults: AdoCliDefaults }>("/phase2/az-cli-defaults", {
+    method: "GET"
+  });
+  return payload.defaults;
 }
 
 export async function listSets(): Promise<ListSetsResponse> {
