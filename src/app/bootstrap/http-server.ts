@@ -32,56 +32,11 @@ import { registerSetRoutes } from "./routes/sets-routes.js";
 import { registerCatalogRoutes } from "./routes/catalog-routes.js";
 import { registerActiveSetSnapshotStreamRoute } from "./routes/active-set-snapshot-route.js";
 import { registerRelationsRoutes } from "./routes/relations-routes.js";
+import { renderRootHtml } from "./bootstrap-html.js";
+import { writeFaviconSvg } from "./favicon-svg.js";
 import type { AdoRuntime } from "../composition/runtime.js";
 
-const THEME_MODE_STORAGE_KEY = "azure-testops.theme-mode.v1";
-const ADO_CSRF_META_PLACEHOLDER = "__ADO_CSRF_TOKEN__";
 const ADO_CSRF_HEADER = "x-ado-csrf-token";
-
-const FAVICON_SVG = [
-  '<?xml version="1.0" encoding="UTF-8"?>',
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">',
-  '<rect width="64" height="64" rx="12" fill="#842CC3"/>',
-  '<path d="M16 22 L32 22 L32 46 L28 46 L28 26 L16 26 Z" fill="#ffffff"/>',
-  '<path d="M36 22 L48 22 L48 26 L42 26 L42 46 L38 46 L38 26 L36 26 Z" fill="#87F3A4"/>',
-  "</svg>"
-].join("");
-const FAVICON_SVG_BUFFER = Buffer.from(FAVICON_SVG, "utf8");
-
-const ROOT_HTML = `<!doctype html>
-<html lang="de">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="ado-csrf-token" content="${ADO_CSRF_META_PLACEHOLDER}" />
-    <title>Azure TestOps</title>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <script>
-      (() => {
-        const key = "${THEME_MODE_STORAGE_KEY}";
-        let mode = "system";
-        try {
-          const persisted = window.localStorage.getItem(key);
-          if (persisted === "light" || persisted === "dark" || persisted === "system") {
-            mode = persisted;
-          }
-        } catch {}
-
-        const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-        const effectiveTheme = mode === "dark" ? "dark" : mode === "light" ? "light" : (prefersDark ? "dark" : "light");
-        const root = document.documentElement;
-        root.dataset.themeMode = mode;
-        root.dataset.theme = effectiveTheme;
-      })();
-    </script>
-  </head>
-  <body>
-    <div id="app"></div>
-    <link rel="stylesheet" href="/dist/src/app/bootstrap/local-ui-entry.browser.css" />
-    <script type="module" src="/dist/src/app/bootstrap/local-ui-entry.browser.js"></script>
-  </body>
-</html>
-`;
 
 export type HttpServer = {
   close: () => Promise<void>;
@@ -439,22 +394,11 @@ function contentTypeFor(filePath: string): string {
   return "application/octet-stream";
 }
 
-function renderRootHtml(csrfToken: string): string {
-  return ROOT_HTML.replace(ADO_CSRF_META_PLACEHOLDER, csrfToken);
-}
-
 function writeHtml(res: ServerResponse, statusCode: number, payload: string): void {
   res.statusCode = statusCode;
   applySecurityHeaders(res);
   res.setHeader("content-type", "text/html; charset=utf-8");
   res.end(payload);
-}
-
-function writeFaviconSvg(res: ServerResponse): void {
-  res.statusCode = 200;
-  applySecurityHeaders(res);
-  res.setHeader("content-type", "image/svg+xml; charset=utf-8");
-  res.end(FAVICON_SVG_BUFFER);
 }
 
 function readHeaderValue(header: string | string[] | undefined): string | null {

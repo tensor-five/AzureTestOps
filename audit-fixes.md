@@ -32,7 +32,7 @@
 
 ### M2 — `http-server.ts` mehrere Verantwortlichkeiten
 
-- [ ] **Datei:** `src/app/bootstrap/http-server.ts` (449 LOC)
+- [x] **Datei:** `src/app/bootstrap/http-server.ts` (449 LOC)
 - **Problem:** Vermischt Favicon-SVG, Root-HTML, Inline-Theme-Bootstrap-Skript, Server-Erstellung, Routing.
 - **AGENTS.md §Clean-Code:** *„Eine Datei hat eine primäre Verantwortung."*
 - **Fix:** Aufsplitten in z. B. `http-server.ts` (Server+Routing), `bootstrap-html.ts` (Root-HTML+Pre-paint-Script), `favicon.ts` (SVG-Asset).
@@ -83,12 +83,12 @@
 
 ### L2 — Hex-Farben im Inline-Favicon-SVG
 
-- [ ] **Datei:** `src/app/bootstrap/http-server.ts:46-48`
+- [x] **Datei:** `src/app/bootstrap/http-server.ts:46-48`
 - **Fix:** Optional — Favicon als Asset-Datei mit dokumentierten Brand-Hex-Werten extrahieren (Asset-Layer, nicht Token-Layer).
 
 ### L3 — Pre-paint localStorage-Read im Inline-Skript
 
-- [ ] **Datei:** `src/app/bootstrap/http-server.ts:63-69`
+- [x] **Datei:** `src/app/bootstrap/http-server.ts:63-69`
 - **Fix:** Kommentar im Inline-Skript ergänzen, der den lowdb-Fallback-Vertrag dokumentiert (FOUC-Schutz, lowdb übernimmt nach Mount).
 
 ### L4 — Spec fehlt: `draggable-card.ts`
