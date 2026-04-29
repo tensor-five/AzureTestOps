@@ -126,4 +126,66 @@ describe("AzureWorkItemHydrationAdapter", () => {
     const result = await adapter.hydrateWorkItems([101]);
     expect(result.get(101)?.relatedIds).toEqual([9001, 9002]);
   });
+
+  it("extracts TestedBy-Forward links (Bug → Test Case)", async () => {
+    const { client } = makeStubClient(() =>
+      ok({
+        value: [
+          {
+            id: 100,
+            fields: {
+              "System.WorkItemType": "Bug",
+              "System.Title": "Bug with TestedBy link",
+              "System.State": "Active"
+            },
+            relations: [
+              {
+                rel: "Microsoft.VSTS.Common.TestedBy-Forward",
+                url: "https://dev.azure.com/contoso/delivery/_apis/wit/workItems/200"
+              },
+              {
+                rel: "System.LinkTypes.Hierarchy-Forward",
+                url: "https://dev.azure.com/contoso/delivery/_apis/wit/workItems/300"
+              }
+            ]
+          }
+        ]
+      })
+    );
+    const adapter = new AzureWorkItemHydrationAdapter(client, ctx);
+
+    const result = await adapter.hydrateWorkItems([100]);
+    expect(result.get(100)?.relatedIds).toEqual([200]);
+  });
+
+  it("extracts TestedBy-Reverse links (Test Case → Bug)", async () => {
+    const { client } = makeStubClient(() =>
+      ok({
+        value: [
+          {
+            id: 200,
+            fields: {
+              "System.WorkItemType": "Test Case",
+              "System.Title": "Test Case with TestedBy link",
+              "System.State": "Ready"
+            },
+            relations: [
+              {
+                rel: "Microsoft.VSTS.Common.TestedBy-Reverse",
+                url: "https://dev.azure.com/contoso/delivery/_apis/wit/workItems/100"
+              },
+              {
+                rel: "System.LinkTypes.Hierarchy-Reverse",
+                url: "https://dev.azure.com/contoso/delivery/_apis/wit/workItems/100"
+              }
+            ]
+          }
+        ]
+      })
+    );
+    const adapter = new AzureWorkItemHydrationAdapter(client, ctx);
+
+    const result = await adapter.hydrateWorkItems([200]);
+    expect(result.get(200)?.relatedIds).toEqual([100]);
+  });
 });

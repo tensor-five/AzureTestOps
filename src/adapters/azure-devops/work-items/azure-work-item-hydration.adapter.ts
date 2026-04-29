@@ -11,7 +11,11 @@ import type { WorkItem } from "../../../domain/work-items/work-item.js";
 const API_VERSION_71 = "7.1";
 const MAX_IDS_PER_REQUEST = 200;
 const DEFAULT_CONCURRENCY = 4;
-const RELATED_LINK_TYPE = "System.LinkTypes.Related";
+const SUPPORTED_LINK_TYPES = new Set<string>([
+  "System.LinkTypes.Related",
+  "Microsoft.VSTS.Common.TestedBy-Forward",
+  "Microsoft.VSTS.Common.TestedBy-Reverse"
+]);
 const WORK_ITEM_URL_ID_PATTERN = /\/workItems\/(\d+)(?:[?#].*)?$/i;
 
 export type AzureWorkItemHydrationAdapterOptions = {
@@ -119,7 +123,7 @@ function toWorkItem(value: unknown): WorkItem | null {
     }
     const rel = (relation as { rel?: unknown }).rel;
     const url = (relation as { url?: unknown }).url;
-    if (rel !== RELATED_LINK_TYPE || typeof url !== "string") {
+    if (typeof rel !== "string" || !SUPPORTED_LINK_TYPES.has(rel) || typeof url !== "string") {
       continue;
     }
     const match = url.match(WORK_ITEM_URL_ID_PATTERN);
