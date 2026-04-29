@@ -753,7 +753,7 @@ Acceptance check:
 
 ---
 
-### Phase 6 — RelationsView (two columns + Move mode) `[x]` _(pending commit)_
+### Phase 6 — RelationsView (two columns + Move mode) `[x]` _(480a39b)_
 
 **Goal:** rendered view, draggable items, suite tree collapsible.
 **Acceptance:** items render in two columns; suite hierarchy on the left collapses per suite; positions snap to 20 px grid and persist per set.
@@ -778,7 +778,7 @@ Side-effects landed in this phase:
 
 Acceptance check:
 - [x] Quality gate green (45 test files, 231 tests, 84 source files cycle-free)
-- [ ] Commit hash: ____
+- [x] Commit hash: `480a39b`
 
 ---
 
