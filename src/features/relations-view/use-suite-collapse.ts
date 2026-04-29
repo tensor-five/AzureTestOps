@@ -1,9 +1,6 @@
 import * as React from "react";
 
-import {
-  getCachedUserPreferences,
-  persistUserPreferencesPatch
-} from "../../shared/user-preferences/user-preferences.client.js";
+import { setLayoutPreferenceStore } from "./set-layout-preference-store.js";
 import type { SetLayoutPreference } from "../../shared/user-preferences/user-preferences.client.js";
 
 export type SuiteCollapseApi = {
@@ -35,7 +32,7 @@ export function useSuiteCollapse(setId: string | null): SuiteCollapseApi {
         ...layoutForSet,
         collapsedSuites: [...next].sort()
       };
-      persistUserPreferencesPatch({ setLayouts: { [setId]: merged } });
+      setLayoutPreferenceStore.save(merged, { scopeKey: setId });
     },
     [setId]
   );
@@ -81,6 +78,5 @@ function seedFromPreferences(setId: string | null): Set<string> {
 }
 
 function readLayoutForSet(setId: string): SetLayoutPreference | undefined {
-  const preferences = getCachedUserPreferences();
-  return preferences.setLayouts?.[setId];
+  return setLayoutPreferenceStore.load({ scopeKey: setId }) ?? undefined;
 }

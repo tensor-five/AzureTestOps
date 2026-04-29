@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRoot } from "react-dom/client";
 
 import { useSetFilters } from "./use-set-filters.js";
+import { clearSetFilterPreferenceForTests } from "./set-filter-preference-store.js";
 import * as preferencesClient from "../../shared/user-preferences/user-preferences.client.js";
 
 function setupHookHarness<T>(useHook: () => T): {
@@ -41,6 +42,7 @@ describe("useSetFilters", () => {
   let cacheSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
+    clearSetFilterPreferenceForTests();
     persistSpy = vi.spyOn(preferencesClient, "persistUserPreferencesPatch").mockReturnValue();
     cacheSpy = vi
       .spyOn(preferencesClient, "getCachedUserPreferences")

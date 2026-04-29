@@ -5,6 +5,8 @@ import { describe, expect, it, vi } from "vitest";
 import { createRoot } from "react-dom/client";
 
 import { RelationsPane } from "./relations-pane.js";
+import { clearSetLayoutPreferenceForTests } from "./set-layout-preference-store.js";
+import { clearSetFilterPreferenceForTests } from "../filters/set-filter-preference-store.js";
 import * as preferencesClient from "../../shared/user-preferences/user-preferences.client.js";
 import type { ActiveSetSnapshot } from "../../domain/sets/set.js";
 
@@ -64,6 +66,8 @@ function makeSnapshot(): ActiveSetSnapshot {
 }
 
 function render(ui: React.ReactElement): { container: HTMLDivElement; unmount(): void } {
+  clearSetLayoutPreferenceForTests();
+  clearSetFilterPreferenceForTests();
   vi.spyOn(preferencesClient, "getCachedUserPreferences").mockReturnValue({});
   vi.spyOn(preferencesClient, "persistUserPreferencesPatch").mockReturnValue();
 

@@ -9,6 +9,7 @@ import {
   snapToGrid,
   useItemPositioning
 } from "./use-item-positioning.js";
+import { clearSetLayoutPreferenceForTests } from "./set-layout-preference-store.js";
 import * as preferencesClient from "../../shared/user-preferences/user-preferences.client.js";
 
 beforeEach(() => {
@@ -94,6 +95,7 @@ describe("useItemPositioning", () => {
   let persistSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
+    clearSetLayoutPreferenceForTests();
     persistSpy = vi
       .spyOn(preferencesClient, "persistUserPreferencesPatch")
       .mockReturnValue();

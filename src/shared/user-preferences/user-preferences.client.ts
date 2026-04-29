@@ -24,6 +24,12 @@ export function getCachedUserPreferences(): UserPreferences {
   return cachedPreferences;
 }
 
+export function resetUserPreferencesCacheForTests(): void {
+  cachedPreferences = {};
+  hydrated = false;
+  hydrationInFlight = null;
+}
+
 export async function hydrateUserPreferences(): Promise<UserPreferences> {
   if (hydrated) {
     return cachedPreferences;

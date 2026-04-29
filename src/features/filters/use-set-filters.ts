@@ -1,11 +1,10 @@
 import * as React from "react";
 
-import {
-  getCachedUserPreferences,
-  persistUserPreferencesPatch,
-  type SetFilterPreference,
-  type TestCaseColumnFilterPreference,
-  type WorkItemColumnFilterPreference
+import { setFilterPreferenceStore } from "./set-filter-preference-store.js";
+import type {
+  SetFilterPreference,
+  TestCaseColumnFilterPreference,
+  WorkItemColumnFilterPreference
 } from "../../shared/user-preferences/user-preferences.client.js";
 
 export type SetFiltersApi = {
@@ -41,7 +40,7 @@ export function useSetFilters(setId: string | null): SetFiltersApi {
       if (!setId) {
         return;
       }
-      persistUserPreferencesPatch({ setFilters: { [setId]: next } });
+      setFilterPreferenceStore.save(next, { scopeKey: setId });
     },
     [setId]
   );
@@ -121,6 +120,5 @@ function seedFromPreferences(setId: string | null): SetFilterPreference {
   if (!setId) {
     return {};
   }
-  const preferences = getCachedUserPreferences();
-  return preferences.setFilters?.[setId] ?? {};
+  return setFilterPreferenceStore.load({ scopeKey: setId }) ?? {};
 }

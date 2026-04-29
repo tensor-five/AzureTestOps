@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRoot } from "react-dom/client";
 
 import { useSuiteCollapse } from "./use-suite-collapse.js";
+import { clearSetLayoutPreferenceForTests } from "./set-layout-preference-store.js";
 import * as preferencesClient from "../../shared/user-preferences/user-preferences.client.js";
 
 function setupHookHarness<T>(useHook: () => T): {
@@ -41,6 +42,7 @@ describe("useSuiteCollapse", () => {
   let cacheSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
+    clearSetLayoutPreferenceForTests();
     persistSpy = vi.spyOn(preferencesClient, "persistUserPreferencesPatch").mockReturnValue();
     cacheSpy = vi
       .spyOn(preferencesClient, "getCachedUserPreferences")
