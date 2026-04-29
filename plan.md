@@ -782,7 +782,7 @@ Acceptance check:
 
 ---
 
-### Phase 7 — Line Layer & Edit Mode `[x]` _(pending commit)_
+### Phase 7 — Line Layer & Edit Mode `[x]` _(82544e8)_
 
 **Goal:** edit relations live in Azure DevOps.
 **Acceptance:** existing `Related` links render as lines on load; drag-from-source → drop-on-target adds a relation (live PATCH W1); selecting a line + Delete removes it (live PATCH W2). Optimistic update with rollback on PATCH failure.
@@ -805,7 +805,7 @@ Side-effects landed in this phase:
 
 Acceptance check:
 - [x] Quality gate green (50 test files, 265 tests, 90 source files cycle-free)
-- [x] Commit hash: ____ (pending push)
+- [x] Commit hash: `82544e8`
 
 ---
 
