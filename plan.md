@@ -809,7 +809,7 @@ Acceptance check:
 
 ---
 
-### Phase 8 — Filters per Column `[x]` _(pending commit)_
+### Phase 8 — Filters per Column `[x]` _(46d8f12)_
 
 **Goal:** the filter set from §3 row 10.
 **Acceptance:** filter bar per column; persists per set; pure function applied to projections; filters compose (AND-of-bars).
@@ -835,7 +835,7 @@ Side-effects landed in this phase:
 
 Acceptance check:
 - [x] Quality gate green (55 test files, 304 tests, 92 source files cycle-free)
-- [ ] Commit hash: ____
+- [x] Commit hash: `46d8f12`
 
 ---
 
