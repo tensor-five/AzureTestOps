@@ -678,7 +678,7 @@ Acceptance check:
 
 ---
 
-### Phase 4 — Sets (CRUD + Active Snapshot) `[x]` _(see commit hash below)_
+### Phase 4 — Sets (CRUD + Active Snapshot) `[x]` _(a90c734)_
 
 **Goal:** sets are first-class, switchable, persistent.
 **Acceptance:** `LoadActiveSetSnapshot` returns `ActiveSetSnapshot` (suiteTree + projections + workItemsFromQuery + relations) for the active set; CRUD use cases tested end-to-end against lowdb tempdir.
@@ -702,7 +702,7 @@ Side-effects landed in this phase:
 
 Acceptance check:
 - [x] Quality gate green (29 test files, 154 tests, 48 source files cycle-free)
-- [x] Commit hash: ____ _(to be filled in below after commit)_
+- [x] Commit hash: `a90c734`
 
 ---
 
