@@ -314,7 +314,7 @@ All paths are anchored at `https://dev.azure.com/{org}/{project}` (built via `bu
 | R5 | `GET /_apis/test/Runs/{runId}/results?$top=100&$skip=0&detailsToInclude=Point&api-version=7.1` | All results of a run | **`$skip`/`$top`**; stop when `value.length < $top` | `detailsToInclude=Point` caps `$top` at 100. |
 | R6 | `GET /_apis/wit/workitems?ids=1,2,3&$expand=relations&api-version=7.1` | Hydrate work items | chunk at **200 ids/request**, parallel via `mapConcurrent` | `relations[].rel === "System.LinkTypes.Related"` carries the related ids; URL pattern `.../_apis/wit/workItems/{id}` parsed via regex `/\/workItems\/(\d+)(?:[?#].*)?$/i`. |
 | R7 | `GET /_apis/wit/queries/Shared%20Queries?$depth=2&$expand=all&api-version=7.1` | Saved query catalog | none for depth=2; deeper = client-side recursion | Returns a folder tree; flatten to leaves where `isFolder=false`. |
-| R8 | `POST /_apis/wit/wiql/{queryId}?api-version=7.1` (no body) | Execute saved query by id | none | Returns `{ workItems: [{id}], workItemRelations? }`. Tree queries return relations; flat queries return only `workItems`. |
+| R8 | `GET /_apis/wit/wiql/{queryId}?api-version=7.1` | Execute saved query by id | none | Returns `{ workItems: [{id}], workItemRelations? }`. Tree queries return relations; flat queries return only `workItems`. (POST `/_apis/wit/wiql` exists for ad-hoc WIQL bodies; we don't use it.) |
 | R9 | `GET /_apis/wit/workitems/{id}?$expand=relations&api-version=7.1` | Read single work item with rev + relations | none | Required before a relation `op:remove` to find the relation index. |
 
 ### 6.2 Writes (Phase 3)
@@ -642,38 +642,38 @@ Spec files sit next to the unit under test (`foo.ts` ⇒ `foo.spec.ts`). Describ
 
 ---
 
-### Phase 3 — Saved Queries + Relations `[ ]`
+### Phase 3 — Saved Queries + Relations `[x]` _(pending)_
 
 **Goal:** Saved Query listing + execution + Related-link write API.
 **Acceptance:** can list shared queries, execute one by id, get back hydrated work items; `RelationPort.add/remove` writes via PATCH `relations[]` with optimistic concurrency (rev test) and idempotent "already exists" handling.
 
 Files to create:
-- [ ] `domain/queries/saved-query.ts` — `SavedQuery`, `QueryExecutionResult` types
-- [ ] `domain/relations/related-link.ts` — `RelatedLink` type
-- [ ] `application/ports/saved-query.port.ts`
-- [ ] `application/ports/relation.port.ts`
-- [ ] `application/use-cases/run-saved-query.use-case.{ts,spec.ts}` — composes `SavedQueryPort` + `WorkItemHydrationPort`
-- [ ] `application/use-cases/create-relation.use-case.{ts,spec.ts}`
-- [ ] `application/use-cases/delete-relation.use-case.{ts,spec.ts}`
-- [ ] `adapters/azure-devops/queries/azure-saved-query.adapter.{ts,spec.ts}` — implements `SavedQueryPort`
+- [x] `domain/queries/saved-query.ts` — `SavedQuery`, `QueryExecutionResult` types
+- [x] `domain/relations/related-link.ts` — `RelatedLink` type
+- [x] `application/ports/saved-query.port.ts`
+- [x] `application/ports/relation.port.ts`
+- [x] `application/use-cases/run-saved-query.use-case.{ts,spec.ts}` — composes `SavedQueryPort` + `WorkItemHydrationPort`
+- [x] `application/use-cases/create-relation.use-case.{ts,spec.ts}`
+- [x] `application/use-cases/delete-relation.use-case.{ts,spec.ts}`
+- [x] `adapters/azure-devops/queries/azure-saved-query.adapter.{ts,spec.ts}` — implements `SavedQueryPort`
   - `listSavedQueries()` — flattens R7 (`/wit/queries/Shared%20Queries?$depth=2`) into leaf queries (`isFolder=false`)
-  - `executeQuery(queryId)` — POST R8 → `{ workItemIds, relations }`
-- [ ] `adapters/azure-devops/work-items/azure-relation.adapter.{ts,spec.ts}` — implements `RelationPort`
+  - `executeQuery(queryId)` — GET R8 → `{ workItemIds, relations }` (the documented stored-query endpoint; plan.md previously said POST — corrected as part of this phase)
+- [x] `adapters/azure-devops/work-items/azure-relation.adapter.{ts,spec.ts}` — implements `RelationPort`
   - `addRelation(sourceId, targetId)` — GET R9 to read rev → PATCH W1 → on `409` re-fetch + retry once
   - `removeRelation(sourceId, targetId)` — GET R9 → find index of matching `(rel, url)` → PATCH W2 → on `409` re-fetch + retry once
   - on `400 RelationAlreadyExists` (add) treat as success
   - on `404` / no matching relation (remove) treat as success (idempotent)
 
 Tests:
-- [ ] saved-query adapter: stub HttpClient; assert URL + flattening of nested folders + extraction of `id`/`name`/`path`
-- [ ] relation adapter: optimistic concurrency happy path, 409→retry→success, 400 idempotent, missing relation on remove → no-op
-- [ ] use cases: stub the ports; assert orchestration
+- [x] saved-query adapter: stub HttpClient; assert URL + flattening of nested folders + extraction of `id`/`name`/`path`
+- [x] relation adapter: optimistic concurrency happy path, 409→retry→success, 400 idempotent, missing relation on remove → no-op
+- [x] use cases: stub the ports; assert orchestration
 
 Server / Wiring:
 - [ ] (deferred to Phase 5) HTTP endpoints `/phase2/saved-queries`, `/phase2/relations` (POST/DELETE)
 
 Acceptance check:
-- [ ] Quality gate green
+- [x] Quality gate green (21 test files, 116 tests, 37 source files cycle-free)
 - [ ] Commit hash: ____
 
 ---
