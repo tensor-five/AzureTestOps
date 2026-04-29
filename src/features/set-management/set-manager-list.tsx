@@ -1,10 +1,18 @@
 import * as React from "react";
 
 import type { Set } from "../../domain/sets/set.js";
+import type { AdoContext } from "../api/api-client.js";
 
 export type SetManagerListProps = {
   sets: Set[];
   activeSetId: string | null;
+  /**
+   * Currently configured ADO org/project. When provided, the list renders a
+   * banner with an Edit button that hands off via {@link onEditAdoContext}.
+   * Optional so tests and consumers without the context can omit it.
+   */
+  adoContext?: AdoContext | null;
+  onEditAdoContext?(): void;
   onCreate(): void;
   onEdit(setId: string): void;
   onDelete(setId: string): Promise<void>;
@@ -30,6 +38,17 @@ export function SetManagerList(props: SetManagerListProps): React.ReactElement {
 
   return (
     <div className="set-manager-list">
+      {props.adoContext && props.onEditAdoContext ? (
+        <div className="set-manager-context-banner">
+          <span className="set-manager-context-text">
+            Connected to <code>{props.adoContext.organization}</code> /{" "}
+            <code>{props.adoContext.project}</code>
+          </span>
+          <button type="button" className="u-btn" onClick={props.onEditAdoContext}>
+            Edit ADO context
+          </button>
+        </div>
+      ) : null}
       {sets.length === 0 ? (
         <p className="set-manager-empty">No sets yet — create your first one to start.</p>
       ) : (

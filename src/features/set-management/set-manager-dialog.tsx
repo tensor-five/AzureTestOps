@@ -18,7 +18,10 @@ export type SetManagerDialogProps = {
   onSetActive(setId: string | null): Promise<void>;
 };
 
-type Mode = { kind: "list" } | { kind: "edit"; setId: string | null };
+type Mode =
+  | { kind: "list" }
+  | { kind: "edit"; setId: string | null }
+  | { kind: "ado-context" };
 
 /**
  * Modal shell for the Set-Manager. Owns only mode/visibility state — list,
@@ -69,10 +72,23 @@ export function SetManagerDialog(props: SetManagerDialogProps): React.ReactEleme
           <SetManagerList
             sets={sets}
             activeSetId={activeSetId}
+            adoContext={adoContext.context}
+            onEditAdoContext={
+              adoContext.hasContext ? () => setMode({ kind: "ado-context" }) : undefined
+            }
             onCreate={() => setMode({ kind: "edit", setId: null })}
             onEdit={(setId) => setMode({ kind: "edit", setId })}
             onDelete={props.onDelete}
             onSetActive={props.onSetActive}
+          />
+        ) : mode.kind === "ado-context" ? (
+          <AdoContextSetup
+            initial={adoContext.context}
+            onSaved={async (context) => {
+              await adoContext.save(context);
+              setMode({ kind: "list" });
+            }}
+            onCancel={() => setMode({ kind: "list" })}
           />
         ) : adoContext.isLoading ? (
           <p className="set-editor-help">Checking ADO context…</p>

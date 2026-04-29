@@ -900,6 +900,24 @@ section[role="tabpanel"]:hover {
   gap: 6px;
 }
 
+.set-manager-context-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-elevated);
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+}
+
+.set-manager-context-text code {
+  color: var(--color-text);
+}
+
 .set-manager-row {
   display: flex;
   justify-content: space-between;

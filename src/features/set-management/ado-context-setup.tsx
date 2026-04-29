@@ -3,19 +3,24 @@ import * as React from "react";
 import type { AdoContext } from "../api/api-client.js";
 
 export type AdoContextSetupProps = {
+  /**
+   * Pre-fills the form when present (edit mode); leave null for first-run
+   * bootstrap. The same form serves both flows so the UX stays identical.
+   */
+  initial?: AdoContext | null;
   onSaved(context: AdoContext): Promise<void>;
   onCancel(): void;
 };
 
 /**
- * One-time bootstrap form rendered when `~/.azure-testops/ado-context.json`
- * is missing. Held here (rather than as a route or top-level dialog) because
- * it surfaces only inside the Set-Manager flow on first run — once the
- * context is filled in, the regular set editor takes over.
+ * Form for the local Azure DevOps organization/project. Rendered both as the
+ * one-time bootstrap (when `~/.azure-testops/ado-context.json` is missing)
+ * and as the edit affordance reachable from the Set-Manager banner.
  */
 export function AdoContextSetup(props: AdoContextSetupProps): React.ReactElement {
-  const [organization, setOrganization] = React.useState("");
-  const [project, setProject] = React.useState("");
+  const initial = props.initial ?? null;
+  const [organization, setOrganization] = React.useState(initial?.organization ?? "");
+  const [project, setProject] = React.useState(initial?.project ?? "");
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -32,11 +37,15 @@ export function AdoContextSetup(props: AdoContextSetupProps): React.ReactElement
     }
   };
 
+  const isEditing = initial !== null;
+
   return (
     <form className="set-editor" onSubmit={handleSubmit}>
       <p className="set-editor-help">
-        Configure your Azure DevOps organization and project before creating a set. The values are
-        stored locally in <code>~/.azure-testops/ado-context.json</code>.
+        {isEditing
+          ? "Update your Azure DevOps organization and project. Existing sets reference ids that only resolve in their original org/project, so changing this will invalidate them."
+          : "Configure your Azure DevOps organization and project before creating a set."}{" "}
+        The values are stored locally in <code>~/.azure-testops/ado-context.json</code>.
       </p>
       <label className="set-editor-field">
         <span>Organization</span>
@@ -68,7 +77,7 @@ export function AdoContextSetup(props: AdoContextSetupProps): React.ReactElement
           Cancel
         </button>
         <button type="submit" className="u-btn u-btn-primary" disabled={submitting}>
-          Save context
+          {isEditing ? "Save changes" : "Save context"}
         </button>
       </footer>
     </form>
