@@ -98,7 +98,7 @@
 
 ### L5 — Bootstrap-Glue ohne Spec
 
-- [ ] **Dateien:** `src/app/bootstrap/local-server.ts`, `src/app/bootstrap/local-ui-entry.ts`
+- [x] **Dateien:** `src/app/bootstrap/local-server.ts`, `src/app/bootstrap/local-ui-entry.ts`
 - **Fix:** Smoke-Spec (Server-Boot, Entry-Mount).
 
 ---

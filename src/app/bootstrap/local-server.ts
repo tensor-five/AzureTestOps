@@ -1,7 +1,6 @@
-import os from "node:os";
-
 import { createHttpServer } from "./http-server.js";
 import { resolveAzCliExecutablePath } from "../../shared/utils/azure-cli-path.js";
+import { resolveLocalUserId } from "./resolve-local-user-id.js";
 import { buildRuntime } from "../composition/runtime.js";
 
 const PORT = Number(process.env.PORT ?? "8081");
@@ -53,19 +52,6 @@ async function main(): Promise<void> {
   process.on("SIGTERM", closeServer);
 
   console.log(`Local server listening on http://127.0.0.1:${PORT}`);
-}
-
-function resolveLocalUserId(): string {
-  const fromEnv = process.env.USER ?? process.env.USERNAME;
-  if (fromEnv && fromEnv.trim().length > 0) {
-    return fromEnv.trim();
-  }
-
-  try {
-    return os.userInfo().username;
-  } catch {
-    return "local-user";
-  }
 }
 
 void main();
