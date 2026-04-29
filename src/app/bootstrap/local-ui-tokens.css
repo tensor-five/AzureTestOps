@@ -48,6 +48,12 @@
   --color-warning-bg: #fef3c7;
   --color-warning-border: #f59e0b;
   --color-warning-text: #92400e;
+  --color-success-fg: #16a34a;
+  --color-on-primary: #ffffff;
+  --color-overlay-scrim: rgba(0, 0, 0, 0.5);
+  --color-pattern-dot: rgba(28, 25, 23, 0.4);
+
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --color-timeline-grid-line: #e7e5e4;
   --color-timeline-week-line: #b8b3ab;
@@ -112,6 +118,9 @@
   --color-warning-bg: #3c2d0d;
   --color-warning-border: #d79a2b;
   --color-warning-text: #f7d696;
+  --color-success-fg: #4ade80;
+  --color-pattern-dot: rgba(250, 250, 249, 0.35);
+  --color-overlay-scrim: rgba(0, 0, 0, 0.65);
 
   --color-timeline-grid-line: #292524;
   --color-timeline-week-line: #57534e;

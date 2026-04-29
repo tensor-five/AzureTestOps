@@ -65,9 +65,9 @@ body::before {
   z-index: 0;
   opacity: 0.01;
   background-image:
-    radial-gradient(circle at 20% 30%, rgba(28, 25, 23, 0.4) 0 0.5px, transparent 0.6px),
-    radial-gradient(circle at 70% 55%, rgba(28, 25, 23, 0.35) 0 0.5px, transparent 0.6px),
-    radial-gradient(circle at 40% 80%, rgba(28, 25, 23, 0.3) 0 0.5px, transparent 0.6px);
+    radial-gradient(circle at 20% 30%, var(--color-pattern-dot) 0 0.5px, transparent 0.6px),
+    radial-gradient(circle at 70% 55%, var(--color-pattern-dot) 0 0.5px, transparent 0.6px),
+    radial-gradient(circle at 40% 80%, var(--color-pattern-dot) 0 0.5px, transparent 0.6px);
   background-size: 10px 10px, 12px 12px, 11px 11px;
 }
 
@@ -106,7 +106,7 @@ body::after {
 .u-btn-primary {
   border-color: var(--color-primary);
   background: var(--color-primary);
-  color: #ffffff;
+  color: var(--color-on-primary);
   font-weight: var(--font-bold);
 }
 

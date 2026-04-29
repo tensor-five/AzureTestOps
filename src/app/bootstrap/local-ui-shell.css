@@ -124,7 +124,7 @@ section[role="tabpanel"]:hover {
 }
 
 .ui-preflight-badge-ready .ui-preflight-badge-dot {
-  background: #16a34a;
+  background: var(--color-success-fg);
 }
 
 .ui-preflight-badge-warn {
@@ -291,7 +291,7 @@ section[role="tabpanel"]:hover {
   padding: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1, 4px);
+  gap: var(--space-1);
 }
 
 .filter-bar-facet-item {
@@ -336,7 +336,7 @@ section[role="tabpanel"]:hover {
   justify-content: center;
   border-radius: var(--radius-pill);
   background: var(--color-primary);
-  color: var(--color-on-primary, #fff);
+  color: var(--color-on-primary);
   font-size: 10px;
 }
 
@@ -352,7 +352,7 @@ section[role="tabpanel"]:hover {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.18));
+  box-shadow: var(--shadow-md);
   padding: var(--space-2);
 }
 
@@ -400,6 +400,7 @@ section[role="tabpanel"]:hover {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  padding-left: calc(var(--space-4) * var(--suite-depth, 0));
 }
 
 .relations-view-suite-toggle {
@@ -850,7 +851,7 @@ section[role="tabpanel"]:hover {
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--color-overlay-scrim);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -1002,7 +1003,7 @@ section[role="tabpanel"]:hover {
 }
 
 .set-editor-field-hint code {
-  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-family: var(--font-mono);
   background: var(--color-bg-muted);
   padding: 0 4px;
   border-radius: var(--radius-sm);
@@ -1055,7 +1056,7 @@ section[role="tabpanel"]:hover {
 .u-btn-primary {
   background: var(--color-primary);
   border-color: var(--color-primary);
-  color: var(--color-on-primary, #ffffff);
+  color: var(--color-on-primary);
 }
 
 .u-btn-primary:hover {

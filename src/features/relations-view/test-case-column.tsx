@@ -87,12 +87,11 @@ function SuiteGroup(props: {
 }): React.ReactElement {
   const { entry, positioning, collapse } = props;
   const isCollapsed = collapse.isCollapsed(entry.suite.id);
-  const indent = entry.suite.depth * 16;
 
   return (
     <li
       className={`relations-view-suite ${isCollapsed ? "relations-view-suite-collapsed" : ""}`}
-      style={{ paddingLeft: indent }}
+      style={{ "--suite-depth": entry.suite.depth } as React.CSSProperties}
     >
       <button
         type="button"

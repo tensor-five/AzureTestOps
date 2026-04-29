@@ -49,27 +49,27 @@
 
 ### M5 — Hardcoded `#16a34a` Preflight-Badge
 
-- [ ] **Datei:** `src/app/bootstrap/local-ui-shell.css:127`
+- [x] **Datei:** `src/app/bootstrap/local-ui-shell.css:127`
 - **Fix:** Success-Token in `local-ui-tokens.css` einführen (`--color-success-fg`/`-bg`) und referenzieren.
 
 ### M6 — Hardcoded Overlay `rgba(0,0,0,0.5)`
 
-- [ ] **Datei:** `src/app/bootstrap/local-ui-shell.css:853`
+- [x] **Datei:** `src/app/bootstrap/local-ui-shell.css:853`
 - **Fix:** `--color-overlay-scrim` Token definieren und nutzen.
 
 ### M7 — `.u-btn-primary { color:#ffffff }`
 
-- [ ] **Datei:** `src/app/bootstrap/local-ui-base.css:109`
+- [x] **Datei:** `src/app/bootstrap/local-ui-base.css:109`
 - **Fix:** Durch `var(--color-on-primary)` ersetzen.
 
 ### M8 — Background-Pattern mit `rgba(28,25,23,…)` + magic Pixel
 
-- [ ] **Datei:** `src/app/bootstrap/local-ui-base.css:68-71`
+- [x] **Datei:** `src/app/bootstrap/local-ui-base.css:68-71`
 - **Fix:** Pattern-Farbe + Größe aus Tokens (`--color-pattern-dot`, `--space-*`) ableiten.
 
 ### M9 — Magic-Pixel-Indent `depth * 16` im Inline-Style
 
-- [ ] **Datei:** `src/features/relations-view/test-case-column.tsx:90,95`
+- [x] **Datei:** `src/features/relations-view/test-case-column.tsx:90,95`
 - **Fix:** Indent über CSS-Var (`var(--space-3)` o. ä.) oder berechnetes `calc(var(--space-3) * depth)` lösen, kein nackter Pixel-Faktor in JSX.
 
 ---
@@ -78,7 +78,7 @@
 
 ### L1 — Token-Fallbacks mit Hex/Shadow
 
-- [ ] **Datei:** `src/app/bootstrap/local-ui-shell.css:339, 355, 1040`
+- [x] **Datei:** `src/app/bootstrap/local-ui-shell.css:339, 355, 1040`
 - **Fix:** Tokens (`--color-on-primary`, `--shadow-md`) ohne Hex/Shadow-Fallback definieren; Fallbacks aus den `var(--token, …)`-Aufrufen entfernen.
 
 ### L2 — Hex-Farben im Inline-Favicon-SVG
