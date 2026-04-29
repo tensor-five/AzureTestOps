@@ -93,7 +93,7 @@
 
 ### L4 — Spec fehlt: `draggable-card.ts`
 
-- [ ] **Datei:** `src/features/relations-view/draggable-card.ts`
+- [x] **Datei:** `src/features/relations-view/draggable-card.ts`
 - **Fix:** Unit-Spec für Drag-Helper.
 
 ### L5 — Bootstrap-Glue ohne Spec
