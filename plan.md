@@ -706,7 +706,7 @@ Acceptance check:
 
 ---
 
-### Phase 5 — UI Foundation (Header, Set Dropdown, Refresh) `[x]` _(pending commit)_
+### Phase 5 — UI Foundation (Header, Set Dropdown, Refresh) `[x]` _(beeb147)_
 
 **Goal:** the actual app shell wired to use cases.
 **Acceptance:** header dropdown lets you switch sets; refresh button shows progress (per stage); manage-sets dialog can create/edit/delete; mode toggle works.
@@ -742,7 +742,7 @@ Side-effects landed in this phase:
 
 Acceptance check:
 - [x] Quality gate green (35 test files, 183 tests, 68 source files cycle-free)
-- [ ] Commit hash: ____
+- [x] Commit hash: `beeb147`
 
 ---
 
