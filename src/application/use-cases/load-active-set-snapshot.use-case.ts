@@ -8,6 +8,20 @@ import type { WorkItemHydrationPort } from "../ports/work-item-hydration.port.js
 import { loadTestCaseProjections } from "./load-test-case-projections.use-case.js";
 import { runSavedQuery } from "./run-saved-query.use-case.js";
 
+export type SnapshotProgressStage =
+  | "context"
+  | "test-cases"
+  | "saved-query"
+  | "aggregate"
+  | "done";
+
+export type SnapshotProgressEvent = {
+  stage: SnapshotProgressStage;
+  done: number;
+  total: number;
+  message?: string;
+};
+
 export type LoadActiveSetSnapshotInput = {
   /**
    * Override the active set. When omitted, the repository's active id is used;
@@ -27,6 +41,8 @@ export type LoadActiveSetSnapshotDeps = {
   concurrency?: number;
   /** Injectable clock for deterministic tests. Defaults to `() => new Date()`. */
   now?: () => Date;
+  /** Optional progress sink — called once per major load stage. */
+  onProgress?: (event: SnapshotProgressEvent) => void;
 };
 
 /**
@@ -36,22 +52,32 @@ export type LoadActiveSetSnapshotDeps = {
  *
  * Numeric parsing of `planId` / `rootSuiteId` happens here (one place, not in
  * every adapter), so the persistence layer can stay string-typed.
+ *
+ * Progress events fire at the boundary of each major load stage. They are not
+ * granular per HTTP call — that level of detail would tightly couple the use
+ * case to adapter internals; the SSE consumer is happy with stage labels.
  */
 export async function loadActiveSetSnapshot(
   input: LoadActiveSetSnapshotInput,
   deps: LoadActiveSetSnapshotDeps
 ): Promise<ActiveSetSnapshot> {
+  const onProgress = deps.onProgress ?? noopProgress;
+
+  onProgress({ stage: "context", done: 0, total: 1 });
   if (deps.adoContext) {
     const context = await deps.adoContext.getContext();
     if (!context) {
       throw new AdoContextMissingError();
     }
   }
-
   const set = await resolveSet(input.setId, deps.setRepository);
+  onProgress({ stage: "context", done: 1, total: 1, message: set.name });
 
   const planId = parsePositiveInt(set.planId, "planId", set.id);
   const rootSuiteId = parsePositiveInt(set.rootSuiteId, "rootSuiteId", set.id);
+
+  onProgress({ stage: "test-cases", done: 0, total: 1 });
+  onProgress({ stage: "saved-query", done: 0, total: 1 });
 
   const [testCaseLoad, queryRun] = await Promise.all([
     loadTestCaseProjections(
@@ -61,25 +87,45 @@ export async function loadActiveSetSnapshot(
         workItemHydration: deps.workItemHydration,
         concurrency: deps.concurrency
       }
-    ),
+    ).then((result) => {
+      onProgress({
+        stage: "test-cases",
+        done: 1,
+        total: 1,
+        message: `${result.projections.length} test cases`
+      });
+      return result;
+    }),
     runSavedQuery(
       { queryId: set.queryId },
       {
         savedQuery: deps.savedQuery,
         workItemHydration: deps.workItemHydration
       }
-    )
+    ).then((result) => {
+      onProgress({
+        stage: "saved-query",
+        done: 1,
+        total: 1,
+        message: `${result.workItems.length} work items`
+      });
+      return result;
+    })
   ]);
 
-  const now = (deps.now ?? (() => new Date()))();
+  onProgress({ stage: "aggregate", done: 1, total: 1 });
 
-  return {
+  const now = (deps.now ?? (() => new Date()))();
+  const snapshot: ActiveSetSnapshot = {
     set,
     suiteTree: testCaseLoad.suiteTree,
     projections: testCaseLoad.projections,
     workItemsFromQuery: queryRun.workItems,
     loadedAt: now.toISOString()
   };
+
+  onProgress({ stage: "done", done: 1, total: 1 });
+  return snapshot;
 }
 
 async function resolveSet(
@@ -108,6 +154,8 @@ function parsePositiveInt(value: string, field: "planId" | "rootSuiteId", setId:
   }
   return parsed;
 }
+
+const noopProgress = (_event: SnapshotProgressEvent): void => {};
 
 export class AdoContextMissingError extends Error {
   public readonly code = "ADO_CONTEXT_MISSING";

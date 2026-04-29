@@ -706,31 +706,42 @@ Acceptance check:
 
 ---
 
-### Phase 5 — UI Foundation (Header, Set Dropdown, Refresh) `[ ]`
+### Phase 5 — UI Foundation (Header, Set Dropdown, Refresh) `[x]` _(pending commit)_
 
 **Goal:** the actual app shell wired to use cases.
 **Acceptance:** header dropdown lets you switch sets; refresh button shows progress (per stage); manage-sets dialog can create/edit/delete; mode toggle works.
 
 UI:
-- [ ] `app/bootstrap/ui-client.tsx` becomes orchestrator only; logic moves to feature modules
-- [ ] `features/navigation/header.tsx` — composes set-dropdown, mode-toggle, refresh, theme, preflight
-- [ ] `features/set-management/set-dropdown.tsx` (matches `.header-query-dropdown*` styles from AzureGanttOps)
-- [ ] `features/set-management/set-manager-dialog.tsx` — CRUD form (plan picker, suite picker, query picker)
-- [ ] `features/set-management/use-set-management.ts` — TanStack Query mutations
-- [ ] `features/relations-view/use-active-set-snapshot.ts` — opens SSE stream, exposes `{snapshot, progress, isLoading, error}`
-- [ ] `features/relations-view/refresh-progress-bar.tsx`
-- [ ] `app/composition/ui-shell.composition.ts` — DI container
+- [x] `app/bootstrap/ui-client.tsx` becomes orchestrator only; logic moves to feature modules
+- [x] `features/navigation/header.tsx` — composes set-dropdown, mode-toggle, refresh, theme, preflight
+- [x] `features/set-management/set-dropdown.tsx` (matches `.header-query-dropdown*` styles from AzureGanttOps)
+- [x] `features/set-management/set-manager-dialog.tsx` — CRUD form (plan picker, suite picker, query picker; bootstraps ADO context on first run)
+- [x] `features/set-management/use-set-management.ts` — local React state hook over the API client (TanStack Query deferred to Phase 6/7 when mutations need optimistic rollback)
+- [x] `features/relations-view/use-active-set-snapshot.ts` — opens SSE stream, exposes `{snapshot, progress, isLoading, error}`
+- [x] `features/relations-view/refresh-progress-bar.tsx`
+- [x] `features/relations-view/relations-view-placeholder.tsx` — Phase 5 stand-in for the two-column view (Phase 6 replaces it)
+- [x] `features/relations-view/mode.ts` (mode-toggle helpers per §7.3)
+- [x] `features/api/api-client.ts` (typed wrapper for `/phase2/*` REST endpoints)
+- [x] `app/composition/runtime.ts` — composition root (lowdb + ADO context + Azure adapters wired through `FetchAzureRestClient` + `AzureCliTokenProvider`)
 
 HTTP server:
-- [ ] `/phase2/sets` GET / POST / PATCH / DELETE (CSRF-protected for writes)
-- [ ] `/phase2/active-set/snapshot/stream` GET (SSE) — see §7.2
-- [ ] `/phase2/saved-queries` GET — list shared queries
-- [ ] `/phase2/test-plans` GET (paged) — list plans for set creation
-- [ ] `/phase2/test-plans/{planId}/suites` GET — root suite list for set creation
-- [ ] `/phase2/ado-context` GET / POST
+- [x] `/phase2/sets` GET / POST / PATCH / DELETE (CSRF-protected for writes), plus `/phase2/active-set` POST for the active pointer
+- [x] `/phase2/active-set/snapshot/stream` GET (SSE) — see §7.2
+- [x] `/phase2/saved-queries` GET — list shared queries
+- [x] `/phase2/test-plans` GET (paged) — list plans for set creation
+- [x] `/phase2/test-plans/{planId}/suites` GET — root suite list for set creation
+- [x] `/phase2/ado-context` GET / POST
+
+Side-effects landed in this phase:
+- [x] Added `domain/test-management/test-plan.ts` (`TestPlanSummary`, `TestSuiteSummary`) and `application/ports/test-catalog.port.ts` so the Set-creation pickers stay Azure-agnostic.
+- [x] Added `adapters/azure-devops/test-management/azure-test-catalog.adapter.ts` (paged plans + flat suites, `5.0` API).
+- [x] Introduced `shared/azure-devops/azure-cli-token-provider.ts` (caches the Azure DevOps bearer with 2-min skew refresh, AAD resource id `499b84ac-1321-427f-aa17-267ca6975798`).
+- [x] Introduced `shared/azure-devops/fetch-azure-rest-client.ts` (production HTTP client; bearer or PAT; normalizes status / json / headers for the existing adapters).
+- [x] Refactored `app/bootstrap/http-server.ts` to receive a typed `HttpServerDependencies` block and delegate routing to feature modules under `app/bootstrap/routes/*` (route-helpers, ado-context-routes, sets-routes, catalog-routes, active-set-snapshot-route).
+- [x] Extended `loadActiveSetSnapshot` with an optional `onProgress` sink emitting `context` → `test-cases` → `saved-query` → `aggregate` → `done` so the SSE handler can report stages without leaking adapter internals.
 
 Acceptance check:
-- [ ] Quality gate green
+- [x] Quality gate green (35 test files, 183 tests, 68 source files cycle-free)
 - [ ] Commit hash: ____
 
 ---

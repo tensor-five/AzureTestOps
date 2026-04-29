@@ -3,8 +3,6 @@ import { createRoot } from "react-dom/client";
 
 import {
   applyThemeMode,
-  iconForThemeMode,
-  labelForThemeMode,
   nextThemeMode,
   persistThemeMode,
   readPersistedThemeMode,
@@ -15,28 +13,22 @@ import {
   hydrateUserPreferences,
   persistUserPreferencesPatch
 } from "../../shared/user-preferences/user-preferences.client.js";
+import {
+  AppHeader,
+  type PreflightStatus
+} from "../../features/navigation/header.js";
+import { useSetManagement } from "../../features/set-management/use-set-management.js";
+import { SetManagerDialog } from "../../features/set-management/set-manager-dialog.js";
+import { useActiveSetSnapshot } from "../../features/relations-view/use-active-set-snapshot.js";
+import { RelationsViewPlaceholder } from "../../features/relations-view/relations-view-placeholder.js";
+import {
+  DEFAULT_MODE,
+  nextMode,
+  type RelationsViewMode
+} from "../../features/relations-view/mode.js";
 
 const THEME_MODE_STORAGE_KEY = "azure-testops.theme-mode.v1";
 const TENSORFIVE_WEBSITE_URL = "https://tensorfive.com";
-
-const PREFLIGHT_LABELS: Record<PreflightStatus, string> = {
-  READY: "Azure CLI ready",
-  CLI_NOT_FOUND: "Install Azure CLI",
-  MISSING_EXTENSION: "Install azure-devops extension",
-  SESSION_EXPIRED: "Run az login",
-  CONTEXT_MISMATCH: "Set ADO defaults",
-  UNKNOWN_ERROR: "Auth check failed",
-  CHECKING: "Checking auth…"
-};
-
-type PreflightStatus =
-  | "READY"
-  | "CLI_NOT_FOUND"
-  | "MISSING_EXTENSION"
-  | "SESSION_EXPIRED"
-  | "CONTEXT_MISMATCH"
-  | "UNKNOWN_ERROR"
-  | "CHECKING";
 
 export type BootstrapUiClientOptions = {
   container: HTMLElement;
@@ -44,7 +36,7 @@ export type BootstrapUiClientOptions = {
 
 export function bootstrapUiClient(options: BootstrapUiClientOptions): void {
   const root = createRoot(options.container);
-  root.render(React.createElement(AppShell));
+  root.render(<AppShell />);
 }
 
 function AppShell(): React.ReactElement {
@@ -52,6 +44,8 @@ function AppShell(): React.ReactElement {
     readPersistedThemeMode(THEME_MODE_STORAGE_KEY, getCachedUserPreferences().themeMode ?? null)
   );
   const [preflightStatus, setPreflightStatus] = React.useState<PreflightStatus>("CHECKING");
+  const [isSetManagerOpen, setSetManagerOpen] = React.useState(false);
+  const [mode, setMode] = React.useState<RelationsViewMode>(DEFAULT_MODE);
 
   React.useEffect(() => {
     void hydrateUserPreferences().then((preferences) => {
@@ -89,86 +83,67 @@ function AppShell(): React.ReactElement {
     };
   }, []);
 
+  const setManagement = useSetManagement();
+  const { state: snapshotState, refresh: refreshSnapshot } = useActiveSetSnapshot(
+    setManagement.activeSetId
+  );
+
   const handleThemeToggle = React.useCallback(() => {
     setThemeMode((current) => nextThemeMode(current));
   }, []);
 
-  return React.createElement(
-    "main",
-    { "data-ui-shell": "phase-6-runtime", className: "ui-shell" },
-    React.createElement(
-      "section",
-      { className: "ui-shell-header" },
-      React.createElement(
-        "div",
-        { className: "ui-shell-brand" },
-        React.createElement("h1", null, "Azure TestOps")
-      ),
-      React.createElement(
-        "div",
-        { className: "ui-shell-header-actions" },
-        renderPreflightBadge(preflightStatus),
-        React.createElement(
-          "button",
-          {
-            type: "button",
-            className: "ui-shell-theme-toggle",
-            "aria-label": `Toggle theme (current: ${labelForThemeMode(themeMode)})`,
-            title: `Theme: ${labelForThemeMode(themeMode)}`,
-            onClick: handleThemeToggle
-          },
-          React.createElement("span", { "aria-hidden": "true" }, iconForThemeMode(themeMode)),
-          React.createElement("span", null, labelForThemeMode(themeMode))
-        )
-      )
-    ),
-    React.createElement(
-      "div",
-      { className: "ui-shell-content" },
-      React.createElement(
-        "div",
-        { className: "ui-shell-placeholder" },
-        React.createElement("h2", null, "Test Cases ↔ Bugs Relations"),
-        React.createElement(
-          "p",
-          null,
-          "[@TODO] Set selection, two-column layout and relation editing land in the next phases."
-        )
-      )
-    ),
-    React.createElement(
-      "footer",
-      { className: "ui-shell-footer" },
-      React.createElement("span", null, "Azure TestOps · "),
-      React.createElement(
-        "a",
-        { href: TENSORFIVE_WEBSITE_URL, target: "_blank", rel: "noreferrer" },
-        "TensorFive GmbH"
-      )
-    )
-  );
-}
-
-function renderPreflightBadge(status: PreflightStatus): React.ReactElement {
-  const isReady = status === "READY";
-  const isChecking = status === "CHECKING";
-  const className =
-    "ui-preflight-badge " +
-    (isReady
-      ? "ui-preflight-badge-ready"
-      : isChecking
-        ? "ui-preflight-badge-checking"
-        : "ui-preflight-badge-warn");
-
-  return React.createElement(
-    "span",
-    {
-      className,
-      role: "status",
-      "aria-live": "polite",
-      title: PREFLIGHT_LABELS[status]
+  const handleSelectSet = React.useCallback(
+    (setId: string) => {
+      void setManagement.setActive(setId);
     },
-    React.createElement("span", { "aria-hidden": "true", className: "ui-preflight-badge-dot" }),
-    React.createElement("span", null, PREFLIGHT_LABELS[status])
+    [setManagement]
+  );
+
+  return (
+    <main data-ui-shell="phase-6-runtime" className="ui-shell">
+      <AppHeader
+        preflightStatus={preflightStatus}
+        themeMode={themeMode}
+        onToggleTheme={handleThemeToggle}
+        sets={setManagement.sets}
+        activeSetId={setManagement.activeSetId}
+        isSetsLoading={setManagement.isLoading}
+        onSelectSet={handleSelectSet}
+        onManageSets={() => setSetManagerOpen(true)}
+        mode={mode}
+        onToggleMode={() => setMode((current) => nextMode(current))}
+        onRefresh={refreshSnapshot}
+        refreshDisabled={!setManagement.activeSetId || snapshotState.isLoading}
+        snapshotProgress={snapshotState.progress}
+        snapshotIsLoading={snapshotState.isLoading}
+        snapshotError={snapshotState.error}
+      />
+      <div className="ui-shell-content">
+        <RelationsViewPlaceholder
+          snapshot={snapshotState.snapshot}
+          mode={mode}
+          isLoading={snapshotState.isLoading}
+          error={snapshotState.error}
+          hasActiveSet={Boolean(setManagement.activeSetId)}
+        />
+      </div>
+      <footer className="ui-shell-footer">
+        <span>Azure TestOps · </span>
+        <a href={TENSORFIVE_WEBSITE_URL} target="_blank" rel="noreferrer">
+          TensorFive GmbH
+        </a>
+      </footer>
+
+      <SetManagerDialog
+        isOpen={isSetManagerOpen}
+        sets={setManagement.sets}
+        activeSetId={setManagement.activeSetId}
+        onClose={() => setSetManagerOpen(false)}
+        onCreate={setManagement.create}
+        onUpdate={setManagement.update}
+        onDelete={setManagement.remove}
+        onSetActive={setManagement.setActive}
+      />
+    </main>
   );
 }

@@ -1,7 +1,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
-import os from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -20,6 +19,21 @@ import {
   type UserPreferences
 } from "../../shared/user-preferences/user-preferences.schema.js";
 import { resolveAzCliExecutablePath } from "../../shared/utils/azure-cli-path.js";
+import type { AdoContextPort, AdoContext } from "../../application/ports/ado-context.port.js";
+import type { SetRepositoryPort } from "../../application/ports/set-repository.port.js";
+
+import {
+  applySecurityHeaders,
+  errorPayload,
+  parseJsonBody,
+  readBody,
+  writeJson
+} from "./routes/route-helpers.js";
+import { registerAdoContextRoutes } from "./routes/ado-context-routes.js";
+import { registerSetRoutes } from "./routes/sets-routes.js";
+import { registerCatalogRoutes } from "./routes/catalog-routes.js";
+import { registerActiveSetSnapshotStreamRoute } from "./routes/active-set-snapshot-route.js";
+import type { AdoRuntime } from "../composition/runtime.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -36,11 +50,6 @@ const FAVICON_SVG = [
   "</svg>"
 ].join("");
 const FAVICON_SVG_BUFFER = Buffer.from(FAVICON_SVG, "utf8");
-
-const CONTENT_SECURITY_POLICY =
-  "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; form-action 'self'; " +
-  "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://api.fontshare.com; " +
-  "img-src 'self' data:; font-src 'self' data: https://cdn.fontshare.com; connect-src 'self'";
 
 const ROOT_HTML = `<!doctype html>
 <html lang="de">
@@ -83,14 +92,21 @@ export type HttpServer = {
 
 export type AzLoginRunner = () => Promise<{ message: string }>;
 
+export type HttpServerDependencies = {
+  preflight: AzureCliPreflightAdapter;
+  userPreferences: LowdbUserPreferencesAdapter;
+  setRepository: SetRepositoryPort;
+  adoContext: AdoContextPort;
+  /** Required only for the SSE snapshot stream and ADO catalog endpoints. */
+  ado?: AdoRuntime;
+};
+
 export type HttpServerOptions = {
   port: number;
-  preflightAdapter?: AzureCliPreflightAdapter;
-  userPreferences?: LowdbUserPreferencesAdapter;
+  deps: HttpServerDependencies;
   azLoginRunner?: AzLoginRunner;
   preflightContext?: PreflightContext;
   distRootPath?: string;
-  userPreferencesFilePath?: string;
 };
 
 const compiledFileDir = path.dirname(fileURLToPath(import.meta.url));
@@ -99,31 +115,25 @@ const fallbackProjectRoot = path.resolve(compiledFileDir, "..", "..", "..", ".."
 export function createHttpServer(options: HttpServerOptions): HttpServer {
   const csrfToken = randomBytes(32).toString("hex");
   const distRootPath = path.resolve(options.distRootPath ?? path.join(fallbackProjectRoot, "dist"));
-  const userPreferencesFilePath =
-    options.userPreferencesFilePath ?? path.join(os.homedir(), ".azure-testops", "user-preferences.json");
-  const userId = resolveLocalUserId();
-
-  const preflightAdapter = options.preflightAdapter ?? new AzureCliPreflightAdapter();
-  const userPreferences =
-    options.userPreferences ?? new LowdbUserPreferencesAdapter(userPreferencesFilePath, userId);
   const azLoginRunner = options.azLoginRunner ?? defaultAzLoginRunner;
 
+  const router = buildRouter({
+    deps: options.deps,
+    azLoginRunner,
+    preflightContext: options.preflightContext,
+    csrfToken,
+    distRootPath
+  });
+
   const server = createServer((req, res) => {
-    void route(req, res, {
-      csrfToken,
-      distRootPath,
-      preflightAdapter,
-      preflightContext: options.preflightContext,
-      userPreferences,
-      azLoginRunner
-    }).catch((error) => {
+    void router(req, res).catch((error) => {
       console.error("[http-server] unhandled error", error);
       if (!res.headersSent) {
         res.statusCode = 500;
         applySecurityHeaders(res);
         res.setHeader("content-type", "application/json; charset=utf-8");
       }
-      res.end(JSON.stringify({ code: "INTERNAL_ERROR", message: "Unexpected server error." }));
+      res.end(JSON.stringify(errorPayload(error, "INTERNAL_ERROR")));
     });
   });
 
@@ -151,78 +161,99 @@ export function createHttpServer(options: HttpServerOptions): HttpServer {
   };
 }
 
-type RouteDeps = {
+type RouterDeps = {
+  deps: HttpServerDependencies;
+  azLoginRunner: AzLoginRunner;
+  preflightContext?: PreflightContext;
   csrfToken: string;
   distRootPath: string;
-  preflightAdapter: AzureCliPreflightAdapter;
-  preflightContext?: PreflightContext;
-  userPreferences: LowdbUserPreferencesAdapter;
-  azLoginRunner: AzLoginRunner;
 };
 
-async function route(req: IncomingMessage, res: ServerResponse, deps: RouteDeps): Promise<void> {
-  const method = req.method ?? "GET";
-  const url = new URL(req.url ?? "/", "http://127.0.0.1");
-  const pathname = url.pathname;
+type Router = (req: IncomingMessage, res: ServerResponse) => Promise<void>;
 
-  if (isCsrfProtected(method, pathname) && !isValidCsrfRequest(req, deps.csrfToken)) {
-    writeJson(res, 403, { code: "CSRF_INVALID", message: "Missing or invalid CSRF protection." });
-    return;
-  }
+function buildRouter(deps: RouterDeps): Router {
+  const adoContextRoutes = registerAdoContextRoutes(deps.deps.adoContext);
+  const setRoutes = registerSetRoutes(deps.deps.setRepository);
+  const catalogRoutes = deps.deps.ado ? registerCatalogRoutes(deps.deps.ado) : null;
+  const snapshotRoute = deps.deps.ado
+    ? registerActiveSetSnapshotStreamRoute({
+        ado: deps.deps.ado,
+        setRepository: deps.deps.setRepository,
+        adoContext: deps.deps.adoContext
+      })
+    : null;
 
-  if (method === "GET" && pathname === "/health") {
-    writeJson(res, 200, { status: "OK" });
-    return;
-  }
+  return async function route(req, res) {
+    const method = req.method ?? "GET";
+    const url = new URL(req.url ?? "/", "http://127.0.0.1");
+    const pathname = url.pathname;
 
-  if (method === "GET" && pathname === "/favicon.svg") {
-    writeFaviconSvg(res);
-    return;
-  }
+    if (isCsrfProtected(method, pathname) && !isValidCsrfRequest(req, deps.csrfToken)) {
+      writeJson(res, 403, { code: "CSRF_INVALID", message: "Missing or invalid CSRF protection." });
+      return;
+    }
 
-  if (method === "GET" && pathname === "/favicon.ico") {
-    writeFaviconSvg(res);
-    return;
-  }
+    if (method === "GET" && pathname === "/health") {
+      writeJson(res, 200, { status: "OK" });
+      return;
+    }
+    if (method === "GET" && (pathname === "/favicon.svg" || pathname === "/favicon.ico")) {
+      writeFaviconSvg(res);
+      return;
+    }
+    if (method === "GET" && pathname.startsWith("/dist/")) {
+      await serveDistAsset(pathname, deps.distRootPath, res);
+      return;
+    }
+    if (method === "GET" && pathname === "/phase2/auth-preflight") {
+      await handleAuthPreflight(res, deps);
+      return;
+    }
+    if (method === "GET" && pathname === "/phase2/user-preferences") {
+      await handleGetUserPreferences(res, deps.deps.userPreferences);
+      return;
+    }
+    if (method === "POST" && pathname === "/phase2/user-preferences") {
+      await handlePostUserPreferences(req, res, deps.deps.userPreferences);
+      return;
+    }
+    if (method === "POST" && pathname === "/phase2/az-login") {
+      await handleAzLogin(res, deps.azLoginRunner);
+      return;
+    }
+    if (await adoContextRoutes(method, pathname, req, res)) return;
+    if (await setRoutes(method, pathname, req, res)) return;
+    if (catalogRoutes && (await catalogRoutes(method, pathname, url, req, res))) return;
+    if (snapshotRoute && (await snapshotRoute(method, pathname, url, req, res))) return;
 
-  if (method === "GET" && pathname.startsWith("/dist/")) {
-    await serveDistAsset(pathname, deps.distRootPath, res);
-    return;
-  }
+    if (method === "GET" && (pathname === "/" || pathname === "/index.html")) {
+      writeHtml(res, 200, renderRootHtml(deps.csrfToken));
+      return;
+    }
 
-  if (method === "GET" && pathname === "/phase2/auth-preflight") {
-    await handleAuthPreflight(res, deps);
-    return;
-  }
-
-  if (method === "GET" && pathname === "/phase2/user-preferences") {
-    await handleGetUserPreferences(res, deps);
-    return;
-  }
-
-  if (method === "POST" && pathname === "/phase2/user-preferences") {
-    await handlePostUserPreferences(req, res, deps);
-    return;
-  }
-
-  if (method === "POST" && pathname === "/phase2/az-login") {
-    await handleAzLogin(res, deps);
-    return;
-  }
-
-  if (method === "GET" && (pathname === "/" || pathname === "/index.html")) {
-    writeHtml(res, 200, renderRootHtml(deps.csrfToken));
-    return;
-  }
-
-  writeJson(res, 404, { code: "NOT_FOUND", message: "Route not found." });
+    writeJson(res, 404, { code: "NOT_FOUND", message: "Route not found." });
+  };
 }
 
 function isCsrfProtected(method: string, pathname: string): boolean {
-  if (method !== "POST") {
+  if (method === "GET" || method === "OPTIONS" || method === "HEAD") {
     return false;
   }
-  return pathname === "/phase2/user-preferences" || pathname === "/phase2/az-login";
+  if (pathname === "/phase2/user-preferences" && method === "POST") return true;
+  if (pathname === "/phase2/az-login" && method === "POST") return true;
+  if (pathname === "/phase2/ado-context" && method === "POST") return true;
+  if (pathname === "/phase2/sets" && method === "POST") return true;
+  if (pathname === "/phase2/active-set" && method === "POST") return true;
+  if (
+    pathname.startsWith("/phase2/sets/") &&
+    (method === "PATCH" || method === "DELETE" || method === "POST")
+  ) {
+    return true;
+  }
+  if (pathname === "/phase2/relations" && (method === "POST" || method === "DELETE")) {
+    return true;
+  }
+  return false;
 }
 
 function isValidCsrfRequest(req: IncomingMessage, expectedToken: string): boolean {
@@ -251,35 +282,32 @@ function isValidCsrfRequest(req: IncomingMessage, expectedToken: string): boolea
   return true;
 }
 
-async function handleAuthPreflight(res: ServerResponse, deps: RouteDeps): Promise<void> {
-  const context: PreflightContext = deps.preflightContext ?? readPreflightContextFromEnv();
+async function handleAuthPreflight(res: ServerResponse, deps: RouterDeps): Promise<void> {
+  const context: PreflightContext = deps.preflightContext ?? (await readPreflightContextFromAdo(deps.deps.adoContext));
   try {
-    const result: PreflightResult = await deps.preflightAdapter.check(context);
+    const result: PreflightResult = await deps.deps.preflight.check(context);
     writeJson(res, 200, { result });
   } catch (error) {
-    writeJson(res, 500, {
-      code: "PREFLIGHT_FAILED",
-      message: error instanceof Error ? error.message : "Auth preflight failed."
-    });
+    writeJson(res, 500, errorPayload(error, "PREFLIGHT_FAILED"));
   }
 }
 
-async function handleGetUserPreferences(res: ServerResponse, deps: RouteDeps): Promise<void> {
+async function handleGetUserPreferences(
+  res: ServerResponse,
+  userPreferences: LowdbUserPreferencesAdapter
+): Promise<void> {
   try {
-    const preferences = await deps.userPreferences.getPreferences();
+    const preferences = await userPreferences.getPreferences();
     writeJson(res, 200, { preferences });
   } catch (error) {
-    writeJson(res, 500, {
-      code: "PREFERENCES_READ_FAILED",
-      message: error instanceof Error ? error.message : "Unable to read user preferences."
-    });
+    writeJson(res, 500, errorPayload(error, "PREFERENCES_READ_FAILED"));
   }
 }
 
 async function handlePostUserPreferences(
   req: IncomingMessage,
   res: ServerResponse,
-  deps: RouteDeps
+  userPreferences: LowdbUserPreferencesAdapter
 ): Promise<void> {
   const body = await readBody(req);
   const payload = parseJsonBody(body);
@@ -291,25 +319,19 @@ async function handlePostUserPreferences(
   }
 
   try {
-    const preferences = await deps.userPreferences.mergePreferences(patch);
+    const preferences = await userPreferences.mergePreferences(patch);
     writeJson(res, 200, { status: "OK", preferences });
   } catch (error) {
-    writeJson(res, 500, {
-      code: "PREFERENCES_WRITE_FAILED",
-      message: error instanceof Error ? error.message : "Unable to persist user preferences."
-    });
+    writeJson(res, 500, errorPayload(error, "PREFERENCES_WRITE_FAILED"));
   }
 }
 
-async function handleAzLogin(res: ServerResponse, deps: RouteDeps): Promise<void> {
+async function handleAzLogin(res: ServerResponse, runner: AzLoginRunner): Promise<void> {
   try {
-    const result = await deps.azLoginRunner();
+    const result = await runner();
     writeJson(res, 200, { status: "OK", message: result.message });
   } catch (error) {
-    writeJson(res, 500, {
-      code: "AZ_LOGIN_FAILED",
-      message: error instanceof Error ? error.message : "Azure CLI login failed."
-    });
+    writeJson(res, 500, errorPayload(error, "AZ_LOGIN_FAILED"));
   }
 }
 
@@ -317,51 +339,22 @@ function parseUserPreferencesPatch(payload: unknown): UserPreferences | null {
   if (!payload || typeof payload !== "object") {
     return null;
   }
-
   const candidate = payload as { preferences?: unknown };
   if (!candidate.preferences || typeof candidate.preferences !== "object") {
     return null;
   }
-
   return sanitizeUserPreferences(candidate.preferences);
 }
 
-function readPreflightContextFromEnv(): PreflightContext {
+async function readPreflightContextFromAdo(adoContext: AdoContextPort): Promise<PreflightContext> {
+  const context: AdoContext | null = await adoContext.getContext().catch(() => null);
+  if (context) {
+    return { organization: context.organization, project: context.project };
+  }
   return {
     organization: process.env.ADO_ORGANIZATION?.trim() ?? "",
     project: process.env.ADO_PROJECT?.trim() ?? ""
   };
-}
-
-async function readBody(req: IncomingMessage): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    let totalSize = 0;
-    const limit = 1024 * 1024; // 1 MiB
-
-    req.on("data", (chunk: Buffer) => {
-      totalSize += chunk.length;
-      if (totalSize > limit) {
-        req.destroy();
-        reject(new Error("Request body too large"));
-        return;
-      }
-      chunks.push(chunk);
-    });
-    req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
-    req.on("error", reject);
-  });
-}
-
-function parseJsonBody(body: string): unknown {
-  if (body.length === 0) {
-    return null;
-  }
-  try {
-    return JSON.parse(body);
-  } catch {
-    return null;
-  }
 }
 
 async function serveDistAsset(pathname: string, distRootPath: string, res: ServerResponse): Promise<void> {
@@ -411,33 +404,16 @@ function resolveDistAssetPath(pathname: string, distRootPath: string): string | 
 }
 
 function contentTypeFor(filePath: string): string {
-  if (filePath.endsWith(".js")) {
-    return "text/javascript; charset=utf-8";
-  }
-  if (filePath.endsWith(".css")) {
-    return "text/css; charset=utf-8";
-  }
-  if (filePath.endsWith(".html")) {
-    return "text/html; charset=utf-8";
-  }
-  if (filePath.endsWith(".json")) {
-    return "application/json; charset=utf-8";
-  }
-  if (filePath.endsWith(".svg")) {
-    return "image/svg+xml; charset=utf-8";
-  }
+  if (filePath.endsWith(".js")) return "text/javascript; charset=utf-8";
+  if (filePath.endsWith(".css")) return "text/css; charset=utf-8";
+  if (filePath.endsWith(".html")) return "text/html; charset=utf-8";
+  if (filePath.endsWith(".json")) return "application/json; charset=utf-8";
+  if (filePath.endsWith(".svg")) return "image/svg+xml; charset=utf-8";
   return "application/octet-stream";
 }
 
 function renderRootHtml(csrfToken: string): string {
   return ROOT_HTML.replace(ADO_CSRF_META_PLACEHOLDER, csrfToken);
-}
-
-function writeJson(res: ServerResponse, statusCode: number, payload: unknown): void {
-  res.statusCode = statusCode;
-  applySecurityHeaders(res);
-  res.setHeader("content-type", "application/json; charset=utf-8");
-  res.end(`${JSON.stringify(payload)}\n`);
 }
 
 function writeHtml(res: ServerResponse, statusCode: number, payload: string): void {
@@ -454,32 +430,12 @@ function writeFaviconSvg(res: ServerResponse): void {
   res.end(FAVICON_SVG_BUFFER);
 }
 
-function applySecurityHeaders(res: ServerResponse): void {
-  res.setHeader("content-security-policy", CONTENT_SECURITY_POLICY);
-  res.setHeader("x-frame-options", "DENY");
-  res.setHeader("x-content-type-options", "nosniff");
-  res.setHeader("referrer-policy", "no-referrer");
-}
-
 function readHeaderValue(header: string | string[] | undefined): string | null {
   if (Array.isArray(header)) {
     const first = header[0];
     return typeof first === "string" && first.length > 0 ? first : null;
   }
   return typeof header === "string" && header.length > 0 ? header : null;
-}
-
-function resolveLocalUserId(): string {
-  const fromEnv = process.env.USER ?? process.env.USERNAME;
-  if (fromEnv && fromEnv.trim().length > 0) {
-    return fromEnv.trim();
-  }
-
-  try {
-    return os.userInfo().username;
-  } catch {
-    return "local-user";
-  }
 }
 
 async function defaultAzLoginRunner(): Promise<{ message: string }> {

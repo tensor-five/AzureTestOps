@@ -177,6 +177,29 @@ describe("loadActiveSetSnapshot", () => {
       loadActiveSetSnapshot({}, { ...baseDeps(repo), adoContext })
     ).rejects.toBeInstanceOf(AdoContextMissingError);
   });
+
+  it("emits progress events through the optional onProgress sink", async () => {
+    const set: Set = { id: "s1", name: "n", planId: "1", rootSuiteId: "1", queryId: "q" };
+    const repo = stubSetRepo(set, "s1");
+    const events: Array<{ stage: string; done: number; total: number }> = [];
+
+    await loadActiveSetSnapshot(
+      {},
+      {
+        ...baseDeps(repo),
+        onProgress: (event) => {
+          events.push({ stage: event.stage, done: event.done, total: event.total });
+        }
+      }
+    );
+
+    const stages = events.map((event) => event.stage);
+    expect(stages).toContain("context");
+    expect(stages).toContain("test-cases");
+    expect(stages).toContain("saved-query");
+    expect(stages).toContain("aggregate");
+    expect(stages[stages.length - 1]).toBe("done");
+  });
 });
 
 function stubSetRepo(
