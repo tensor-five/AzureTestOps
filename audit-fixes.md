@@ -39,12 +39,12 @@
 
 ### M3 — Hook ohne Spec: `use-ado-context.ts`
 
-- [ ] **Datei:** `src/features/set-management/use-ado-context.ts`
+- [x] **Datei:** `src/features/set-management/use-ado-context.ts`
 - **Fix:** `use-ado-context.spec.tsx` mit jsdom-Pragma, Coverage für Lade-/Persist-Pfad.
 
 ### M4 — Hook ohne Spec: `use-auth-preflight.ts`
 
-- [ ] **Datei:** `src/features/navigation/use-auth-preflight.ts`
+- [x] **Datei:** `src/features/navigation/use-auth-preflight.ts`
 - **Fix:** `use-auth-preflight.spec.tsx` mit jsdom-Pragma.
 
 ### M5 — Hardcoded `#16a34a` Preflight-Badge
