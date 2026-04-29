@@ -29,6 +29,48 @@ export function parseSuiteIdentifier(input: string): string | null {
   return parseNumericQueryParam(input, "suiteId");
 }
 
+export type PlanAndSuite = {
+  planId: string | null;
+  rootSuiteId: string | null;
+};
+
+/**
+ * Parses both plan and root suite ids out of a single user input. The Azure
+ * DevOps Test Plans URL already carries both as `?planId=…&suiteId=…`, so
+ * forcing the user to paste the same URL into two fields is busywork. This
+ * helper accepts either:
+ *   - a full Test Plans URL (extracts both ids in one go)
+ *   - two integer ids separated by `/`, `,` or whitespace
+ *     (e.g. `10519879 / 10519880`, `10519879,10519880`, `10519879 10519880`)
+ *   - a single bare integer (treated as plan id only; suite id stays null)
+ */
+export function parsePlanAndSuite(input: string): PlanAndSuite {
+  const trimmed = input.trim();
+  if (trimmed.length === 0) {
+    return { planId: null, rootSuiteId: null };
+  }
+
+  // Bare integer: plan id only — caller decides whether the missing suite is
+  // a hard error. Handle this before delegating to parseNumericQueryParam,
+  // which would otherwise return the same number for both param names.
+  if (/^\d+$/.test(trimmed)) {
+    const n = Number.parseInt(trimmed, 10);
+    return n > 0 ? { planId: String(n), rootSuiteId: null } : { planId: null, rootSuiteId: null };
+  }
+
+  // Manual id pair: split on whitespace, slash or comma.
+  const parts = trimmed.split(/[\s/,]+/).filter((part) => part.length > 0);
+  if (parts.length === 2 && /^\d+$/.test(parts[0]) && /^\d+$/.test(parts[1])) {
+    return { planId: parts[0], rootSuiteId: parts[1] };
+  }
+
+  // Otherwise treat as URL-ish input and pull both query params out.
+  return {
+    planId: parseNumericQueryParam(trimmed, "planId"),
+    rootSuiteId: parseNumericQueryParam(trimmed, "suiteId")
+  };
+}
+
 /**
  * Accepts a saved-query GUID, or extracts the GUID from an Azure DevOps URL
  * like `https://dev.azure.com/{org}/{project}/_queries/query/<guid>/`.

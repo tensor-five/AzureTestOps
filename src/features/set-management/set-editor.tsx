@@ -3,9 +3,8 @@ import * as React from "react";
 import type { Set, SetDraft } from "../../domain/sets/set.js";
 
 import {
-  parsePlanIdentifier,
-  parseQueryIdentifier,
-  parseSuiteIdentifier
+  parsePlanAndSuite,
+  parseQueryIdentifier
 } from "./parse-set-identifiers.js";
 
 export type SetEditorProps = {
@@ -16,7 +15,7 @@ export type SetEditorProps = {
   onSubmit(draft: SetDraft, setActive: boolean, setId: string | null): Promise<void>;
 };
 
-type IdentifierKind = "plan" | "suite" | "query";
+type IdentifierKind = "query";
 
 /**
  * Form for creating or editing a Set. Each identifier (plan, root suite,
@@ -33,9 +32,10 @@ type IdentifierKind = "plan" | "suite" | "query";
 export function SetEditor(props: SetEditorProps): React.ReactElement {
   const { existing } = props;
   const [name, setName] = React.useState(existing?.name ?? "");
-  const [planInput, setPlanInput] = React.useState(existing?.planId ?? "");
+  const [planSuiteInput, setPlanSuiteInput] = React.useState(
+    initialPlanSuiteInput(existing)
+  );
   const [planName, setPlanName] = React.useState(existing?.planName ?? "");
-  const [suiteInput, setSuiteInput] = React.useState(existing?.rootSuiteId ?? "");
   const [suiteName, setSuiteName] = React.useState(existing?.rootSuiteName ?? "");
   const [queryInput, setQueryInput] = React.useState(existing?.queryId ?? "");
   const [queryName, setQueryName] = React.useState(existing?.queryName ?? "");
@@ -43,8 +43,7 @@ export function SetEditor(props: SetEditorProps): React.ReactElement {
   const [submitting, setSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
 
-  const planId = parsePlanIdentifier(planInput);
-  const suiteId = parseSuiteIdentifier(suiteInput);
+  const { planId, rootSuiteId: suiteId } = parsePlanAndSuite(planSuiteInput);
   const queryId = parseQueryIdentifier(queryInput);
 
   const canSubmit =
@@ -98,13 +97,11 @@ export function SetEditor(props: SetEditorProps): React.ReactElement {
 
       <fieldset className="set-editor-fieldset">
         <legend>Test Plan</legend>
-        <IdentifierField
-          label="Plan ID or URL"
-          placeholder="10519879 or https://dev.azure.com/{org}/{project}/_testPlans/define?planId=…"
-          value={planInput}
-          onChange={setPlanInput}
-          resolvedId={planId}
-          kind="plan"
+        <PlanSuiteField
+          value={planSuiteInput}
+          onChange={setPlanSuiteInput}
+          planId={planId}
+          rootSuiteId={suiteId}
         />
         <label className="set-editor-field">
           <span>Plan name (optional)</span>
@@ -115,15 +112,6 @@ export function SetEditor(props: SetEditorProps): React.ReactElement {
             placeholder="Shown in the header dropdown"
           />
         </label>
-
-        <IdentifierField
-          label="Root Suite ID or URL"
-          placeholder="10519880 or any _testPlans URL with suiteId=…"
-          value={suiteInput}
-          onChange={setSuiteInput}
-          resolvedId={suiteId}
-          kind="suite"
-        />
         <label className="set-editor-field">
           <span>Root suite name (optional)</span>
           <input
@@ -220,12 +208,65 @@ function IdentifierField(props: {
   );
 }
 
+/**
+ * Combined plan-and-root-suite input. The Azure DevOps Test Plans URL carries
+ * both ids as `?planId=…&suiteId=…`, so a single paste covers both. The
+ * field also accepts two integers separated by `/`, `,` or whitespace for
+ * users who only have the bare ids.
+ */
+function PlanSuiteField(props: {
+  value: string;
+  onChange: (next: string) => void;
+  planId: string | null;
+  rootSuiteId: string | null;
+}): React.ReactElement {
+  const trimmed = props.value.trim();
+  const showHint = trimmed.length > 0;
+  const planResolved = props.planId !== null;
+  const suiteResolved = props.rootSuiteId !== null;
+  const bothResolved = planResolved && suiteResolved;
+
+  return (
+    <label className="set-editor-field">
+      <span>Plan URL or Plan ID / Suite ID</span>
+      <input
+        type="text"
+        value={props.value}
+        onChange={(event) => props.onChange(event.currentTarget.value)}
+        required
+        placeholder="https://dev.azure.com/{org}/{project}/_testPlans/define?planId=…&suiteId=… or 10519879 / 10519880"
+        spellCheck={false}
+        autoComplete="off"
+      />
+      {showHint ? (
+        bothResolved ? (
+          <small className="set-editor-field-hint">
+            Resolved plan id: <code>{props.planId}</code> · root suite id:{" "}
+            <code>{props.rootSuiteId}</code>
+          </small>
+        ) : (
+          <small className="set-editor-field-hint set-editor-field-hint-error">
+            {planResolved
+              ? "Missing root suite id — paste the full Test Plans URL or add the suite id (e.g. 10519879 / 10519880)."
+              : suiteResolved
+                ? "Missing plan id — paste the full Test Plans URL or add the plan id (e.g. 10519879 / 10519880)."
+                : "Could not extract plan and suite ids from the input."}
+          </small>
+        )
+      ) : null}
+    </label>
+  );
+}
+
+function initialPlanSuiteInput(existing: Set | null): string {
+  if (!existing) {
+    return "";
+  }
+  return `${existing.planId} / ${existing.rootSuiteId}`;
+}
+
 function labelFor(kind: IdentifierKind): string {
   switch (kind) {
-    case "plan":
-      return "plan id";
-    case "suite":
-      return "suite id";
     case "query":
       return "query GUID";
   }
