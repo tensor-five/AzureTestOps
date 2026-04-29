@@ -642,7 +642,7 @@ Spec files sit next to the unit under test (`foo.ts` ⇒ `foo.spec.ts`). Describ
 
 ---
 
-### Phase 3 — Saved Queries + Relations `[x]` _(pending)_
+### Phase 3 — Saved Queries + Relations `[x]` _(f445211)_
 
 **Goal:** Saved Query listing + execution + Related-link write API.
 **Acceptance:** can list shared queries, execute one by id, get back hydrated work items; `RelationPort.add/remove` writes via PATCH `relations[]` with optimistic concurrency (rev test) and idempotent "already exists" handling.
@@ -674,7 +674,7 @@ Server / Wiring:
 
 Acceptance check:
 - [x] Quality gate green (21 test files, 116 tests, 37 source files cycle-free)
-- [ ] Commit hash: ____
+- [x] Commit hash: `f445211`
 
 ---
 
