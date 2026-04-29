@@ -94,8 +94,8 @@ describe("LowdbSetRepository", () => {
           s2: { collapsedSuites: ["sa"] }
         },
         setFilters: {
-          s1: { lastOutcome: ["Failed"] },
-          s2: { titleQuery: "auth" }
+          s1: { testCases: { lastOutcomes: ["Failed"] } },
+          s2: { testCases: { titleQuery: "auth" } }
         }
       });
 
@@ -107,7 +107,7 @@ describe("LowdbSetRepository", () => {
       const prefs = await preferences.getPreferences();
       expect(prefs.activeSetId).toBeUndefined();
       expect(prefs.setLayouts).toEqual({ s2: { collapsedSuites: ["sa"] } });
-      expect(prefs.setFilters).toEqual({ s2: { titleQuery: "auth" } });
+      expect(prefs.setFilters).toEqual({ s2: { testCases: { titleQuery: "auth" } } });
     });
 
     it("is a no-op when the id does not exist", async () => {

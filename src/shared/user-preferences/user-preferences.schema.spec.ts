@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { sanitizeUserPreferences, sanitizeSetPreference } from "./user-preferences.schema.js";
+import {
+  sanitizeSetFilterPreference,
+  sanitizeSetPreference,
+  sanitizeUserPreferences
+} from "./user-preferences.schema.js";
 
 describe("sanitizeUserPreferences", () => {
   it("returns an empty object for non-records", () => {
@@ -63,15 +67,66 @@ describe("sanitizeUserPreferences", () => {
     });
   });
 
-  it("passes opaque records through setFilters", () => {
+  it("normalizes typed setFilters and drops empty / unkeyed entries", () => {
     const input = {
       setFilters: {
-        s1: { lastOutcome: ["Failed"], titleQuery: "auth" },
-        "": { lastOutcome: ["NotRun"] }
+        s1: {
+          testCases: {
+            titleQuery: "  auth  ",
+            lastOutcomes: ["Failed", "Failed", " ", "NotRun"],
+            states: ["Active"],
+            workItemTypes: []
+          },
+          workItems: { tags: ["regression", "regression", "release-blocker"] }
+        },
+        s2: { unrelated: 1 },
+        "": { testCases: { titleQuery: "ignored" } }
       }
     };
+
     expect(sanitizeUserPreferences(input).setFilters).toEqual({
-      s1: { lastOutcome: ["Failed"], titleQuery: "auth" }
+      s1: {
+        testCases: {
+          titleQuery: "auth",
+          lastOutcomes: ["Failed", "NotRun"],
+          states: ["Active"]
+        },
+        workItems: { tags: ["regression", "release-blocker"] }
+      }
+    });
+  });
+});
+
+describe("sanitizeSetFilterPreference", () => {
+  it("returns null for non-records and empty objects", () => {
+    expect(sanitizeSetFilterPreference(null)).toBeNull();
+    expect(sanitizeSetFilterPreference("string")).toBeNull();
+    expect(sanitizeSetFilterPreference([])).toBeNull();
+    expect(sanitizeSetFilterPreference({})).toBeNull();
+    expect(
+      sanitizeSetFilterPreference({ testCases: {}, workItems: {} })
+    ).toBeNull();
+  });
+
+  it("strips lastOutcomes from the work-items column (not a valid axis there)", () => {
+    const sanitized = sanitizeSetFilterPreference({
+      workItems: { lastOutcomes: ["Failed"], states: ["Active"] }
+    });
+    expect(sanitized).toEqual({ workItems: { states: ["Active"] } });
+  });
+
+  it("trims and dedupes string lists, preserving first-seen order", () => {
+    const sanitized = sanitizeSetFilterPreference({
+      testCases: {
+        states: [" Active ", "Active", "Closed", "  "],
+        assignedTo: [42, "alice@example.com", "alice@example.com"]
+      }
+    });
+    expect(sanitized).toEqual({
+      testCases: {
+        states: ["Active", "Closed"],
+        assignedTo: ["alice@example.com"]
+      }
     });
   });
 });

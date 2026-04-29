@@ -12,9 +12,16 @@ import type { SuiteCollapseApi } from "./use-suite-collapse.js";
 
 export type TestCaseColumnProps = {
   suiteTree: TestSuiteNode;
+  /**
+   * Already filtered by the active filter bar. The unfiltered total is
+   * passed separately so the empty-state copy can distinguish "no test cases
+   * in the set" from "no matches for the active filter".
+   */
   projections: readonly TestCaseProjection[];
+  unfilteredCount: number;
   positioning: ItemPositioningApi;
   collapse: SuiteCollapseApi;
+  filterBar?: React.ReactNode;
   onEditPointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
 };
 
@@ -35,16 +42,24 @@ export function TestCaseColumn(props: TestCaseColumnProps): React.ReactElement {
     [grouped, props.collapse]
   );
 
-  const totalProjections = props.projections.length;
+  const visibleProjectionCount = props.projections.length;
+  const unfilteredCount = props.unfilteredCount;
 
   return (
     <section className="relations-view-column relations-view-column-test-cases" aria-label="Test cases">
       <header className="relations-view-column-header">
         <h3>Test Cases</h3>
-        <span className="relations-view-column-count">{totalProjections}</span>
+        <span className="relations-view-column-count">
+          {visibleProjectionCount === unfilteredCount
+            ? unfilteredCount
+            : `${visibleProjectionCount} / ${unfilteredCount}`}
+        </span>
       </header>
-      {totalProjections === 0 ? (
+      {props.filterBar}
+      {unfilteredCount === 0 ? (
         <p className="relations-view-column-empty">No test cases in this set.</p>
+      ) : visibleProjectionCount === 0 ? (
+        <p className="relations-view-column-empty">No test cases match the active filter.</p>
       ) : visibleEntries.length === 0 ? (
         <p className="relations-view-column-empty">All suites are collapsed.</p>
       ) : (

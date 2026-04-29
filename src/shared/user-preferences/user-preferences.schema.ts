@@ -11,7 +11,36 @@ export type SetLayoutPreference = {
 };
 
 export type SetLayoutPreferencesBySetId = Record<string, SetLayoutPreference>;
-export type SetFiltersBySetId = Record<string, Record<string, unknown>>;
+
+/**
+ * Persisted filter state per Set, split per column. The right column ("Work
+ * Items") does not get an `lastOutcomes` axis — outcomes only exist on Test
+ * Cases. Empty arrays / blank strings mean "no filter applied" and are
+ * normalized away by the sanitizer so the on-disk file stays compact.
+ */
+export type TestCaseColumnFilterPreference = {
+  titleQuery?: string;
+  lastOutcomes?: string[];
+  states?: string[];
+  assignedTo?: string[];
+  tags?: string[];
+  workItemTypes?: string[];
+};
+
+export type WorkItemColumnFilterPreference = {
+  titleQuery?: string;
+  states?: string[];
+  assignedTo?: string[];
+  tags?: string[];
+  workItemTypes?: string[];
+};
+
+export type SetFilterPreference = {
+  testCases?: TestCaseColumnFilterPreference;
+  workItems?: WorkItemColumnFilterPreference;
+};
+
+export type SetFiltersBySetId = Record<string, SetFilterPreference>;
 
 /**
  * A Set bundles a Test Plan + root Suite + Saved Query into one switchable unit.
@@ -93,10 +122,13 @@ export function sanitizeUserPreferences(value: unknown): UserPreferences {
     const sanitized: SetFiltersBySetId = {};
     Object.entries(candidate.setFilters).forEach(([setId, filterState]) => {
       const trimmedSetId = setId.trim();
-      if (trimmedSetId.length === 0 || !isPlainRecord(filterState)) {
+      if (trimmedSetId.length === 0) {
         return;
       }
-      sanitized[trimmedSetId] = filterState;
+      const sanitizedFilter = sanitizeSetFilterPreference(filterState);
+      if (sanitizedFilter) {
+        sanitized[trimmedSetId] = sanitizedFilter;
+      }
     });
     if (Object.keys(sanitized).length > 0) {
       next.setFilters = sanitized;
@@ -136,6 +168,99 @@ export function sanitizeSetPreference(value: unknown): SetPreference | null {
     organization: readNonEmptyString(value.organization),
     project: readNonEmptyString(value.project)
   };
+}
+
+export function sanitizeSetFilterPreference(value: unknown): SetFilterPreference | null {
+  if (!isPlainRecord(value)) {
+    return null;
+  }
+
+  const next: SetFilterPreference = {};
+
+  const testCases = sanitizeTestCaseColumnFilter(value.testCases);
+  if (testCases) {
+    next.testCases = testCases;
+  }
+
+  const workItems = sanitizeWorkItemColumnFilter(value.workItems);
+  if (workItems) {
+    next.workItems = workItems;
+  }
+
+  return Object.keys(next).length === 0 ? null : next;
+}
+
+function sanitizeTestCaseColumnFilter(
+  value: unknown
+): TestCaseColumnFilterPreference | null {
+  if (!isPlainRecord(value)) {
+    return null;
+  }
+
+  const next: TestCaseColumnFilterPreference = {};
+  applyTitleQuery(next, value.titleQuery);
+  applyStringList(next, "lastOutcomes", value.lastOutcomes);
+  applyStringList(next, "states", value.states);
+  applyStringList(next, "assignedTo", value.assignedTo);
+  applyStringList(next, "tags", value.tags);
+  applyStringList(next, "workItemTypes", value.workItemTypes);
+
+  return Object.keys(next).length === 0 ? null : next;
+}
+
+function sanitizeWorkItemColumnFilter(
+  value: unknown
+): WorkItemColumnFilterPreference | null {
+  if (!isPlainRecord(value)) {
+    return null;
+  }
+
+  const next: WorkItemColumnFilterPreference = {};
+  applyTitleQuery(next, value.titleQuery);
+  applyStringList(next, "states", value.states);
+  applyStringList(next, "assignedTo", value.assignedTo);
+  applyStringList(next, "tags", value.tags);
+  applyStringList(next, "workItemTypes", value.workItemTypes);
+
+  return Object.keys(next).length === 0 ? null : next;
+}
+
+function applyTitleQuery(target: { titleQuery?: string }, raw: unknown): void {
+  if (typeof raw !== "string") {
+    return;
+  }
+  const trimmed = raw.trim();
+  if (trimmed.length === 0) {
+    return;
+  }
+  target.titleQuery = trimmed;
+}
+
+function applyStringList<T extends Record<string, unknown>>(
+  target: T,
+  key: keyof T,
+  raw: unknown
+): void {
+  if (!Array.isArray(raw)) {
+    return;
+  }
+  const seen = new Set<string>();
+  const cleaned: string[] = [];
+  for (const entry of raw) {
+    if (typeof entry !== "string") {
+      continue;
+    }
+    const trimmed = entry.trim();
+    if (trimmed.length === 0 || seen.has(trimmed)) {
+      continue;
+    }
+    seen.add(trimmed);
+    cleaned.push(trimmed);
+  }
+  if (cleaned.length === 0) {
+    return;
+  }
+  (target as Record<string, unknown>)[key as string] = cleaned;
 }
 
 function sanitizeSetLayoutPreference(value: unknown): SetLayoutPreference | null {

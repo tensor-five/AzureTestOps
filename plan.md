@@ -809,26 +809,32 @@ Acceptance check:
 
 ---
 
-### Phase 8 — Filters per Column `[ ]`
+### Phase 8 — Filters per Column `[x]` _(pending commit)_
 
 **Goal:** the filter set from §3 row 10.
 **Acceptance:** filter bar per column; persists per set; pure function applied to projections; filters compose (AND-of-bars).
 
 Files:
-- [ ] `features/filters/filter-bar.tsx` — per-column filter UI
-- [ ] `features/filters/test-case-filters.ts` — pure filter on `TestCaseProjection[]`
-- [ ] `features/filters/work-item-filters.ts` — pure filter on `WorkItem[]`
-- [ ] Filters:
-  - [ ] Last Outcome multi-select (left only): Passed / Failed / NotRun / Blocked / NotApplicable / Other
-  - [ ] Title full-text (both)
-  - [ ] State multi-select (both)
-  - [ ] AssignedTo multi-select (both) — chip list of distinct values
-  - [ ] Tags multi-select (both)
-  - [ ] WorkItemType multi-select (both)
-- [ ] Persistence: `setFilters[setId] = { lastOutcomes?: [], titleQuery?: '', states?: [], ... }` via `persistUserPreferencesPatch`
+- [x] `features/filters/filter-bar.tsx` — per-column filter UI (`<details>` popovers, no extra state hook)
+- [x] `features/filters/test-case-filters.ts` — pure filter on `TestCaseProjection[]` + `extractTestCaseFacets`
+- [x] `features/filters/work-item-filters.ts` — pure filter on `WorkItem[]` + `extractWorkItemFacets`
+- [x] `features/filters/use-set-filters.ts` — per-set filter state hook (mirror of `useSuiteCollapse`)
+- [x] Filters:
+  - [x] Last Outcome multi-select (left only): values come from the snapshot's actual outcomes (so unknown ADO values show up too) instead of a hard-coded list
+  - [x] Title full-text (both) — case-insensitive substring on `title`
+  - [x] State multi-select (both)
+  - [x] AssignedTo multi-select (both); items without an assignee are excluded when the facet is configured
+  - [x] Tags multi-select (both); OR-within (intersection)
+  - [x] WorkItemType multi-select (both)
+- [x] Persistence: `setFilters[setId] = { testCases?: {…}, workItems?: {…} }` via `persistUserPreferencesPatch`; sanitizer dedupes/trims string lists and strips empty axes
+
+Side-effects landed in this phase:
+- [x] Tightened `SetFiltersBySetId` from `Record<string, Record<string, unknown>>` to a typed `SetFilterPreference` (split per column; `lastOutcomes` is rejected on the work-item column because outcomes only exist on Test Cases). New `sanitizeSetFilterPreference` exported alongside `sanitizeSetPreference`.
+- [x] `TestCaseColumn` / `WorkItemColumn` now take `unfilteredCount` + `filterBar` slot props so the column header can show `12 / 87` when filters are active and the filter bar renders directly under the title.
+- [x] `buildLineSpecs` switched from "all snapshot projections × work items" to "filtered projections × filtered work items" so a hidden endpoint cannot leave a line floating into nothing.
 
 Acceptance check:
-- [ ] Quality gate green
+- [x] Quality gate green (55 test files, 304 tests, 92 source files cycle-free)
 - [ ] Commit hash: ____
 
 ---

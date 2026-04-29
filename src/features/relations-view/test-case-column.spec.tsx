@@ -114,6 +114,7 @@ describe("TestCaseColumn", () => {
           projection(102, 3, "Login succeeds with valid creds"),
           projection(201, 4, "Header renders brand")
         ]}
+        unfilteredCount={3}
         positioning={makePositioning()}
         collapse={makeCollapse([])}
       />
@@ -136,6 +137,7 @@ describe("TestCaseColumn", () => {
           projection(101, 3, "Auth case"),
           projection(202, 4, "UI case")
         ]}
+        unfilteredCount={2}
         positioning={makePositioning()}
         collapse={makeCollapse([2])}
       />
@@ -159,6 +161,7 @@ describe("TestCaseColumn", () => {
       <TestCaseColumn
         suiteTree={tree()}
         projections={[]}
+        unfilteredCount={0}
         positioning={makePositioning()}
         collapse={makeCollapse([])}
       />

@@ -1,12 +1,15 @@
 import { sanitizeUserPreferences, type UserPreferences } from "./user-preferences.schema.js";
 
 export type {
+  SetFilterPreference,
+  SetFiltersBySetId,
   SetLayoutPreference,
   SetLayoutPreferencesBySetId,
-  SetFiltersBySetId,
   SetPreference,
+  TestCaseColumnFilterPreference,
   ThemeModePreference,
-  UserPreferences
+  UserPreferences,
+  WorkItemColumnFilterPreference
 } from "./user-preferences.schema.js";
 
 const USER_PREFERENCES_ENDPOINT = "/phase2/user-preferences";
