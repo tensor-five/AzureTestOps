@@ -678,27 +678,31 @@ Acceptance check:
 
 ---
 
-### Phase 4 — Sets (CRUD + Active Snapshot) `[ ]`
+### Phase 4 — Sets (CRUD + Active Snapshot) `[x]` _(see commit hash below)_
 
 **Goal:** sets are first-class, switchable, persistent.
 **Acceptance:** `LoadActiveSetSnapshot` returns `ActiveSetSnapshot` (suiteTree + projections + workItemsFromQuery + relations) for the active set; CRUD use cases tested end-to-end against lowdb tempdir.
 
 Files:
-- [ ] `domain/sets/set.ts` — `Set` value object (see §5)
-- [ ] `application/ports/set-repository.port.ts` — `listSets`, `getById`, `create`, `update`, `delete`, `getActiveId`, `setActiveId`
-- [ ] `application/ports/ado-context.port.ts` — `getContext()`, `setContext({org, project})`
-- [ ] `adapters/persistence/settings/set-repository.adapter.{ts,spec.ts}` — extends the lowdb adapter; sets/activeSetId live in `users[localUserId]`
-- [ ] `adapters/persistence/settings/file-ado-context.adapter.{ts,spec.ts}` — reads/writes `~/.azure-testops/ado-context.json`
-- [ ] `application/use-cases/list-sets.use-case.ts` (+spec)
-- [ ] `application/use-cases/create-set.use-case.ts` (+spec) — validates planId/suiteId/queryId presence
-- [ ] `application/use-cases/update-set.use-case.ts` (+spec)
-- [ ] `application/use-cases/delete-set.use-case.ts` (+spec) — also clears `setLayouts[id]` and `setFilters[id]`
-- [ ] `application/use-cases/set-active-set.use-case.ts` (+spec)
-- [ ] `application/use-cases/load-active-set-snapshot.use-case.{ts,spec.ts}` — orchestrates Phase 2 (`loadTestCaseProjections`) + Phase 3 (`runSavedQuery`); reads ADO context for org/project
+- [x] `domain/sets/set.ts` — `Set` value object + `SetDraft` + `ActiveSetSnapshot`
+- [x] `application/ports/set-repository.port.ts` — `listSets`, `getById`, `create`, `update`, `delete`, `getActiveId`, `setActiveId`
+- [x] `application/ports/ado-context.port.ts` — `getContext()`, `setContext({org, project})`
+- [x] `adapters/persistence/settings/set-repository.adapter.{ts,spec.ts}` — wraps `LowdbUserPreferencesAdapter` via new atomic `updatePreferences(updater)`; sets/activeSetId/setLayouts/setFilters live in `users[localUserId]`
+- [x] `adapters/persistence/settings/file-ado-context.adapter.{ts,spec.ts}` — reads/writes `~/.azure-testops/ado-context.json` (versioned)
+- [x] `application/use-cases/list-sets.use-case.{ts,spec.ts}`
+- [x] `application/use-cases/create-set.use-case.{ts,spec.ts}` — validates planId/rootSuiteId/queryId, optional `setActive` promotion
+- [x] `application/use-cases/update-set.use-case.{ts,spec.ts}` — required-field validation when present
+- [x] `application/use-cases/delete-set.use-case.{ts,spec.ts}` — repo cascades `setLayouts[id]` / `setFilters[id]` and clears active pointer
+- [x] `application/use-cases/set-active-set.use-case.{ts,spec.ts}` — accepts `null` to clear
+- [x] `application/use-cases/load-active-set-snapshot.use-case.{ts,spec.ts}` — orchestrates Phase 2 (`loadTestCaseProjections`) + Phase 3 (`runSavedQuery`); typed errors `AdoContextMissingError` / `NoActiveSetError` / `SetNotFoundError` / `InvalidSetIdentifierError`
+
+Side-effects landed in this phase:
+- [x] Renamed schema field `SetPreference.suiteId` → `rootSuiteId` (and `suiteName` → `rootSuiteName`) for vocabulary alignment with §5.
+- [x] Fixed a shared-reference bug in `LowdbUserPreferencesAdapter` where `DEFAULT_DB` (passed to `JSONFilePreset`) was mutated across instances under vitest's in-memory adapter (`NODE_ENV === "test"`). Replaced with `defaultDb()` factory.
 
 Acceptance check:
-- [ ] Quality gate green
-- [ ] Commit hash: ____
+- [x] Quality gate green (29 test files, 154 tests, 48 source files cycle-free)
+- [x] Commit hash: ____ _(to be filled in below after commit)_
 
 ---
 

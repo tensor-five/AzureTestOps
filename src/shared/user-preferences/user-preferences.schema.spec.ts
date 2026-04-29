@@ -20,10 +20,10 @@ describe("sanitizeUserPreferences", () => {
   it("dedupes Sets by id and drops invalid entries", () => {
     const input = {
       sets: [
-        { id: "a", name: "Alpha", planId: "1", suiteId: "10", queryId: "q-1" },
-        { id: "a", name: "Duplicate", planId: "1", suiteId: "10", queryId: "q-1" },
-        { id: "b", name: "Beta", planId: "2", suiteId: "20", queryId: "q-2" },
-        { name: "missing-id", planId: "3", suiteId: "30", queryId: "q-3" }
+        { id: "a", name: "Alpha", planId: "1", rootSuiteId: "10", queryId: "q-1" },
+        { id: "a", name: "Duplicate", planId: "1", rootSuiteId: "10", queryId: "q-1" },
+        { id: "b", name: "Beta", planId: "2", rootSuiteId: "20", queryId: "q-2" },
+        { name: "missing-id", planId: "3", rootSuiteId: "30", queryId: "q-3" }
       ]
     };
 
@@ -77,12 +77,12 @@ describe("sanitizeUserPreferences", () => {
 });
 
 describe("sanitizeSetPreference", () => {
-  it("requires id, planId, suiteId and queryId", () => {
+  it("requires id, planId, rootSuiteId and queryId", () => {
     expect(
-      sanitizeSetPreference({ id: "a", planId: "1", suiteId: "10", queryId: "q-1" })
-    ).toMatchObject({ id: "a", name: "a", planId: "1", suiteId: "10", queryId: "q-1" });
+      sanitizeSetPreference({ id: "a", planId: "1", rootSuiteId: "10", queryId: "q-1" })
+    ).toMatchObject({ id: "a", name: "a", planId: "1", rootSuiteId: "10", queryId: "q-1" });
 
-    expect(sanitizeSetPreference({ id: "a", planId: "1", suiteId: "10" })).toBeNull();
+    expect(sanitizeSetPreference({ id: "a", planId: "1", rootSuiteId: "10" })).toBeNull();
     expect(sanitizeSetPreference({})).toBeNull();
     expect(sanitizeSetPreference(null)).toBeNull();
   });
@@ -93,8 +93,8 @@ describe("sanitizeSetPreference", () => {
       name: "Alpha",
       planId: "1",
       planName: "Plan One",
-      suiteId: "10",
-      suiteName: "Root",
+      rootSuiteId: "10",
+      rootSuiteName: "Root",
       queryId: "q-1",
       queryName: "Bugs",
       organization: "contoso",
@@ -106,8 +106,8 @@ describe("sanitizeSetPreference", () => {
       name: "Alpha",
       planId: "1",
       planName: "Plan One",
-      suiteId: "10",
-      suiteName: "Root",
+      rootSuiteId: "10",
+      rootSuiteName: "Root",
       queryId: "q-1",
       queryName: "Bugs",
       organization: "contoso",

@@ -16,10 +16,9 @@ type PersistedPreferencesDb = {
   users: Record<string, UserPreferences>;
 };
 
-const DEFAULT_DB: PersistedPreferencesDb = {
-  version: 1,
-  users: {}
-};
+function defaultDb(): PersistedPreferencesDb {
+  return { version: 1, users: {} };
+}
 
 export class LowdbUserPreferencesAdapter {
   private dbPromise: Promise<Low<PersistedPreferencesDb>> | null = null;
@@ -59,6 +58,28 @@ export class LowdbUserPreferencesAdapter {
     return sanitizeUserPreferences(db.data.users[this.userId] ?? {});
   }
 
+  /**
+   * Atomic read-modify-write. The updater receives the sanitized current
+   * preferences and must return the desired full state — fields it omits are
+   * dropped (use {@link mergePreferences} for partial patches).
+   */
+  public async updatePreferences(
+    updater: (current: UserPreferences) => UserPreferences
+  ): Promise<UserPreferences> {
+    const db = await this.getDb();
+
+    await db.update((data) => {
+      const current = sanitizeUserPreferences(data.users[this.userId] ?? {});
+      const next = sanitizeUserPreferences(updater(current));
+      data.users[this.userId] = {
+        ...next,
+        updatedAt: new Date().toISOString()
+      };
+    });
+
+    return sanitizeUserPreferences(db.data.users[this.userId] ?? {});
+  }
+
   private async getDb(): Promise<Low<PersistedPreferencesDb>> {
     if (this.dbPromise) {
       return this.dbPromise;
@@ -66,10 +87,10 @@ export class LowdbUserPreferencesAdapter {
 
     this.dbPromise = (async () => {
       await mkdir(path.dirname(this.filePath), { recursive: true });
-      const db = await JSONFilePreset<PersistedPreferencesDb>(this.filePath, DEFAULT_DB);
+      const db = await JSONFilePreset<PersistedPreferencesDb>(this.filePath, defaultDb());
 
       if (!isValidDb(db.data)) {
-        db.data = DEFAULT_DB;
+        db.data = defaultDb();
         await db.write();
       }
 

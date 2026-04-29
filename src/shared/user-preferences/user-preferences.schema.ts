@@ -23,8 +23,8 @@ export type SetPreference = {
   name: string;
   planId: string;
   planName?: string;
-  suiteId: string;
-  suiteName?: string;
+  rootSuiteId: string;
+  rootSuiteName?: string;
   queryId: string;
   queryName?: string;
   organization?: string;
@@ -117,10 +117,10 @@ export function sanitizeSetPreference(value: unknown): SetPreference | null {
 
   const id = readNonEmptyString(value.id);
   const planId = readNonEmptyString(value.planId);
-  const suiteId = readNonEmptyString(value.suiteId);
+  const rootSuiteId = readNonEmptyString(value.rootSuiteId);
   const queryId = readNonEmptyString(value.queryId);
 
-  if (!id || !planId || !suiteId || !queryId) {
+  if (!id || !planId || !rootSuiteId || !queryId) {
     return null;
   }
 
@@ -129,8 +129,8 @@ export function sanitizeSetPreference(value: unknown): SetPreference | null {
     name: readNonEmptyString(value.name) ?? id,
     planId,
     planName: readNonEmptyString(value.planName),
-    suiteId,
-    suiteName: readNonEmptyString(value.suiteName),
+    rootSuiteId,
+    rootSuiteName: readNonEmptyString(value.rootSuiteName),
     queryId,
     queryName: readNonEmptyString(value.queryName),
     organization: readNonEmptyString(value.organization),

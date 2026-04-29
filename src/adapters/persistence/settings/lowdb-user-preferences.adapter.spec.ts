@@ -51,13 +51,13 @@ describe("LowdbUserPreferencesAdapter", () => {
 
     await adapter.mergePreferences({
       sets: [
-        { id: "s1", name: "Alpha", planId: "p", suiteId: "su", queryId: "q" },
-        { id: "s2", name: "Beta", planId: "p", suiteId: "su", queryId: "q" }
+        { id: "s1", name: "Alpha", planId: "p", rootSuiteId: "su", queryId: "q" },
+        { id: "s2", name: "Beta", planId: "p", rootSuiteId: "su", queryId: "q" }
       ]
     });
 
     const replaced = await adapter.mergePreferences({
-      sets: [{ id: "s3", name: "Gamma", planId: "p", suiteId: "su", queryId: "q" }]
+      sets: [{ id: "s3", name: "Gamma", planId: "p", rootSuiteId: "su", queryId: "q" }]
     });
 
     expect(replaced.sets?.map((set) => set.id)).toEqual(["s3"]);
