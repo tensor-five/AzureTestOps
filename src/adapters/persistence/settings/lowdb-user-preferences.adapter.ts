@@ -4,6 +4,7 @@ import path from "node:path";
 import type { Low } from "lowdb";
 import { JSONFilePreset } from "lowdb/node";
 
+import type { UserPreferencesPort } from "../../../application/ports/user-preferences.port.js";
 import {
   sanitizeUserPreferences,
   type UserPreferences
@@ -20,7 +21,7 @@ function defaultDb(): PersistedPreferencesDb {
   return { version: 1, users: {} };
 }
 
-export class LowdbUserPreferencesAdapter {
+export class LowdbUserPreferencesAdapter implements UserPreferencesPort {
   private dbPromise: Promise<Low<PersistedPreferencesDb>> | null = null;
 
   public constructor(

@@ -740,9 +740,16 @@ Side-effects landed in this phase:
 - [x] Refactored `app/bootstrap/http-server.ts` to receive a typed `HttpServerDependencies` block and delegate routing to feature modules under `app/bootstrap/routes/*` (route-helpers, ado-context-routes, sets-routes, catalog-routes, active-set-snapshot-route).
 - [x] Extended `loadActiveSetSnapshot` with an optional `onProgress` sink emitting `context` → `test-cases` → `saved-query` → `aggregate` → `done` so the SSE handler can report stages without leaking adapter internals.
 
+Phase-5 hardening (post-audit, follow-up commit):
+- [x] Introduced `application/ports/user-preferences.port.ts`; `Runtime`/`HttpServerDependencies` now expose `AuthPreflightPort` + `UserPreferencesPort` instead of concrete adapter classes (closes a hexagonal leak).
+- [x] Split `set-manager-dialog.tsx` (was 544 lines) into `set-manager-dialog.tsx`, `set-manager-list.tsx`, `set-editor.tsx`, `ado-context-setup.tsx`, `select-from-catalog.tsx`.
+- [x] Extracted `useAdoContext`, `useTestPlanCatalog`, `useSavedQueries` and `useAuthPreflight` so components stop calling `api-client` directly (per AGENTS.md §"Persistenzzugriff kapseln").
+- [x] Added missing unit tests: `runtime.spec.ts`, `api-client.spec.ts`, `catalog-routes.spec.ts`, `active-set-snapshot-route.spec.ts`, `use-active-set-snapshot.spec.tsx`, `set-manager-list.spec.tsx`.
+- [x] Live smoketest of `npm run start:local` — verified `/health`, `/`, `/phase2/auth-preflight`, CSRF rejection (403) + acceptance (200) on `/phase2/ado-context`, sets CRUD + active-set switching, SSE stream emits `progress` events through Node's HTTP transport.
+
 Acceptance check:
-- [x] Quality gate green (35 test files, 183 tests, 68 source files cycle-free)
-- [x] Commit hash: `beeb147`
+- [x] Quality gate green (41 test files, 213 tests, 77 source files cycle-free)
+- [x] Commit hash: `beeb147` (initial), follow-up landed in next commit
 
 ---
 

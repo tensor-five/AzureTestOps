@@ -13,10 +13,8 @@ import {
   hydrateUserPreferences,
   persistUserPreferencesPatch
 } from "../../shared/user-preferences/user-preferences.client.js";
-import {
-  AppHeader,
-  type PreflightStatus
-} from "../../features/navigation/header.js";
+import { AppHeader } from "../../features/navigation/header.js";
+import { useAuthPreflight } from "../../features/navigation/use-auth-preflight.js";
 import { useSetManagement } from "../../features/set-management/use-set-management.js";
 import { SetManagerDialog } from "../../features/set-management/set-manager-dialog.js";
 import { useActiveSetSnapshot } from "../../features/relations-view/use-active-set-snapshot.js";
@@ -43,7 +41,6 @@ function AppShell(): React.ReactElement {
   const [themeMode, setThemeMode] = React.useState<ThemeMode>(() =>
     readPersistedThemeMode(THEME_MODE_STORAGE_KEY, getCachedUserPreferences().themeMode ?? null)
   );
-  const [preflightStatus, setPreflightStatus] = React.useState<PreflightStatus>("CHECKING");
   const [isSetManagerOpen, setSetManagerOpen] = React.useState(false);
   const [mode, setMode] = React.useState<RelationsViewMode>(DEFAULT_MODE);
 
@@ -61,28 +58,7 @@ function AppShell(): React.ReactElement {
     persistUserPreferencesPatch({ themeMode });
   }, [themeMode]);
 
-  React.useEffect(() => {
-    let cancelled = false;
-    void fetch("/phase2/auth-preflight", { headers: { accept: "application/json" } })
-      .then(async (response) => {
-        if (!response.ok) {
-          return { result: { status: "UNKNOWN_ERROR" as PreflightStatus } };
-        }
-        return (await response.json()) as { result: { status: PreflightStatus } };
-      })
-      .then((payload) => {
-        if (cancelled) return;
-        setPreflightStatus(payload.result?.status ?? "UNKNOWN_ERROR");
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setPreflightStatus("UNKNOWN_ERROR");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
+  const preflightStatus = useAuthPreflight();
   const setManagement = useSetManagement();
   const { state: snapshotState, refresh: refreshSnapshot } = useActiveSetSnapshot(
     setManagement.activeSetId

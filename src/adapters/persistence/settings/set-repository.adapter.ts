@@ -2,15 +2,14 @@ import { randomUUID } from "node:crypto";
 
 import type { Set, SetDraft } from "../../../domain/sets/set.js";
 import type { SetRepositoryPort } from "../../../application/ports/set-repository.port.js";
+import type { UserPreferencesPort } from "../../../application/ports/user-preferences.port.js";
 import type {
   SetPreference,
   UserPreferences
 } from "../../../shared/user-preferences/user-preferences.schema.js";
 
-import { LowdbUserPreferencesAdapter } from "./lowdb-user-preferences.adapter.js";
-
 export type LowdbSetRepositoryDeps = {
-  preferences: LowdbUserPreferencesAdapter;
+  preferences: UserPreferencesPort;
   /** Defaults to `crypto.randomUUID()`. Injectable for deterministic tests. */
   generateId?: () => string;
 };
@@ -20,11 +19,10 @@ export type LowdbSetRepositoryDeps = {
  *
  * Sets, the active-set pointer, layouts and filters all live inside the same
  * per-user `UserPreferences` envelope, so we delegate to
- * {@link LowdbUserPreferencesAdapter#updatePreferences} for atomic
- * read-modify-write.
+ * {@link UserPreferencesPort#updatePreferences} for atomic read-modify-write.
  */
 export class LowdbSetRepository implements SetRepositoryPort {
-  private readonly preferences: LowdbUserPreferencesAdapter;
+  private readonly preferences: UserPreferencesPort;
   private readonly generateId: () => string;
 
   public constructor(deps: LowdbSetRepositoryDeps) {

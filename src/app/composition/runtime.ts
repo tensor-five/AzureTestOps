@@ -11,11 +11,13 @@ import { FileAdoContextAdapter } from "../../adapters/persistence/settings/file-
 import { LowdbUserPreferencesAdapter } from "../../adapters/persistence/settings/lowdb-user-preferences.adapter.js";
 import { LowdbSetRepository } from "../../adapters/persistence/settings/set-repository.adapter.js";
 import type { AdoContextPort } from "../../application/ports/ado-context.port.js";
+import type { AuthPreflightPort } from "../../application/ports/auth-preflight.port.js";
 import type { RelationPort } from "../../application/ports/relation.port.js";
 import type { SavedQueryPort } from "../../application/ports/saved-query.port.js";
 import type { SetRepositoryPort } from "../../application/ports/set-repository.port.js";
 import type { TestCatalogPort } from "../../application/ports/test-catalog.port.js";
 import type { TestManagementReadPort } from "../../application/ports/test-management.port.js";
+import type { UserPreferencesPort } from "../../application/ports/user-preferences.port.js";
 import type { WorkItemHydrationPort } from "../../application/ports/work-item-hydration.port.js";
 import { AzureCliTokenProvider } from "../../shared/azure-devops/azure-cli-token-provider.js";
 import { FetchAzureRestClient } from "../../shared/azure-devops/fetch-azure-rest-client.js";
@@ -47,8 +49,8 @@ export type RuntimeOptions = {
 };
 
 export type Runtime = {
-  preflight: AzureCliPreflightAdapter;
-  userPreferences: LowdbUserPreferencesAdapter;
+  preflight: AuthPreflightPort;
+  userPreferences: UserPreferencesPort;
   setRepository: SetRepositoryPort;
   adoContext: AdoContextPort;
   ado: AdoRuntime;

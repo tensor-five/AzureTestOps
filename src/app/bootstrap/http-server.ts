@@ -6,21 +6,19 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
-import {
-  AzureCliPreflightAdapter,
-  type PreflightContext,
-  type PreflightResult
-} from "../../adapters/azure-devops/auth/azure-cli-preflight.adapter.js";
-import {
-  LowdbUserPreferencesAdapter
-} from "../../adapters/persistence/settings/lowdb-user-preferences.adapter.js";
+import { resolveAzCliExecutablePath } from "../../shared/utils/azure-cli-path.js";
 import {
   sanitizeUserPreferences,
   type UserPreferences
 } from "../../shared/user-preferences/user-preferences.schema.js";
-import { resolveAzCliExecutablePath } from "../../shared/utils/azure-cli-path.js";
 import type { AdoContextPort, AdoContext } from "../../application/ports/ado-context.port.js";
+import type {
+  AuthPreflightPort,
+  AuthPreflightResult,
+  PreflightContext
+} from "../../application/ports/auth-preflight.port.js";
 import type { SetRepositoryPort } from "../../application/ports/set-repository.port.js";
+import type { UserPreferencesPort } from "../../application/ports/user-preferences.port.js";
 
 import {
   applySecurityHeaders,
@@ -93,8 +91,8 @@ export type HttpServer = {
 export type AzLoginRunner = () => Promise<{ message: string }>;
 
 export type HttpServerDependencies = {
-  preflight: AzureCliPreflightAdapter;
-  userPreferences: LowdbUserPreferencesAdapter;
+  preflight: AuthPreflightPort;
+  userPreferences: UserPreferencesPort;
   setRepository: SetRepositoryPort;
   adoContext: AdoContextPort;
   /** Required only for the SSE snapshot stream and ADO catalog endpoints. */
@@ -285,7 +283,7 @@ function isValidCsrfRequest(req: IncomingMessage, expectedToken: string): boolea
 async function handleAuthPreflight(res: ServerResponse, deps: RouterDeps): Promise<void> {
   const context: PreflightContext = deps.preflightContext ?? (await readPreflightContextFromAdo(deps.deps.adoContext));
   try {
-    const result: PreflightResult = await deps.deps.preflight.check(context);
+    const result: AuthPreflightResult = await deps.deps.preflight.check(context);
     writeJson(res, 200, { result });
   } catch (error) {
     writeJson(res, 500, errorPayload(error, "PREFLIGHT_FAILED"));
@@ -294,7 +292,7 @@ async function handleAuthPreflight(res: ServerResponse, deps: RouterDeps): Promi
 
 async function handleGetUserPreferences(
   res: ServerResponse,
-  userPreferences: LowdbUserPreferencesAdapter
+  userPreferences: UserPreferencesPort
 ): Promise<void> {
   try {
     const preferences = await userPreferences.getPreferences();
@@ -307,7 +305,7 @@ async function handleGetUserPreferences(
 async function handlePostUserPreferences(
   req: IncomingMessage,
   res: ServerResponse,
-  userPreferences: LowdbUserPreferencesAdapter
+  userPreferences: UserPreferencesPort
 ): Promise<void> {
   const body = await readBody(req);
   const payload = parseJsonBody(body);
