@@ -22,11 +22,7 @@ type SuiteWithProjections = {
   projections: TestCaseProjection[];
 };
 
-/**
- * Left column: groups Test Case projections by suite, indents per depth, and
- * lets the user collapse a sub-tree (collapse hides every descendant suite,
- * not just the suite the user clicked).
- */
+/** Collapsing a parent suite hides every descendant suite, not just its row. */
 export function TestCaseColumn(props: TestCaseColumnProps): React.ReactElement {
   const grouped = React.useMemo(
     () => groupProjectionsBySuite(props.suiteTree, props.projections),

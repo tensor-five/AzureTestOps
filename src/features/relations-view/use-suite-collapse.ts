@@ -10,16 +10,11 @@ export type SuiteCollapseApi = {
   collapsedSuiteIds: ReadonlySet<string>;
   isCollapsed(suiteId: number): boolean;
   toggle(suiteId: number): void;
-  collapseAll(suiteIds: readonly number[]): void;
-  expandAll(): void;
 };
 
 /**
- * Tracks which suites are collapsed in the Test Cases column for the active set.
- *
- * The state is mirrored to lowdb via `persistUserPreferencesPatch` so that the
- * collapse state survives reloads on a per-set basis. When the active set
- * changes the hook re-seeds from the cached preferences.
+ * Mirrors collapse state to lowdb on every toggle so it survives reloads
+ * per-set. Re-seeds from the cached preferences when `setId` changes.
  */
 export function useSuiteCollapse(setId: string | null): SuiteCollapseApi {
   const [collapsed, setCollapsed] = React.useState<Set<string>>(() =>
@@ -62,25 +57,6 @@ export function useSuiteCollapse(setId: string | null): SuiteCollapseApi {
     [persist]
   );
 
-  const collapseAll = React.useCallback(
-    (suiteIds: readonly number[]) => {
-      setCollapsed(() => {
-        const next = new Set(suiteIds.map((id) => String(id)));
-        persist(next);
-        return next;
-      });
-    },
-    [persist]
-  );
-
-  const expandAll = React.useCallback(() => {
-    setCollapsed(() => {
-      const next = new Set<string>();
-      persist(next);
-      return next;
-    });
-  }, [persist]);
-
   const isCollapsed = React.useCallback(
     (suiteId: number) => collapsed.has(String(suiteId)),
     [collapsed]
@@ -89,9 +65,7 @@ export function useSuiteCollapse(setId: string | null): SuiteCollapseApi {
   return {
     collapsedSuiteIds: collapsed,
     isCollapsed,
-    toggle,
-    collapseAll,
-    expandAll
+    toggle
   };
 }
 

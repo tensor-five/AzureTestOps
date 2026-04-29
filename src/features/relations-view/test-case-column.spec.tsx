@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import * as React from "react";
 import { act } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { createRoot } from "react-dom/client";
 
 import { TestCaseColumn } from "./test-case-column.js";
@@ -82,9 +82,7 @@ function makeCollapse(collapsedIds: number[]): SuiteCollapseApi {
   return {
     collapsedSuiteIds: set,
     isCollapsed: (id) => set.has(String(id)),
-    toggle: vi.fn(),
-    collapseAll: vi.fn(),
-    expandAll: vi.fn()
+    toggle: () => {}
   };
 }
 

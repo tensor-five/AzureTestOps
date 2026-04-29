@@ -9,10 +9,6 @@ export type WorkItemColumnProps = {
   positioning: ItemPositioningApi;
 };
 
-/**
- * Right column: flat list of every work item returned by the saved query,
- * sorted by id so the order is stable across refreshes.
- */
 export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
   const sorted = React.useMemo(
     () => props.workItems.slice().sort((a, b) => a.id - b.id),

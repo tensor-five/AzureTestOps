@@ -16,11 +16,6 @@ export type RelationsPaneProps = {
   hasActiveSet: boolean;
 };
 
-/**
- * Phase 6 orchestrator: two-column relations view. Owns no business logic —
- * delegates positioning + collapse state to dedicated hooks and the actual
- * rendering to the column components.
- */
 export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
   const positioning = useItemPositioning(props.setId, props.mode === "move-items");
   const collapse = useSuiteCollapse(props.setId);

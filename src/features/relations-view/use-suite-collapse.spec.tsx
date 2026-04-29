@@ -129,29 +129,4 @@ describe("useSuiteCollapse", () => {
     harness.unmount();
   });
 
-  it("collapseAll and expandAll touch all supplied ids", () => {
-    const harness = setupHookHarness(() => useSuiteCollapse("set-1"));
-
-    act(() => {
-      harness.result.current.collapseAll([1, 2, 3]);
-    });
-
-    expect(harness.result.current.isCollapsed(1)).toBe(true);
-    expect(harness.result.current.isCollapsed(2)).toBe(true);
-    expect(harness.result.current.isCollapsed(3)).toBe(true);
-    expect(persistSpy).toHaveBeenLastCalledWith({
-      setLayouts: { "set-1": { collapsedSuites: ["1", "2", "3"] } }
-    });
-
-    act(() => {
-      harness.result.current.expandAll();
-    });
-
-    expect(harness.result.current.collapsedSuiteIds.size).toBe(0);
-    expect(persistSpy).toHaveBeenLastCalledWith({
-      setLayouts: { "set-1": { collapsedSuites: [] } }
-    });
-
-    harness.unmount();
-  });
 });
