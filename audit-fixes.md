@@ -25,7 +25,7 @@
 
 ### M1 — `relations-pane.tsx` Berechnungslogik in Hook/Util auslagern
 
-- [ ] **Datei:** `src/features/relations-view/relations-pane.tsx:387-490`
+- [x] **Datei:** `src/features/relations-view/relations-pane.tsx:387-490`
 - **Helpers inline:** `buildSnapshotRelationSet`, `buildLineSpecs`, `resolvePairFromItemKeys`, `parseLineId`, `countPositions`.
 - **AGENTS.md §1:** *„`relations-pane.tsx` nur als Orchestrator weiterentwickeln … neue komplexe State-Blöcke zuerst als Hook anlegen."*
 - **Fix:** Auslagern in `use-snapshot-relations.ts` (oder reine Util `relation-line-specs.ts`) + dedizierte Specs.

@@ -1,8 +1,6 @@
 import * as React from "react";
 
 import type { ActiveSetSnapshot } from "../../domain/sets/set.js";
-import type { TestCaseProjection } from "../../domain/test-management/test-case-projection.js";
-import type { WorkItem } from "../../domain/work-items/work-item.js";
 import {
   FilterBar,
   toggleStringList,
@@ -26,15 +24,14 @@ import { useSuiteCollapse } from "./use-suite-collapse.js";
 import { useRelationMutations } from "./use-relation-mutations.js";
 import { useLineDrawing } from "./use-line-drawing.js";
 import { useLineSelection } from "./use-line-selection.js";
+import { RelationLineLayer } from "./relation-line-layer.js";
 import {
-  RelationLineLayer,
-  type LineSpec
-} from "./relation-line-layer.js";
-import {
-  parseItemKey,
-  testCaseItemKey,
-  workItemItemKey
-} from "./item-key.js";
+  buildLineSpecs,
+  buildSnapshotRelationSet,
+  countPositions,
+  parseLineId,
+  resolvePairFromItemKeys
+} from "./relation-line-specs.js";
 
 export type RelationsPaneProps = {
   setId: string | null;
@@ -44,8 +41,6 @@ export type RelationsPaneProps = {
   error: string | null;
   hasActiveSet: boolean;
 };
-
-const LINE_ID_SEPARATOR = "->";
 
 export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
   const positioning = useItemPositioning(props.setId, props.mode === "move-items");
@@ -384,107 +379,3 @@ function RelationErrorBanner(props: {
   );
 }
 
-function buildSnapshotRelationSet(snapshot: ActiveSetSnapshot | null): Set<string> {
-  const set = new Set<string>();
-  if (!snapshot) {
-    return set;
-  }
-  const workItemIdsInQuery = new Set<number>();
-  for (const wi of snapshot.workItemsFromQuery) {
-    workItemIdsInQuery.add(wi.id);
-  }
-  const testCaseIdsInProjections = new Set<number>();
-  for (const projection of snapshot.projections) {
-    testCaseIdsInProjections.add(projection.workItemId);
-  }
-
-  // System.LinkTypes.Related is symmetric in Azure DevOps — both work items
-  // mirror the link in their `relations[]`. We walk both sides to be robust
-  // against partial data (e.g. older work items that lost the inverse).
-  for (const projection of snapshot.projections) {
-    for (const relatedId of projection.relatedIds) {
-      if (workItemIdsInQuery.has(relatedId)) {
-        set.add(`${projection.workItemId}::${relatedId}`);
-      }
-    }
-  }
-  for (const wi of snapshot.workItemsFromQuery) {
-    for (const relatedId of wi.relatedIds) {
-      if (testCaseIdsInProjections.has(relatedId)) {
-        set.add(`${relatedId}::${wi.id}`);
-      }
-    }
-  }
-  return set;
-}
-
-function buildLineSpecs(
-  projections: readonly TestCaseProjection[],
-  workItems: readonly WorkItem[],
-  mutations: ReturnType<typeof useRelationMutations>
-): LineSpec[] {
-  // Lines render only for endpoints that survive the active filter — a
-  // hidden endpoint would leave a line floating into nothing, so we anchor
-  // both sides to what's actually on screen.
-  const workItemIds = workItems.map((wi) => wi.id);
-  const seenLineIds = new Set<string>();
-  const out: LineSpec[] = [];
-
-  for (const projection of projections) {
-    const tcKey = testCaseItemKey(projection.workItemId, projection.suiteId);
-    for (const wiId of workItemIds) {
-      if (!mutations.isRelated(projection.workItemId, wiId)) {
-        continue;
-      }
-      const wiKey = workItemItemKey(wiId);
-      const lineId = `${tcKey}${LINE_ID_SEPARATOR}${wiKey}`;
-      if (seenLineIds.has(lineId)) {
-        continue;
-      }
-      seenLineIds.add(lineId);
-      out.push({
-        lineId,
-        testCaseItemKey: tcKey,
-        workItemItemKey: wiKey,
-        testCaseWorkItemId: projection.workItemId,
-        workItemWorkItemId: wiId,
-        pending: mutations.isPending(projection.workItemId, wiId)
-      });
-    }
-  }
-
-  return out;
-}
-
-function resolvePairFromItemKeys(
-  a: string,
-  b: string
-): { testCaseId: number; workItemId: number } | null {
-  const parsedA = parseItemKey(a);
-  const parsedB = parseItemKey(b);
-  if (!parsedA || !parsedB) {
-    return null;
-  }
-  if (parsedA.kind === "test-case" && parsedB.kind === "work-item") {
-    return { testCaseId: parsedA.workItemId, workItemId: parsedB.workItemId };
-  }
-  if (parsedA.kind === "work-item" && parsedB.kind === "test-case") {
-    return { testCaseId: parsedB.workItemId, workItemId: parsedA.workItemId };
-  }
-  return null;
-}
-
-function parseLineId(lineId: string): { testCaseId: number; workItemId: number } | null {
-  const [left, right] = lineId.split(LINE_ID_SEPARATOR);
-  if (!left || !right) {
-    return null;
-  }
-  return resolvePairFromItemKeys(left, right);
-}
-
-function countPositions(positions: Readonly<Record<string, unknown>>): number {
-  // A change in offset count is the cheapest signal that the layout shifted;
-  // value comparisons are unnecessary because the SVG also recomputes on
-  // ResizeObserver events fired by each card's `transform` style change.
-  return Object.keys(positions).length;
-}
