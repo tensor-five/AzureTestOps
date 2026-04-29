@@ -8,6 +8,7 @@ import { buildDraggableCardSurface } from "./draggable-card.js";
 export type TestCaseCardProps = {
   projection: TestCaseProjection;
   positioning: ItemPositioningApi;
+  onEditPointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
 };
 
 export function TestCaseCard(props: TestCaseCardProps): React.ReactElement {
@@ -15,11 +16,16 @@ export function TestCaseCard(props: TestCaseCardProps): React.ReactElement {
   const itemKey = testCaseItemKey(projection.workItemId, projection.suiteId);
   const slug = outcomeSlug(projection.lastOutcome);
 
-  const surface = buildDraggableCardSurface(positioning, itemKey, [
-    "relations-view-card",
-    "relations-view-card-test-case",
-    `relations-view-card-outcome-${slug}`
-  ]);
+  const surface = buildDraggableCardSurface(
+    positioning,
+    itemKey,
+    [
+      "relations-view-card",
+      "relations-view-card-test-case",
+      `relations-view-card-outcome-${slug}`
+    ],
+    { editPointerDown: props.onEditPointerDown }
+  );
 
   return (
     <article

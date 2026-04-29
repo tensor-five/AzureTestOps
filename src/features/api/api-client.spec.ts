@@ -3,7 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   ApiError,
+  createRelationRequest,
   createSetRequest,
+  deleteRelationRequest,
   deleteSetRequest,
   getAdoContext,
   listSavedQueries,
@@ -163,5 +165,27 @@ describe("api-client", () => {
 
     const result = await listSuitesForPlan(123);
     expect(result).toEqual([{ id: 1, name: "Root", parentSuiteId: null, suiteType: null }]);
+  });
+
+  it("posts to /phase2/relations with the link body", async () => {
+    const fetchSpy = installFetch(() => jsonResponse(200, { status: "OK" }));
+
+    await createRelationRequest({ sourceId: 11, targetId: 22 });
+
+    expect(fetchSpy.mock.calls[0]?.[0]).toBe("/phase2/relations");
+    const init = (fetchSpy.mock.calls[0]?.[1] ?? {}) as RequestInit;
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({ sourceId: 11, targetId: 22 });
+    expect((init.headers as Record<string, string>)["x-ado-csrf-token"]).toBe("csrf-abc");
+  });
+
+  it("sends a DELETE with body to /phase2/relations on remove", async () => {
+    const fetchSpy = installFetch(() => jsonResponse(200, { status: "OK" }));
+
+    await deleteRelationRequest({ sourceId: 33, targetId: 44 });
+
+    const init = (fetchSpy.mock.calls[0]?.[1] ?? {}) as RequestInit;
+    expect(init.method).toBe("DELETE");
+    expect(JSON.parse(init.body as string)).toEqual({ sourceId: 33, targetId: 44 });
   });
 });

@@ -782,23 +782,30 @@ Acceptance check:
 
 ---
 
-### Phase 7 — Line Layer & Edit Mode `[ ]`
+### Phase 7 — Line Layer & Edit Mode `[x]` _(pending commit)_
 
 **Goal:** edit relations live in Azure DevOps.
 **Acceptance:** existing `Related` links render as lines on load; drag-from-source → drop-on-target adds a relation (live PATCH W1); selecting a line + Delete removes it (live PATCH W2). Optimistic update with rollback on PATCH failure.
 
 Files:
-- [ ] `features/relations-view/relation-line-layer.tsx` — SVG overlay
-- [ ] `features/relations-view/use-line-drawing.ts` — drag-to-connect, hover hit-testing on lines (point-to-line distance threshold)
-- [ ] `features/relations-view/use-relation-mutations.ts` — TanStack Query mutations with optimistic update + rollback
-- [ ] `features/relations-view/use-line-selection.ts` — single-selection state, Delete keybinding
-- [ ] HTTP routes (Phase 5 placeholder; finalize here):
-  - [ ] `POST /phase2/relations` body `{ sourceId, targetId }` → uses `CreateRelation` use case
-  - [ ] `DELETE /phase2/relations` body `{ sourceId, targetId }` → uses `DeleteRelation` use case
+- [x] `features/relations-view/relation-line-layer.tsx` — SVG overlay (anchor-driven coords, ResizeObserver + scroll/resize listeners)
+- [x] `features/relations-view/use-line-drawing.ts` — drag-to-connect via window pointer listeners; `document.elementFromPoint` resolves drop target
+- [x] `features/relations-view/use-relation-mutations.ts` — local "added/removed" overrides over snapshot truth, optimistic update + rollback on API rejection (TanStack Query deferred — single-user local tool, plain hook is enough; revisit in Phase 9 if request fan-out grows)
+- [x] `features/relations-view/use-line-selection.ts` — single-selection state, Delete/Backspace keybinding (skips when typing in inputs), Esc clears
+- [x] HTTP routes:
+  - [x] `POST /phase2/relations` body `{ sourceId, targetId }` → uses `CreateRelation` use case
+  - [x] `DELETE /phase2/relations` body `{ sourceId, targetId }` → uses `DeleteRelation` use case
+
+Side-effects landed in this phase:
+- [x] `features/relations-view/item-key.ts` gained `parseItemKey` so the line layer / mutation hook can decode raw `data-item-key` values back to `{ workItemId, suiteId? }` without re-running the regex in three places.
+- [x] `draggable-card.ts` learned an optional `editPointerDown` so cards route their pointer-down to either positioning (move-mode) or line-drawing (edit-mode); `RelationsPane` is the only consumer so far. Picks one role per gesture — the two modes never overlap.
+- [x] `relations-pane.tsx` now owns the `containerRef` for the SVG overlay, builds the snapshot relation set from **both** sides of `relatedIds` (Azure mirrors `System.LinkTypes.Related`, but real plans see partial data), and threads mutations + drawing + selection into the column tree.
+- [x] CSS additions in `local-ui-shell.css`: `.relations-view` is now `position: relative` (so the SVG can `inset: 0`), and we added `.relations-view-line-layer/-line/-line-hitbox/-line-stroke/-line-selected/-line-pending/-line-draft` plus the `.relations-view-error-banner` that surfaces failed PATCHes.
+- [x] Snapshot relations are filtered to pairs whose work-item id appears in the saved query result — so a Test Case's stale `relatedIds` to deleted/unscoped work items don't render as lines.
 
 Acceptance check:
-- [ ] Quality gate green
-- [ ] Commit hash: ____
+- [x] Quality gate green (50 test files, 265 tests, 90 source files cycle-free)
+- [x] Commit hash: ____ (pending push)
 
 ---
 

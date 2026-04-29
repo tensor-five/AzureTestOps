@@ -7,6 +7,7 @@ import type { ItemPositioningApi } from "./use-item-positioning.js";
 export type WorkItemColumnProps = {
   workItems: readonly WorkItem[];
   positioning: ItemPositioningApi;
+  onEditPointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
 };
 
 export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
@@ -27,7 +28,11 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
         <ol className="relations-view-work-item-list">
           {sorted.map((workItem) => (
             <li key={workItem.id} className="relations-view-work-item-list-item">
-              <WorkItemCard workItem={workItem} positioning={props.positioning} />
+              <WorkItemCard
+                workItem={workItem}
+                positioning={props.positioning}
+                onEditPointerDown={props.onEditPointerDown}
+              />
             </li>
           ))}
         </ol>

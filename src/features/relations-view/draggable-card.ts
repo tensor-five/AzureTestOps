@@ -8,16 +8,31 @@ export type DraggableCardSurface = {
   onPointerDown: (event: React.PointerEvent<HTMLElement>) => void;
 };
 
+export type DraggableCardSurfaceOptions = {
+  /**
+   * Pointer-down handler used in Edit-relations mode (positioning disabled).
+   * Receives the same `itemKey` baked into the surface so consumers don't
+   * have to thread it through props.
+   */
+  editPointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
+};
+
 /**
  * Bundles the drag-related class modifiers, transform style and pointer-down
  * handler that every card in the RelationsView shares. Card components keep
  * domain-specific class names (outcome, work-item type) local; only the
  * drag/positioning concerns live here.
+ *
+ * The pointer-down handler picks one role per gesture based on
+ * `positioning.enabled`: if true, dragging the card snaps its position; if
+ * false (Edit-relations mode), the optional `editPointerDown` starts a line.
+ * Both modes never run together, so no debouncing is needed.
  */
 export function buildDraggableCardSurface(
   positioning: ItemPositioningApi,
   itemKey: string,
-  baseClassNames: readonly string[]
+  baseClassNames: readonly string[],
+  options: DraggableCardSurfaceOptions = {}
 ): DraggableCardSurface {
   const offset = positioning.getOffset(itemKey);
   const dragging = positioning.isDragging(itemKey);
@@ -25,6 +40,8 @@ export function buildDraggableCardSurface(
   const classNames = [...baseClassNames];
   if (positioning.enabled) {
     classNames.push("relations-view-card-draggable");
+  } else if (options.editPointerDown) {
+    classNames.push("relations-view-card-line-source");
   }
   if (dragging) {
     classNames.push("relations-view-card-dragging");
@@ -33,7 +50,13 @@ export function buildDraggableCardSurface(
   return {
     className: classNames.join(" "),
     style: cardTransformStyle(offset),
-    onPointerDown: (event) => positioning.startDrag(itemKey, event)
+    onPointerDown: (event) => {
+      if (positioning.enabled) {
+        positioning.startDrag(itemKey, event);
+        return;
+      }
+      options.editPointerDown?.(itemKey, event);
+    }
   };
 }
 

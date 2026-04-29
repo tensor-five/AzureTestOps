@@ -31,6 +31,7 @@ import { registerAdoContextRoutes } from "./routes/ado-context-routes.js";
 import { registerSetRoutes } from "./routes/sets-routes.js";
 import { registerCatalogRoutes } from "./routes/catalog-routes.js";
 import { registerActiveSetSnapshotStreamRoute } from "./routes/active-set-snapshot-route.js";
+import { registerRelationsRoutes } from "./routes/relations-routes.js";
 import type { AdoRuntime } from "../composition/runtime.js";
 
 const execFileAsync = promisify(execFile);
@@ -180,6 +181,7 @@ function buildRouter(deps: RouterDeps): Router {
         adoContext: deps.deps.adoContext
       })
     : null;
+  const relationsRoutes = deps.deps.ado ? registerRelationsRoutes(deps.deps.ado) : null;
 
   return async function route(req, res) {
     const method = req.method ?? "GET";
@@ -223,6 +225,7 @@ function buildRouter(deps: RouterDeps): Router {
     if (await setRoutes(method, pathname, req, res)) return;
     if (catalogRoutes && (await catalogRoutes(method, pathname, url, req, res))) return;
     if (snapshotRoute && (await snapshotRoute(method, pathname, url, req, res))) return;
+    if (relationsRoutes && (await relationsRoutes(method, pathname, req, res))) return;
 
     if (method === "GET" && (pathname === "/" || pathname === "/index.html")) {
       writeHtml(res, 200, renderRootHtml(deps.csrfToken));

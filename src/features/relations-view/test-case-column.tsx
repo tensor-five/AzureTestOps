@@ -15,6 +15,7 @@ export type TestCaseColumnProps = {
   projections: readonly TestCaseProjection[];
   positioning: ItemPositioningApi;
   collapse: SuiteCollapseApi;
+  onEditPointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
 };
 
 type SuiteWithProjections = {
@@ -54,6 +55,7 @@ export function TestCaseColumn(props: TestCaseColumnProps): React.ReactElement {
               entry={entry}
               positioning={props.positioning}
               collapse={props.collapse}
+              onEditPointerDown={props.onEditPointerDown}
             />
           ))}
         </ol>
@@ -66,6 +68,7 @@ function SuiteGroup(props: {
   entry: SuiteWithProjections;
   positioning: ItemPositioningApi;
   collapse: SuiteCollapseApi;
+  onEditPointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
 }): React.ReactElement {
   const { entry, positioning, collapse } = props;
   const isCollapsed = collapse.isCollapsed(entry.suite.id);
@@ -97,6 +100,7 @@ function SuiteGroup(props: {
               key={`${projection.workItemId}::${projection.suiteId}`}
               projection={projection}
               positioning={positioning}
+              onEditPointerDown={props.onEditPointerDown}
             />
           ))}
         </div>

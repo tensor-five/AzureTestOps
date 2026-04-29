@@ -104,6 +104,16 @@ export async function listSavedQueries(): Promise<SavedQuery[]> {
   return payload.queries;
 }
 
+export type RelationLinkRequest = { sourceId: number; targetId: number };
+
+export async function createRelationRequest(link: RelationLinkRequest): Promise<void> {
+  await jsonFetch<{ status: string }>("/phase2/relations", { method: "POST", body: link });
+}
+
+export async function deleteRelationRequest(link: RelationLinkRequest): Promise<void> {
+  await jsonFetch<{ status: string }>("/phase2/relations", { method: "DELETE", body: link });
+}
+
 type FetchInit = {
   method: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
