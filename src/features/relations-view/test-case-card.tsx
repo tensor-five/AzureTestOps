@@ -11,10 +11,31 @@ export type TestCaseCardProps = {
   onEditPointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
 };
 
+type OutcomeDisplay = { slug: string; shortLabel: string };
+
+const OUTCOME_TABLE: Record<string, OutcomeDisplay> = {
+  passed: { slug: "passed", shortLabel: "✓" },
+  failed: { slug: "failed", shortLabel: "✗" },
+  blocked: { slug: "blocked", shortLabel: "■" },
+  notapplicable: { slug: "notapplicable", shortLabel: "N/A" },
+  notrun: { slug: "notrun", shortLabel: "—" }
+};
+
+function outcomeDisplay(outcome: string): OutcomeDisplay {
+  const lowered = outcome.toLowerCase();
+  if (lowered in OUTCOME_TABLE) {
+    return OUTCOME_TABLE[lowered];
+  }
+  return {
+    slug: "other",
+    shortLabel: outcome ? outcome.slice(0, 3).toUpperCase() : "—"
+  };
+}
+
 export function TestCaseCard(props: TestCaseCardProps): React.ReactElement {
   const { projection, positioning } = props;
   const itemKey = testCaseItemKey(projection.workItemId, projection.suiteId);
-  const slug = outcomeSlug(projection.lastOutcome);
+  const display = outcomeDisplay(projection.lastOutcome);
 
   const surface = buildDraggableCardSurface(
     positioning,
@@ -22,7 +43,7 @@ export function TestCaseCard(props: TestCaseCardProps): React.ReactElement {
     [
       "relations-view-card",
       "relations-view-card-test-case",
-      `relations-view-card-outcome-${slug}`
+      `relations-view-card-outcome-${display.slug}`
     ],
     { editPointerDown: props.onEditPointerDown }
   );
@@ -34,42 +55,30 @@ export function TestCaseCard(props: TestCaseCardProps): React.ReactElement {
       onPointerDown={surface.onPointerDown}
       data-relations-anchor="left"
       data-item-key={itemKey}
+      title={buildTooltip(projection)}
     >
-      <header className="relations-view-card-header">
-        <span className="relations-view-card-id">#{projection.workItemId}</span>
-        <span className={`relations-view-outcome-chip relations-view-outcome-chip-${slug}`}>
-          {projection.lastOutcome || "—"}
-        </span>
-      </header>
-      <h4 className="relations-view-card-title">{projection.title}</h4>
-      <dl className="relations-view-card-meta">
-        <div>
-          <dt>State</dt>
-          <dd>{projection.state || "—"}</dd>
-        </div>
-        <div>
-          <dt>Assigned</dt>
-          <dd>{projection.assignedTo ?? "—"}</dd>
-        </div>
-        <div>
-          <dt>Suite</dt>
-          <dd title={projection.suitePath}>{projection.suitePath}</dd>
-        </div>
-      </dl>
+      <span className="relations-view-card-id">#{projection.workItemId}</span>
+      <span
+        className={`relations-view-outcome-chip relations-view-outcome-chip-${display.slug}`}
+        aria-label={`Outcome: ${projection.lastOutcome || "Unknown"}`}
+      >
+        {display.shortLabel}
+      </span>
+      <span className="relations-view-card-title">{projection.title}</span>
     </article>
   );
 }
 
-function outcomeSlug(outcome: string): string {
-  const lowered = outcome.toLowerCase();
-  switch (lowered) {
-    case "passed":
-    case "failed":
-    case "blocked":
-    case "notapplicable":
-    case "notrun":
-      return lowered;
-    default:
-      return "other";
+function buildTooltip(p: TestCaseProjection): string {
+  const lines = [
+    `#${p.workItemId} — ${p.title}`,
+    `Outcome: ${p.lastOutcome || "—"}`,
+    `State: ${p.state || "—"}`,
+    `Assigned: ${p.assignedTo ?? "—"}`,
+    `Suite: ${p.suitePath}`
+  ];
+  if (p.tags.length > 0) {
+    lines.push(`Tags: ${p.tags.join(", ")}`);
   }
+  return lines.join("\n");
 }

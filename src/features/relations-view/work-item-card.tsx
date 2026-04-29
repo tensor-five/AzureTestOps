@@ -34,35 +34,54 @@ export function WorkItemCard(props: WorkItemCardProps): React.ReactElement {
       onPointerDown={surface.onPointerDown}
       data-relations-anchor="right"
       data-item-key={itemKey}
+      title={buildTooltip(workItem)}
     >
-      <header className="relations-view-card-header">
-        <span className="relations-view-card-id">#{workItem.id}</span>
-        <span className={`relations-view-type-chip relations-view-type-chip-${typeSlug}`}>
-          {workItem.workItemType || "Unknown"}
-        </span>
-      </header>
-      <h4 className="relations-view-card-title">{workItem.title}</h4>
-      <dl className="relations-view-card-meta">
-        <div>
-          <dt>State</dt>
-          <dd>{workItem.state || "—"}</dd>
-        </div>
-        <div>
-          <dt>Assigned</dt>
-          <dd>{workItem.assignedTo ?? "—"}</dd>
-        </div>
-        {workItem.tags.length > 0 ? (
-          <div>
-            <dt>Tags</dt>
-            <dd>{workItem.tags.join(", ")}</dd>
-          </div>
-        ) : null}
-      </dl>
+      <span className="relations-view-card-id">#{workItem.id}</span>
+      <span
+        className={`relations-view-type-chip relations-view-type-chip-${typeSlug}`}
+        aria-label={`Type: ${workItem.workItemType || "Unknown"}`}
+      >
+        {workItemShortType(workItem.workItemType)}
+      </span>
+      <span className="relations-view-card-title">{workItem.title}</span>
     </article>
   );
+}
+
+function buildTooltip(wi: WorkItem): string {
+  const lines = [
+    `#${wi.id} — ${wi.title}`,
+    `Type: ${wi.workItemType || "Unknown"}`,
+    `State: ${wi.state || "—"}`,
+    `Assigned: ${wi.assignedTo ?? "—"}`
+  ];
+  if (wi.tags.length > 0) {
+    lines.push(`Tags: ${wi.tags.join(", ")}`);
+  }
+  if (wi.areaPath) {
+    lines.push(`Area: ${wi.areaPath}`);
+  }
+  return lines.join("\n");
 }
 
 function workItemTypeSlug(type: string): string {
   const trimmed = type.trim().toLowerCase().replace(/\s+/g, "-");
   return trimmed.length > 0 ? trimmed : "unknown";
+}
+
+function workItemShortType(type: string): string {
+  const trimmed = type.trim();
+  if (trimmed.length === 0) {
+    return "—";
+  }
+  // Keep the chip narrow — most ADO type names fit in 3-4 chars when shortened
+  // by their leading capitals (e.g. "User Story" → "US", "Bug" → "BUG").
+  const initials = trimmed
+    .split(/\s+/)
+    .map((word) => word[0]?.toUpperCase() ?? "")
+    .join("");
+  if (initials.length >= 2) {
+    return initials;
+  }
+  return trimmed.slice(0, 3).toUpperCase();
 }
