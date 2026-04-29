@@ -59,7 +59,7 @@ Currently **closed source**; will follow AzureGanttOps and become open source on
 | 8 | Filter persistence | **Per Set in lowdb** | Each set tells a different story; filter state belongs to the story. |
 | 9 | Set-switcher UI | **Dropdown in the header** | Same pattern as AzureGanttOps' query dropdown, scales to many sets. |
 | 10 | Filters v1 | **Last Outcome (Test Cases) · Title full-text (both) · Standard work-item filters (State, AssignedTo, Tags, WorkItemType)** | Covers 95% of triage workflows; "Has/Has-no relation" deferred to v1.x. |
-| 11 | Repo / OSS | **Closed source initially** (local `git init`, no remote); structurally OSS-ready | Allows fast iteration; OSS path mirrors AzureGanttOps once v1 ships. |
+| 11 | Repo / OSS | **Closed source initially** (private `tensor-five/AzureTestOps` on GitHub since 2026-04-29); structurally OSS-ready | Allows fast iteration; OSS path mirrors AzureGanttOps once v1 ships — flip visibility to public, no migration needed. |
 
 ---
 
@@ -880,7 +880,7 @@ Add new ADRs as `docs/adr/0XXX-<slug>.md`. Format: Context · Decision · Conseq
 
 ## 15 · Repo / Operations
 
-- Local-only git, no remote yet. Closed source (see §3 row 11).
+- Remote: `https://github.com/tensor-five/AzureTestOps` (private, same org as AzureGanttOps). Closed source until v1 ships (see §3 row 11) — flip the GitHub repo to public as part of the OSS-readiness checklist in §14.
 - Default port `8081` (`PORT` env overrides) so it can run alongside AzureGanttOps on `8080`.
 - Local data directory: `~/.azure-testops/` (`user-preferences.json` + `ado-context.json`).
 - Commit style: `feat:` / `fix:` / `refactor:` with `Co-Authored-By: T5.Code <code@tensorfive.com>` trailer. **No** Claude/AI attribution. **No** emojis in commits.
