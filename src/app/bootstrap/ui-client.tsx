@@ -18,7 +18,7 @@ import { useAuthPreflight } from "../../features/navigation/use-auth-preflight.j
 import { useSetManagement } from "../../features/set-management/use-set-management.js";
 import { SetManagerDialog } from "../../features/set-management/set-manager-dialog.js";
 import { useActiveSetSnapshot } from "../../features/relations-view/use-active-set-snapshot.js";
-import { RelationsViewPlaceholder } from "../../features/relations-view/relations-view-placeholder.js";
+import { RelationsPane } from "../../features/relations-view/relations-pane.js";
 import {
   DEFAULT_MODE,
   nextMode,
@@ -95,7 +95,8 @@ function AppShell(): React.ReactElement {
         snapshotError={snapshotState.error}
       />
       <div className="ui-shell-content">
-        <RelationsViewPlaceholder
+        <RelationsPane
+          setId={setManagement.activeSetId}
           snapshot={snapshotState.snapshot}
           mode={mode}
           isLoading={snapshotState.isLoading}

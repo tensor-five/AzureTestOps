@@ -753,25 +753,31 @@ Acceptance check:
 
 ---
 
-### Phase 6 — RelationsView (two columns + Move mode) `[ ]`
+### Phase 6 — RelationsView (two columns + Move mode) `[x]` _(pending commit)_
 
 **Goal:** rendered view, draggable items, suite tree collapsible.
 **Acceptance:** items render in two columns; suite hierarchy on the left collapses per suite; positions snap to 20 px grid and persist per set.
 
 Files:
-- [ ] `features/relations-view/relations-pane.tsx` (orchestrator, no business logic)
-- [ ] `features/relations-view/test-case-column.tsx` — suite tree, indent by depth, collapse toggles
-- [ ] `features/relations-view/work-item-column.tsx` — flat list from query
-- [ ] `features/relations-view/test-case-card.tsx`, `work-item-card.tsx`
-- [ ] Hooks:
-  - [ ] `use-item-positioning.ts` — pointer events, snap-to-grid, optimistic-then-persist
-  - [ ] `use-suite-collapse.ts` — collapse state per suite
-  - [ ] `use-mode-switch.ts` — see §7.3
-- [ ] `local-ui-shell.css` — `.relations-view*` styles per §7.4
-- [ ] Layout state persisted via `persistUserPreferencesPatch({ setLayouts: { [setId]: { positions, collapsedSuites } } })`
+- [x] `features/relations-view/relations-pane.tsx` (orchestrator, no business logic)
+- [x] `features/relations-view/test-case-column.tsx` — suite tree, indent by depth, collapse toggles
+- [x] `features/relations-view/work-item-column.tsx` — flat list from query
+- [x] `features/relations-view/test-case-card.tsx`, `work-item-card.tsx`
+- [x] Hooks:
+  - [x] `use-item-positioning.ts` — pointer events, snap-to-grid, optimistic-then-persist
+  - [x] `use-suite-collapse.ts` — collapse state per suite
+  - [x] `use-mode-switch.ts` — folded into the existing `mode.ts` helpers in `ui-client.tsx`; no separate hook needed (state already lives in the orchestrator per §7.3)
+- [x] `local-ui-shell.css` — `.relations-view*` styles per §7.4
+- [x] Layout state persisted via `persistUserPreferencesPatch({ setLayouts: { [setId]: { positions, collapsedSuites } } })`
+
+Side-effects landed in this phase:
+- [x] Added `features/relations-view/item-key.ts` to mint stable `tc:<workItemId>:<suiteId>` / `wi:<workItemId>` keys for the positions map (same Test Case can appear in multiple suites, so per §5 the test-case key carries `suiteId`).
+- [x] Removed `features/relations-view/relations-view-placeholder.tsx`; `ui-client.tsx` now wires `RelationsPane` directly and the redundant `.relations-view-summary` CSS block was deleted.
+- [x] Suite-tree collapse hides every descendant suite below the collapsed node (depth-tracking filter in `test-case-column.tsx`), matching the "click parent → entire subtree collapses" affordance.
+- [x] Positions are stored as additive offsets `{x, y}` applied via `transform: translate3d(...)` on top of the natural in-flow position so new items always land in a deterministic spot before any drag.
 
 Acceptance check:
-- [ ] Quality gate green
+- [x] Quality gate green (45 test files, 231 tests, 84 source files cycle-free)
 - [ ] Commit hash: ____
 
 ---
