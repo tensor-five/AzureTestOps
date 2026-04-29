@@ -749,7 +749,7 @@ Phase-5 hardening (post-audit, follow-up commit):
 
 Acceptance check:
 - [x] Quality gate green (41 test files, 213 tests, 77 source files cycle-free)
-- [x] Commit hash: `beeb147` (initial), follow-up landed in next commit
+- [x] Commit hashes: `beeb147` (initial), `73f5b03` (post-audit hardening)
 
 ---
 
