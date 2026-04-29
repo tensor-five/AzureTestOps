@@ -8,8 +8,8 @@ import type { Outcome } from "./outcome.js";
 export type TestResult = {
   resultId: number;
   runId: number;
-  /** Maps to the Test Case work item id. */
-  testCaseReferenceId: number;
+  /** Test Case Work Item id (`testCase.id`, not `testCaseReferenceId` — those diverge in ADO). */
+  workItemId: number;
   suiteId: number | null;
   pointId: number | null;
   outcome: Outcome;

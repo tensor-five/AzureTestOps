@@ -251,6 +251,9 @@ function toTestPoint(value: unknown, fallbackSuiteId: number): TestPoint | null 
   const lastRun = (candidate.lastTestRun ?? {}) as Record<string, unknown>;
   const lastResult = (candidate.lastResult ?? {}) as Record<string, unknown>;
 
+  const directOutcome = typeof candidate.outcome === "string" ? candidate.outcome : null;
+  const lastResultOutcome = typeof lastResult.outcome === "string" ? lastResult.outcome : null;
+
   return {
     pointId,
     workItemId,
@@ -258,7 +261,8 @@ function toTestPoint(value: unknown, fallbackSuiteId: number): TestPoint | null 
     configurationId: readNumber(configuration.id),
     configurationName: typeof configuration.name === "string" ? configuration.name : null,
     lastRunId: readNumber(lastRun.id),
-    lastResultId: readNumber(lastResult.id)
+    lastResultId: readNumber(lastResult.id),
+    lastOutcome: directOutcome ?? lastResultOutcome
   };
 }
 
@@ -293,17 +297,18 @@ function toTestResult(value: unknown): TestResult | null {
   const candidate = value as Record<string, unknown>;
   const resultId = readNumber(candidate.id);
   const runId = readNumber((candidate.testRun as { id?: unknown } | undefined)?.id);
-  const testCaseReferenceId =
-    readNumber(candidate.testCaseReferenceId) ??
-    readNumber((candidate.testCase as { id?: unknown } | undefined)?.id);
-  if (resultId === null || runId === null || testCaseReferenceId === null) {
+  // testCase.id is the Work Item ID; testCaseReferenceId is an internal ref. Prefer the former.
+  const workItemId =
+    readNumber((candidate.testCase as { id?: unknown } | undefined)?.id) ??
+    readNumber(candidate.testCaseReferenceId);
+  if (resultId === null || runId === null || workItemId === null) {
     return null;
   }
 
   return {
     resultId,
     runId,
-    testCaseReferenceId,
+    workItemId,
     suiteId: readNumber((candidate.testSuite as { id?: unknown } | undefined)?.id),
     pointId: readNumber((candidate.testPoint as { id?: unknown } | undefined)?.id),
     outcome: typeof candidate.outcome === "string" ? candidate.outcome : "Unspecified",

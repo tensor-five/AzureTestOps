@@ -52,7 +52,7 @@ describe("loadActiveSetSnapshot", () => {
     const result: TestResult = {
       resultId: 7001,
       runId: 5000,
-      testCaseReferenceId: 101,
+      workItemId: 101,
       suiteId: 1,
       pointId: 11,
       outcome: "Passed",
@@ -65,7 +65,8 @@ describe("loadActiveSetSnapshot", () => {
       configurationId: 1,
       configurationName: "Default",
       lastRunId: null,
-      lastResultId: null
+      lastResultId: null,
+      lastOutcome: null
     };
 
     const testCase: WorkItem = {

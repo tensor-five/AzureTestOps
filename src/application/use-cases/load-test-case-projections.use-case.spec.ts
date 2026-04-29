@@ -34,12 +34,12 @@ describe("loadTestCaseProjections", () => {
     ]);
 
     const pointsBySuite = new Map<number, TestPoint[]>([
-      [1, [{ pointId: 11, workItemId: 101, suiteId: 1, configurationId: 1, configurationName: "Default", lastRunId: null, lastResultId: null }]],
+      [1, [{ pointId: 11, workItemId: 101, suiteId: 1, configurationId: 1, configurationName: "Default", lastRunId: null, lastResultId: null, lastOutcome: null }]],
       [
         2,
         [
-          { pointId: 21, workItemId: 101, suiteId: 2, configurationId: 1, configurationName: "Default", lastRunId: null, lastResultId: null },
-          { pointId: 22, workItemId: 102, suiteId: 2, configurationId: 1, configurationName: "Default", lastRunId: null, lastResultId: null }
+          { pointId: 21, workItemId: 101, suiteId: 2, configurationId: 1, configurationName: "Default", lastRunId: null, lastResultId: null, lastOutcome: null },
+          { pointId: 22, workItemId: 102, suiteId: 2, configurationId: 1, configurationName: "Default", lastRunId: null, lastResultId: null, lastOutcome: null }
         ]
       ]
     ]);
@@ -49,8 +49,8 @@ describe("loadTestCaseProjections", () => {
     ];
 
     const results: TestResult[] = [
-      { resultId: 7001, runId: 5000, testCaseReferenceId: 101, suiteId: 2, pointId: 21, outcome: "Passed", completedDate: "2026-03-01T10:00:00Z" },
-      { resultId: 7002, runId: 5000, testCaseReferenceId: 102, suiteId: 2, pointId: 22, outcome: "Failed", completedDate: "2026-03-01T10:05:00Z" }
+      { resultId: 7001, runId: 5000, workItemId: 101, suiteId: 2, pointId: 21, outcome: "Passed", completedDate: "2026-03-01T10:00:00Z" },
+      { resultId: 7002, runId: 5000, workItemId: 102, suiteId: 2, pointId: 22, outcome: "Failed", completedDate: "2026-03-01T10:05:00Z" }
     ];
 
     const workItems = new Map<number, WorkItem>([

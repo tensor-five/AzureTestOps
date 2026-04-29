@@ -84,11 +84,31 @@ describe("AzureTestManagementAdapter", () => {
   it("pages test points via continuation token", async () => {
     const pages = [
       ok(
-        { value: [{ id: 1, testCase: { id: 101 }, configuration: { id: 1, name: "Default" } }] },
+        {
+          value: [
+            {
+              id: 1,
+              testCase: { id: 101 },
+              configuration: { id: 1, name: "Default" },
+              outcome: "Passed",
+              lastTestRun: { id: 5000 },
+              lastResult: { id: 7001 }
+            }
+          ]
+        },
         { "x-ms-continuationtoken": "TOKEN-2" }
       ),
       ok(
-        { value: [{ id: 2, testCase: { id: 102 }, configuration: { id: 1, name: "Default" } }] },
+        {
+          value: [
+            {
+              id: 2,
+              testCase: { id: 102 },
+              configuration: { id: 1, name: "Default" },
+              lastResult: { id: 7002, outcome: "Failed" }
+            }
+          ]
+        },
         {}
       )
     ];
@@ -104,6 +124,9 @@ describe("AzureTestManagementAdapter", () => {
     const points = await adapter.loadPointsForSuite(99, 10);
     expect(points.map((p) => p.pointId)).toEqual([1, 2]);
     expect(points[0].suiteId).toBe(10);
+    // Direct outcome on the point wins; otherwise lastResult.outcome is the fallback.
+    expect(points[0].lastOutcome).toBe("Passed");
+    expect(points[1].lastOutcome).toBe("Failed");
     expect(calls).toHaveLength(2);
     expect(calls[1]).toContain("continuationToken=TOKEN-2");
   });
@@ -156,12 +179,62 @@ describe("AzureTestManagementAdapter", () => {
       {
         resultId: 7001,
         runId: 5000,
-        testCaseReferenceId: 101,
+        workItemId: 101,
         suiteId: 10,
         pointId: 1,
         outcome: "Passed",
         completedDate: "2026-03-01T10:00:00Z"
       }
     ]);
+  });
+
+  it("uses testCase.id (Work Item ID) over testCaseReferenceId when they diverge", async () => {
+    // Real ADO payload: the embedded ids arrive as strings, and the internal
+    // `testCaseReferenceId` differs from the Work Item id on `testCase.id`.
+    const { client } = makeStubClient(() =>
+      ok({
+        value: [
+          {
+            id: 100000,
+            testRun: { id: 21441507 },
+            testCase: { id: "11293223" },
+            testCaseReferenceId: 5998338,
+            testSuite: { id: "11755552" },
+            testPoint: { id: "3064711" },
+            outcome: "Passed",
+            completedDate: "2026-01-22T09:51:29.027Z"
+          }
+        ]
+      })
+    );
+
+    const adapter = new AzureTestManagementAdapter(client, ctx);
+    const [result] = await adapter.loadResultsForRun(21441507);
+
+    expect(result.workItemId).toBe(11293223);
+    expect(result.suiteId).toBe(11755552);
+    expect(result.outcome).toBe("Passed");
+  });
+
+  it("falls back to testCaseReferenceId when testCase.id is missing", async () => {
+    const { client } = makeStubClient(() =>
+      ok({
+        value: [
+          {
+            id: 7002,
+            testRun: { id: 5000 },
+            testCaseReferenceId: 123,
+            testSuite: { id: 10 },
+            outcome: "Failed",
+            completedDate: "2026-03-02T10:00:00Z"
+          }
+        ]
+      })
+    );
+
+    const adapter = new AzureTestManagementAdapter(client, ctx);
+    const [result] = await adapter.loadResultsForRun(5000);
+
+    expect(result.workItemId).toBe(123);
   });
 });

@@ -40,6 +40,7 @@ const point = (
   configurationName: "Default",
   lastRunId: null,
   lastResultId: null,
+  lastOutcome: null,
   ...overrides
 });
 
@@ -53,7 +54,7 @@ const result = (
 ): TestResult => ({
   resultId,
   runId,
-  testCaseReferenceId: workItemId,
+  workItemId,
   suiteId,
   pointId: null,
   outcome,
@@ -149,6 +150,43 @@ describe("aggregateTestCaseProjections", () => {
 
     expect(projections).toHaveLength(1);
     expect(projections[0].workItemId).toBe(101);
+  });
+
+  it("falls back to point.lastOutcome when no result matched the (workItemId, suiteId)", () => {
+    const projections = aggregateTestCaseProjections({
+      suiteEntries: [suite(10, "Smoke", "Root > Smoke")],
+      testCasesBySuiteId: new Map([[10, [101]]]),
+      pointsBySuiteId: new Map([
+        [10, [point(1, 101, 10, { lastOutcome: "Passed", lastRunId: 555, lastResultId: 999 })]]
+      ]),
+      // Result has no testSuite.id — Azure sometimes drops the link, so the
+      // join fails and only the point's published outcome remains.
+      results: [result(900, 101, null, "Failed", "2026-02-20T08:00:00Z")],
+      workItemsById: new Map([[101, workItem(101)]])
+    });
+
+    expect(projections[0].lastOutcome).toBe("Passed");
+    expect(projections[0].lastResultId).toBe(999);
+    expect(projections[0].lastRunId).toBe(555);
+  });
+
+  it("uses millisecond precision when picking the latest completedDate", () => {
+    // Mixing `…Z` and `….123Z` ISO forms breaks lexicographic compare — `Z`
+    // (0x5A) sorts after `.` (0x2E), so the no-millis form would win even
+    // though it is chronologically earlier.
+    const projections = aggregateTestCaseProjections({
+      suiteEntries: [suite(10, "Smoke", "Root > Smoke")],
+      testCasesBySuiteId: new Map([[10, [101]]]),
+      pointsBySuiteId: new Map([[10, [point(1, 101, 10)]]]),
+      results: [
+        result(900, 101, 10, "Failed", "2026-02-20T08:00:00Z"),
+        result(901, 101, 10, "Passed", "2026-02-20T08:00:00.500Z")
+      ],
+      workItemsById: new Map([[101, workItem(101)]])
+    });
+
+    expect(projections[0].lastResultId).toBe(901);
+    expect(projections[0].lastOutcome).toBe("Passed");
   });
 
   it("falls back to point.lastRunId when there is no result yet", () => {

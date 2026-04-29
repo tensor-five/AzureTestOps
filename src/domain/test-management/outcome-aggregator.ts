@@ -51,6 +51,9 @@ export function aggregateTestCaseProjections(
       const point = pointByWorkItemId.get(workItemId) ?? null;
       const latestResult = latestResultByKey.get(projectionKey(workItemId, suite.id)) ?? null;
 
+      // Fallback to point.lastOutcome — Azure sometimes drops `testSuite.id` on results.
+      const fallbackOutcome = point?.lastOutcome ?? NOT_RUN;
+
       projections.push({
         workItemId,
         suiteId: suite.id,
@@ -66,8 +69,8 @@ export function aggregateTestCaseProjections(
         testPointId: point?.pointId ?? null,
         configurationId: point?.configurationId ?? null,
         configurationName: point?.configurationName ?? null,
-        lastOutcome: latestResult ? latestResult.outcome : NOT_RUN,
-        lastResultId: latestResult?.resultId ?? null,
+        lastOutcome: latestResult ? latestResult.outcome : fallbackOutcome,
+        lastResultId: latestResult?.resultId ?? point?.lastResultId ?? null,
         lastResultCompletedDate: latestResult?.completedDate ?? null,
         lastRunId: latestResult?.runId ?? point?.lastRunId ?? null
       });
@@ -86,14 +89,19 @@ function buildLatestResultIndex(
     if (result.completedDate === null || result.suiteId === null) {
       continue;
     }
-    const key = projectionKey(result.testCaseReferenceId, result.suiteId);
+    const ts = Date.parse(result.completedDate);
+    if (Number.isNaN(ts)) {
+      continue;
+    }
+    const key = projectionKey(result.workItemId, result.suiteId);
     const existing = latest.get(key);
     if (!existing) {
       latest.set(key, result);
       continue;
     }
-    const existingDate = existing.completedDate ?? "";
-    if (existingDate < result.completedDate) {
+    // Date.parse, not string compare — ADO mixes `…Z` and `….123Z` ISO forms.
+    const existingTs = existing.completedDate === null ? -Infinity : Date.parse(existing.completedDate);
+    if (Number.isNaN(existingTs) || existingTs < ts) {
       latest.set(key, result);
     }
   }
