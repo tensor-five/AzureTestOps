@@ -125,6 +125,47 @@ describe("useSetFilters", () => {
     harness.unmount();
   });
 
+  it("emits an empty setFilters map when the last column of the only set is cleared", () => {
+    cacheSpy.mockReturnValue({
+      setFilters: {
+        "set-1": { testCases: { lastOutcomes: ["Failed"] } }
+      }
+    });
+
+    const harness = setupHookHarness(() => useSetFilters("set-1"));
+
+    act(() => {
+      harness.result.current.clearTestCaseFilter();
+    });
+
+    // The patch must carry an explicit empty map so the backend overwrites the
+    // persisted filter instead of falling back to the previous value.
+    expect(persistSpy).toHaveBeenLastCalledWith({ setFilters: {} });
+
+    harness.unmount();
+  });
+
+  it("preserves sibling sets' filters when one set is fully cleared", () => {
+    cacheSpy.mockReturnValue({
+      setFilters: {
+        "set-1": { testCases: { lastOutcomes: ["Failed"] } },
+        "set-2": { workItems: { states: ["New"] } }
+      }
+    });
+
+    const harness = setupHookHarness(() => useSetFilters("set-1"));
+
+    act(() => {
+      harness.result.current.clearTestCaseFilter();
+    });
+
+    expect(persistSpy).toHaveBeenLastCalledWith({
+      setFilters: { "set-2": { workItems: { states: ["New"] } } }
+    });
+
+    harness.unmount();
+  });
+
   it("does not persist when no set is active", () => {
     const harness = setupHookHarness(() => useSetFilters(null));
 

@@ -62,4 +62,18 @@ describe("LowdbUserPreferencesAdapter", () => {
 
     expect(replaced.sets?.map((set) => set.id)).toEqual(["s3"]);
   });
+
+  it("clears persisted setFilters when the patch carries an explicitly empty map", async () => {
+    const adapter = new LowdbUserPreferencesAdapter(filePath, "alice");
+
+    await adapter.mergePreferences({
+      setFilters: { "set-1": { testCases: { lastOutcomes: ["Failed"] } } }
+    });
+
+    const cleared = await adapter.mergePreferences({ setFilters: {} });
+    expect(cleared.setFilters).toEqual({});
+
+    const reloaded = await adapter.getPreferences();
+    expect(reloaded.setFilters).toEqual({});
+  });
 });

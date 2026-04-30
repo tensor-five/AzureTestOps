@@ -95,6 +95,16 @@ describe("sanitizeUserPreferences", () => {
       }
     });
   });
+
+  it("preserves an explicitly empty setFilters map so a clear-all patch can overwrite", () => {
+    // Without this, the patch loses its `setFilters` key on the wire and the
+    // backend's `incoming ?? current` merge would silently keep stale filters.
+    expect(sanitizeUserPreferences({ setFilters: {} }).setFilters).toEqual({});
+  });
+
+  it("omits setFilters when the input has no setFilters key at all", () => {
+    expect(sanitizeUserPreferences({ themeMode: "dark" }).setFilters).toBeUndefined();
+  });
 });
 
 describe("sanitizeSetFilterPreference", () => {

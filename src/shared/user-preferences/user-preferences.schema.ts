@@ -130,9 +130,9 @@ export function sanitizeUserPreferences(value: unknown): UserPreferences {
         sanitized[trimmedSetId] = sanitizedFilter;
       }
     });
-    if (Object.keys(sanitized).length > 0) {
-      next.setFilters = sanitized;
-    }
+    // Preserve an explicitly-empty map so a "clear-last-filter" patch can
+    // overwrite the current state instead of being treated as "no change".
+    next.setFilters = sanitized;
   }
 
   if (typeof candidate.updatedAt === "string") {

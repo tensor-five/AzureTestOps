@@ -1,6 +1,7 @@
 import { createUserPreferenceStore } from "../../shared/user-preferences/create-user-preference-store.js";
 import type {
   SetFilterPreference,
+  SetFiltersBySetId,
   TestCaseColumnFilterPreference,
   UserPreferences,
   WorkItemColumnFilterPreference
@@ -27,11 +28,20 @@ export const setFilterPreferenceStore = createUserPreferenceStore<SetFilterPrefe
     return preferences.setFilters?.[scopeKey] ?? null;
   },
   sanitize: sanitizeSetFilterInput,
-  buildPatch: (value, _preferences, scopeKey) => {
+  buildPatch: (value, preferences, scopeKey) => {
     if (!scopeKey) {
       return {};
     }
-    return { setFilters: { [scopeKey]: value } } satisfies Partial<UserPreferences>;
+    // Construct the full intended setFilters map so the backend can apply
+    // deletions: clearing a column to {} would otherwise be stripped by
+    // sanitization and silently kept on disk via `incoming ?? current`.
+    const nextFilters: SetFiltersBySetId = { ...(preferences.setFilters ?? {}) };
+    if (Object.keys(value).length === 0) {
+      delete nextFilters[scopeKey];
+    } else {
+      nextFilters[scopeKey] = value;
+    }
+    return { setFilters: nextFilters } satisfies Partial<UserPreferences>;
   }
 });
 
