@@ -8,6 +8,10 @@ import {
 import type { TestCaseProjection } from "../../domain/test-management/test-case-projection.js";
 import { TestCaseCard } from "./test-case-card.js";
 import type { SuiteCollapseApi } from "./use-suite-collapse.js";
+import type { TestCaseOrderApi } from "./use-test-case-order.js";
+
+const DRAG_DATA_TYPE = "application/x-azure-testops-test-case";
+const DRAG_DROP_EDGE_ATTR = "data-drop-edge";
 
 export type TestCaseColumnProps = {
   suiteTree: TestSuiteNode;
@@ -21,12 +25,16 @@ export type TestCaseColumnProps = {
   collapse: SuiteCollapseApi;
   filterBar?: React.ReactNode;
   onLinePointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
+  /** Persists the drag-and-drop ordering per (Set, Suite); absent → fixed title sort. */
+  order?: TestCaseOrderApi;
 };
 
 type SuiteWithProjections = {
   suite: TestSuiteFlatEntry;
   projections: TestCaseProjection[];
 };
+
+type DragSource = { workItemId: number; suiteId: number };
 
 /** Collapsing a parent suite hides every descendant suite, not just its row. */
 export function TestCaseColumn(props: TestCaseColumnProps): React.ReactElement {
@@ -42,6 +50,41 @@ export function TestCaseColumn(props: TestCaseColumnProps): React.ReactElement {
 
   const visibleProjectionCount = props.projections.length;
   const unfilteredCount = props.unfilteredCount;
+  const order = props.order;
+
+  const dragSourceRef = React.useRef<DragSource | null>(null);
+  const [draggedKey, setDraggedKey] = React.useState<string | null>(null);
+
+  const beginDrag = React.useCallback(
+    (
+      workItemId: number,
+      suiteId: number,
+      event: React.DragEvent<HTMLElement>
+    ) => {
+      if (!order) {
+        return;
+      }
+      event.dataTransfer.setData(DRAG_DATA_TYPE, `${workItemId}:${suiteId}`);
+      event.dataTransfer.effectAllowed = "move";
+      const card = event.currentTarget
+        .closest(".relations-view-test-case-row")
+        ?.querySelector<HTMLElement>(".relations-view-card-test-case");
+      if (card && typeof event.dataTransfer.setDragImage === "function") {
+        event.dataTransfer.setDragImage(card, 12, 12);
+      }
+      dragSourceRef.current = { workItemId, suiteId };
+      setDraggedKey(`${workItemId}::${suiteId}`);
+    },
+    [order]
+  );
+
+  const endDrag = React.useCallback(() => {
+    dragSourceRef.current = null;
+    setDraggedKey(null);
+    document
+      .querySelectorAll(`[data-suite-cards] [${DRAG_DROP_EDGE_ATTR}]`)
+      .forEach((el) => el.removeAttribute(DRAG_DROP_EDGE_ATTR));
+  }, []);
 
   return (
     <section className="relations-view-column relations-view-column-test-cases" aria-label="Test cases">
@@ -68,6 +111,11 @@ export function TestCaseColumn(props: TestCaseColumnProps): React.ReactElement {
               entry={entry}
               collapse={props.collapse}
               onLinePointerDown={props.onLinePointerDown}
+              order={order}
+              dragSourceRef={dragSourceRef}
+              draggedKey={draggedKey}
+              onDragStart={beginDrag}
+              onDragEnd={endDrag}
             />
           ))}
         </ol>
@@ -80,9 +128,129 @@ function SuiteGroup(props: {
   entry: SuiteWithProjections;
   collapse: SuiteCollapseApi;
   onLinePointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
+  order?: TestCaseOrderApi;
+  dragSourceRef: React.MutableRefObject<DragSource | null>;
+  draggedKey: string | null;
+  onDragStart: (
+    workItemId: number,
+    suiteId: number,
+    event: React.DragEvent<HTMLElement>
+  ) => void;
+  onDragEnd: () => void;
 }): React.ReactElement {
-  const { entry, collapse } = props;
+  const { entry, collapse, order, dragSourceRef, onDragEnd, onDragStart, draggedKey } = props;
   const isCollapsed = collapse.isCollapsed(entry.suite.id);
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
+
+  const ordered = React.useMemo(() => {
+    if (!order) {
+      return entry.projections;
+    }
+    return order.sortByStoredOrder(entry.suite.id, entry.projections);
+  }, [order, entry.projections, entry.suite.id]);
+
+  const resolveDropTarget = React.useCallback(
+    (clientY: number): { workItemId: number; edge: "before" | "after"; element: HTMLElement } | null => {
+      const container = containerRef.current;
+      if (!container) {
+        return null;
+      }
+      const rows = Array.from(
+        container.querySelectorAll<HTMLElement>(":scope > [data-test-case-id]")
+      );
+      if (rows.length === 0) {
+        return null;
+      }
+      for (const row of rows) {
+        const rect = row.getBoundingClientRect();
+        const midpoint = rect.top + rect.height / 2;
+        if (clientY < midpoint) {
+          const id = Number.parseInt(row.dataset.testCaseId ?? "", 10);
+          if (!Number.isFinite(id)) {
+            return null;
+          }
+          return { workItemId: id, edge: "before", element: row };
+        }
+      }
+      const last = rows[rows.length - 1];
+      const id = Number.parseInt(last.dataset.testCaseId ?? "", 10);
+      if (!Number.isFinite(id)) {
+        return null;
+      }
+      return { workItemId: id, edge: "after", element: last };
+    },
+    []
+  );
+
+  const clearEdges = React.useCallback(() => {
+    containerRef.current
+      ?.querySelectorAll(`[${DRAG_DROP_EDGE_ATTR}]`)
+      .forEach((el) => el.removeAttribute(DRAG_DROP_EDGE_ATTR));
+  }, []);
+
+  const handleDragOver = React.useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (!order) {
+        return;
+      }
+      const source = dragSourceRef.current;
+      if (!source || source.suiteId !== entry.suite.id) {
+        // Cross-suite drops are not supported — withhold preventDefault so
+        // the browser's "no drop" cursor signals the rejection.
+        return;
+      }
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      const target = resolveDropTarget(event.clientY);
+      if (!target) {
+        return;
+      }
+      const container = containerRef.current;
+      container?.querySelectorAll(`[${DRAG_DROP_EDGE_ATTR}]`).forEach((el) => {
+        if (el !== target.element) {
+          el.removeAttribute(DRAG_DROP_EDGE_ATTR);
+        }
+      });
+      if (target.element.getAttribute(DRAG_DROP_EDGE_ATTR) !== target.edge) {
+        target.element.setAttribute(DRAG_DROP_EDGE_ATTR, target.edge);
+      }
+    },
+    [order, dragSourceRef, entry.suite.id, resolveDropTarget]
+  );
+
+  const handleDragLeave = React.useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      const next = event.relatedTarget as Node | null;
+      if (next && event.currentTarget.contains(next)) {
+        return;
+      }
+      clearEdges();
+    },
+    [clearEdges]
+  );
+
+  const handleDrop = React.useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (!order) {
+        return;
+      }
+      const source = dragSourceRef.current;
+      if (!source || source.suiteId !== entry.suite.id) {
+        return;
+      }
+      event.preventDefault();
+      const target = resolveDropTarget(event.clientY);
+      if (!target || target.workItemId === source.workItemId) {
+        onDragEnd();
+        return;
+      }
+      order.move(entry.suite.id, source.workItemId, target.workItemId, target.edge);
+      onDragEnd();
+    },
+    [order, dragSourceRef, entry.suite.id, resolveDropTarget, onDragEnd]
+  );
+
+  const reorderEnabled = order !== undefined;
 
   return (
     <li
@@ -103,15 +271,52 @@ function SuiteGroup(props: {
         </span>
         <span className="relations-view-suite-count">{entry.projections.length}</span>
       </button>
-      {!isCollapsed && entry.projections.length > 0 ? (
-        <div className="relations-view-suite-cards">
-          {entry.projections.map((projection) => (
-            <TestCaseCard
-              key={`${projection.workItemId}::${projection.suiteId}`}
-              projection={projection}
-              onLinePointerDown={props.onLinePointerDown}
-            />
-          ))}
+      {!isCollapsed && ordered.length > 0 ? (
+        <div
+          className="relations-view-suite-cards"
+          ref={containerRef}
+          data-suite-cards=""
+          data-suite-id={entry.suite.id}
+          onDragOver={reorderEnabled ? handleDragOver : undefined}
+          onDragLeave={reorderEnabled ? handleDragLeave : undefined}
+          onDrop={reorderEnabled ? handleDrop : undefined}
+        >
+          {ordered.map((projection) => {
+            const rowKey = `${projection.workItemId}::${projection.suiteId}`;
+            const className =
+              draggedKey === rowKey
+                ? "relations-view-test-case-row relations-view-test-case-row-dragging"
+                : "relations-view-test-case-row";
+            return (
+              <div
+                key={rowKey}
+                className={className}
+                data-test-case-id={projection.workItemId}
+              >
+                {reorderEnabled ? (
+                  <button
+                    type="button"
+                    className="relations-view-drag-handle"
+                    draggable
+                    onDragStart={(event) =>
+                      onDragStart(projection.workItemId, projection.suiteId, event)
+                    }
+                    onDragEnd={onDragEnd}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => event.preventDefault()}
+                    aria-label={`Reorder test case #${projection.workItemId}`}
+                    title="Drag to reorder"
+                  >
+                    <span aria-hidden="true">⠿</span>
+                  </button>
+                ) : null}
+                <TestCaseCard
+                  projection={projection}
+                  onLinePointerDown={props.onLinePointerDown}
+                />
+              </div>
+            );
+          })}
         </div>
       ) : null}
     </li>

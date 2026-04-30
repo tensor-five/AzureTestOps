@@ -9,11 +9,17 @@ export type ThemeModePreference = "system" | "light" | "dark";
  * column (drag-and-drop reorder). Stored as the raw `WorkItem.id` sequence so
  * stale ids dropped from the active set survive a round-trip without
  * silently shifting the ordering of items still in the snapshot.
+ *
+ * `testCaseOrder` holds the same idea per Test Suite: a map from suite id to
+ * an ordered list of `workItemId`s. Reordering is constrained to one suite —
+ * the keying mirrors that constraint and keeps stale ids from one suite
+ * influencing another.
  */
 export type SetLayoutPreference = {
   positions?: Record<string, { x: number; y: number }>;
   collapsedSuites?: string[];
   workItemOrder?: number[];
+  testCaseOrder?: Record<string, number[]>;
 };
 
 export type SetLayoutPreferencesBySetId = Record<string, SetLayoutPreference>;
@@ -317,6 +323,32 @@ function sanitizeSetLayoutPreference(value: unknown): SetLayoutPreference | null
     }
     if (ordered.length > 0) {
       next.workItemOrder = ordered;
+    }
+  }
+
+  if (isPlainRecord(value.testCaseOrder)) {
+    const sanitized: Record<string, number[]> = {};
+    Object.entries(value.testCaseOrder).forEach(([rawSuiteId, rawIds]) => {
+      const suiteId = typeof rawSuiteId === "string" ? rawSuiteId.trim() : "";
+      if (suiteId.length === 0 || !Array.isArray(rawIds)) {
+        return;
+      }
+      const seen = new Set<number>();
+      const ordered: number[] = [];
+      for (const entry of rawIds) {
+        const id = readPositiveInteger(entry);
+        if (id === null || seen.has(id)) {
+          continue;
+        }
+        seen.add(id);
+        ordered.push(id);
+      }
+      if (ordered.length > 0) {
+        sanitized[suiteId] = ordered;
+      }
+    });
+    if (Object.keys(sanitized).length > 0) {
+      next.testCaseOrder = sanitized;
     }
   }
 

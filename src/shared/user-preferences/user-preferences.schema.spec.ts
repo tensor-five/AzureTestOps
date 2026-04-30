@@ -82,6 +82,31 @@ describe("sanitizeUserPreferences", () => {
     });
   });
 
+  it("preserves testCaseOrder per suite, dedupes ids, and drops empty suites/blank keys", () => {
+    const input = {
+      setLayouts: {
+        s1: {
+          testCaseOrder: {
+            "3": [201, 202, 201, "203", -5, 0],
+            "4": [301],
+            "  ": [999],
+            "5": ["all-junk", -1]
+          }
+        }
+      }
+    };
+
+    const sanitized = sanitizeUserPreferences(input);
+    expect(sanitized.setLayouts).toEqual({
+      s1: {
+        testCaseOrder: {
+          "3": [201, 202],
+          "4": [301]
+        }
+      }
+    });
+  });
+
   it("normalizes typed setFilters and drops empty / unkeyed entries", () => {
     const input = {
       setFilters: {

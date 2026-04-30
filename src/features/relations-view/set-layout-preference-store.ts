@@ -88,6 +88,30 @@ function sanitizeSetLayoutInput(value: unknown): SetLayoutPreference | null {
     next.workItemOrder = ordered;
   }
 
+  if (isPlainRecord(value.testCaseOrder)) {
+    const perSuite: Record<string, number[]> = {};
+    Object.entries(value.testCaseOrder).forEach(([rawSuiteId, rawIds]) => {
+      const suiteId = typeof rawSuiteId === "string" ? rawSuiteId.trim() : "";
+      if (suiteId.length === 0 || !Array.isArray(rawIds)) {
+        return;
+      }
+      const seen = new Set<number>();
+      const ordered: number[] = [];
+      for (const entry of rawIds) {
+        if (typeof entry !== "number" || !Number.isFinite(entry)) {
+          continue;
+        }
+        if (!Number.isInteger(entry) || entry <= 0 || seen.has(entry)) {
+          continue;
+        }
+        seen.add(entry);
+        ordered.push(entry);
+      }
+      perSuite[suiteId] = ordered;
+    });
+    next.testCaseOrder = perSuite;
+  }
+
   return next;
 }
 

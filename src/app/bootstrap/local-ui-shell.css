@@ -457,6 +457,46 @@ section[role="tabpanel"]:hover {
   flex-direction: column;
   gap: var(--space-2);
   padding-left: 18px;
+  /* Symmetrical vertical padding widens the drop target above and below
+     the rows so the user can release anywhere in the suite group. */
+  padding-top: var(--space-1);
+  padding-bottom: var(--space-1);
+}
+
+.relations-view-test-case-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.relations-view-test-case-row > .relations-view-card {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.relations-view-test-case-row-dragging {
+  opacity: 0.55;
+}
+
+.relations-view-test-case-row[data-drop-edge="before"]::before,
+.relations-view-test-case-row[data-drop-edge="after"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--color-primary);
+  border-radius: var(--radius-pill);
+  pointer-events: none;
+}
+
+.relations-view-test-case-row[data-drop-edge="before"]::before {
+  top: -3px;
+}
+
+.relations-view-test-case-row[data-drop-edge="after"]::after {
+  bottom: -3px;
 }
 
 .relations-view-work-item-list-item {
