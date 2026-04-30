@@ -1,7 +1,7 @@
 import * as React from "react";
 
 import type { ActiveSetSnapshot } from "../../application/dto/active-set-snapshot.dto.js";
-import { buildWorkItemUrl } from "../../shared/azure-devops/azure-rest-client.js";
+import { useClientPorts } from "../../app/composition/client-ports-context.js";
 import { useAdoContext } from "../set-management/use-ado-context.js";
 import {
   FilterBar,
@@ -31,7 +31,8 @@ import {
   buildLineSpecs,
   buildSnapshotRelationSet,
   parseLineId,
-  resolvePairFromItemKeys
+  resolvePairFromItemKeys,
+  snapshotRelationKey
 } from "./relation-line-specs.js";
 
 export type RelationsPaneProps = {
@@ -49,12 +50,13 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
   const filters = useSetFilters(props.setId);
   const adoContextState = useAdoContext();
   const adoContext = adoContextState.context;
+  const ports = useClientPorts();
   const getWorkItemHref = React.useMemo<((workItemId: number) => string | null) | undefined>(
     () =>
       adoContext
-        ? (workItemId: number) => buildWorkItemUrl(adoContext, workItemId)
+        ? (workItemId: number) => ports.workItemDeepLink.buildHref(adoContext, workItemId)
         : undefined,
-    [adoContext]
+    [adoContext, ports.workItemDeepLink]
   );
   // Container is held as both a ref (for `useLineDrawing`, which reads it
   // lazily on pointer events) and as state (for the line layer, whose
@@ -95,7 +97,7 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
 
   const isRelatedInSnapshot = React.useCallback(
     (testCaseId: number, workItemId: number): boolean =>
-      snapshotRelations.has(`${testCaseId}::${workItemId}`),
+      snapshotRelations.has(snapshotRelationKey(testCaseId, workItemId)),
     [snapshotRelations]
   );
 

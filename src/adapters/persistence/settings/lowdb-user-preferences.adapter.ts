@@ -44,14 +44,23 @@ export class LowdbUserPreferencesAdapter implements UserPreferencesPort {
     const db = await this.getDb();
     const incoming = sanitizeUserPreferences(patch);
 
+    // setLayouts / setFilters are keyed by setId. A naive shallow merge would
+    // let a single-set patch wipe out every other set's persisted entry. We
+    // walk the raw patch to learn which setIds the caller intended to touch:
+    //   - present in raw patch + survives sanitize → upsert
+    //   - present in raw patch + sanitized away    → delete (empty/clear intent)
+    //   - absent from raw patch                    → leave current entry untouched
+    const layoutTouched = collectKeyedScopeIds(patch, "setLayouts");
+    const filterTouched = collectKeyedScopeIds(patch, "setFilters");
+
     await db.update((data) => {
       const current = sanitizeUserPreferences(data.users[this.userId] ?? {});
       data.users[this.userId] = {
         ...current,
         ...incoming,
         sets: incoming.sets ?? current.sets,
-        setLayouts: incoming.setLayouts ?? current.setLayouts,
-        setFilters: incoming.setFilters ?? current.setFilters,
+        setLayouts: mergeKeyedScope(current.setLayouts, incoming.setLayouts, layoutTouched),
+        setFilters: mergeKeyedScope(current.setFilters, incoming.setFilters, filterTouched),
         updatedAt: new Date().toISOString()
       };
     });
@@ -100,6 +109,47 @@ export class LowdbUserPreferencesAdapter implements UserPreferencesPort {
 
     return this.dbPromise;
   }
+}
+
+function collectKeyedScopeIds(
+  rawPatch: unknown,
+  field: "setLayouts" | "setFilters"
+): Set<string> | null {
+  if (!isPlainRecord(rawPatch)) {
+    return null;
+  }
+  const map = rawPatch[field];
+  if (!isPlainRecord(map)) {
+    return null;
+  }
+  const ids = new Set<string>();
+  for (const key of Object.keys(map)) {
+    const trimmed = key.trim();
+    if (trimmed.length > 0) {
+      ids.add(trimmed);
+    }
+  }
+  return ids;
+}
+
+function mergeKeyedScope<T>(
+  current: Record<string, T> | undefined,
+  incoming: Record<string, T> | undefined,
+  touched: Set<string> | null
+): Record<string, T> | undefined {
+  if (touched === null) {
+    return current;
+  }
+  const next: Record<string, T> = { ...(current ?? {}) };
+  for (const setId of touched) {
+    const value = incoming?.[setId];
+    if (value === undefined) {
+      delete next[setId];
+    } else {
+      next[setId] = value;
+    }
+  }
+  return Object.keys(next).length > 0 ? next : undefined;
 }
 
 function isValidDb(value: unknown): value is PersistedPreferencesDb {

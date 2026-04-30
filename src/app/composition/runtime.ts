@@ -5,6 +5,7 @@ import { AzureCliPreflightAdapter } from "../../adapters/azure-devops/auth/azure
 import { AzureSavedQueryAdapter } from "../../adapters/azure-devops/queries/azure-saved-query.adapter.js";
 import { AzureTestCatalogAdapter } from "../../adapters/azure-devops/test-management/azure-test-catalog.adapter.js";
 import { AzureTestManagementAdapter } from "../../adapters/azure-devops/test-management/azure-test-management.adapter.js";
+import { WorkItemBackedTestCaseHydrationAdapter } from "../../adapters/azure-devops/test-management/work-item-backed-test-case-hydration.adapter.js";
 import { AzureRelationAdapter } from "../../adapters/azure-devops/work-items/azure-relation.adapter.js";
 import { AzureWorkItemHydrationAdapter } from "../../adapters/azure-devops/work-items/azure-work-item-hydration.adapter.js";
 import { FileAdoContextAdapter } from "../../adapters/persistence/settings/file-ado-context.adapter.js";
@@ -15,6 +16,7 @@ import type { AuthPreflightPort } from "../../application/ports/auth-preflight.p
 import type { RelationPort } from "../../application/ports/relation.port.js";
 import type { SavedQueryPort } from "../../application/ports/saved-query.port.js";
 import type { SetRepositoryPort } from "../../application/ports/set-repository.port.js";
+import type { TestCaseHydrationPort } from "../../application/ports/test-case-hydration.port.js";
 import type { TestCatalogPort } from "../../application/ports/test-catalog.port.js";
 import type { TestManagementReadPort } from "../../application/ports/test-management.port.js";
 import type { UserPreferencesPort } from "../../application/ports/user-preferences.port.js";
@@ -33,6 +35,7 @@ export type AdoRuntime = {
   testManagement(): Promise<TestManagementReadPort>;
   testCatalog(): Promise<TestCatalogPort>;
   workItemHydration(): Promise<WorkItemHydrationPort>;
+  testCaseHydration(): Promise<TestCaseHydrationPort>;
   savedQuery(): Promise<SavedQueryPort>;
   relations(): Promise<RelationPort>;
 };
@@ -96,10 +99,12 @@ export function buildRuntime(options: RuntimeOptions = {}): Runtime {
     if (cached && cached.key === key) {
       return cached.bundle;
     }
+    const workItemHydration = new AzureWorkItemHydrationAdapter(httpClient, context);
     const bundle: ResolvedAdoBundle = {
       testManagement: new AzureTestManagementAdapter(httpClient, context),
       testCatalog: new AzureTestCatalogAdapter(httpClient, context),
-      workItemHydration: new AzureWorkItemHydrationAdapter(httpClient, context),
+      workItemHydration,
+      testCaseHydration: new WorkItemBackedTestCaseHydrationAdapter(workItemHydration),
       savedQuery: new AzureSavedQueryAdapter(httpClient, context),
       relations: new AzureRelationAdapter(httpClient, context)
     };
@@ -112,6 +117,7 @@ export function buildRuntime(options: RuntimeOptions = {}): Runtime {
     testManagement: async () => (await resolveBundle()).testManagement,
     testCatalog: async () => (await resolveBundle()).testCatalog,
     workItemHydration: async () => (await resolveBundle()).workItemHydration,
+    testCaseHydration: async () => (await resolveBundle()).testCaseHydration,
     savedQuery: async () => (await resolveBundle()).savedQuery,
     relations: async () => (await resolveBundle()).relations
   };
@@ -129,6 +135,7 @@ type ResolvedAdoBundle = {
   testManagement: TestManagementReadPort;
   testCatalog: TestCatalogPort;
   workItemHydration: WorkItemHydrationPort;
+  testCaseHydration: TestCaseHydrationPort;
   savedQuery: SavedQueryPort;
   relations: RelationPort;
 };

@@ -46,6 +46,9 @@ function makeAdoRuntime(relations: RelationPort): AdoRuntime {
     workItemHydration: async () => {
       throw new Error("not used");
     },
+    testCaseHydration: async () => {
+      throw new Error("not used");
+    },
     savedQuery: async () => {
       throw new Error("not used");
     },
@@ -159,6 +162,9 @@ describe("registerRelationsRoutes", () => {
         throw new Error("not used");
       },
       workItemHydration: async () => {
+        throw new Error("not used");
+      },
+      testCaseHydration: async () => {
         throw new Error("not used");
       },
       savedQuery: async () => {

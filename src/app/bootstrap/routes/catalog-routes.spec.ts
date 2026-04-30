@@ -50,6 +50,9 @@ function makeAdoRuntime(overrides: Partial<AdoRuntime>): AdoRuntime {
     workItemHydration: async () => {
       throw new Error("not used");
     },
+    testCaseHydration: async () => {
+      throw new Error("not used");
+    },
     savedQuery: async () => {
       throw new Error("not used");
     },

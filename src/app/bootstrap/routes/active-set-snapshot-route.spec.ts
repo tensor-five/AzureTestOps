@@ -11,6 +11,7 @@ import type { AdoContextPort } from "../../../application/ports/ado-context.port
 import type { RelationPort } from "../../../application/ports/relation.port.js";
 import type { SavedQueryPort } from "../../../application/ports/saved-query.port.js";
 import type { SetRepositoryPort } from "../../../application/ports/set-repository.port.js";
+import type { TestCaseHydrationPort } from "../../../application/ports/test-case-hydration.port.js";
 import type { TestCatalogPort } from "../../../application/ports/test-catalog.port.js";
 import type { TestManagementReadPort } from "../../../application/ports/test-management.port.js";
 import type { WorkItemHydrationPort } from "../../../application/ports/work-item-hydration.port.js";
@@ -31,6 +32,9 @@ function makeStubAdo(): AdoRuntime {
   const workItemHydration: WorkItemHydrationPort = {
     hydrateWorkItems: async () => new Map()
   };
+  const testCaseHydration: TestCaseHydrationPort = {
+    hydrateTestCases: async () => new Map()
+  };
   const savedQuery: SavedQueryPort = {
     listSavedQueries: async () => [],
     executeQuery: async () => ({ workItemIds: [], relations: [] })
@@ -49,6 +53,7 @@ function makeStubAdo(): AdoRuntime {
     testManagement: async () => testManagement,
     testCatalog: async () => testCatalog,
     workItemHydration: async () => workItemHydration,
+    testCaseHydration: async () => testCaseHydration,
     savedQuery: async () => savedQuery,
     relations: async () => relations
   };

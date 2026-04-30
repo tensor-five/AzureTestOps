@@ -1,7 +1,6 @@
 import { createUserPreferenceStore } from "../../shared/user-preferences/create-user-preference-store.js";
 import type {
   SetFilterPreference,
-  SetFiltersBySetId,
   TestCaseColumnFilterPreference,
   UserPreferences,
   WorkItemColumnFilterPreference
@@ -11,9 +10,10 @@ const SET_FILTER_STORAGE_KEY = "azure-testops.set-filters.v1";
 
 /**
  * Per-Set column filter preference. Wraps the lowdb-persisted `setFilters`
- * branch behind a typed store. Keeps explicit empty subobjects (`testCases:
- * {}`) intact so callers can clear a single column without losing the other.
- * Final on-disk compaction is handled by `sanitizeUserPreferences`.
+ * branch behind a typed store. The server applies a per-setId merge: an
+ * empty value (`{}`) for a given setId signals "delete this entry", non-empty
+ * values upsert. Other sets in `setFilters` are never touched by a single-set
+ * patch.
  */
 export function clearSetFilterPreferenceForTests(): void {
   setFilterPreferenceStore.clearForTests();
@@ -28,20 +28,11 @@ export const setFilterPreferenceStore = createUserPreferenceStore<SetFilterPrefe
     return preferences.setFilters?.[scopeKey] ?? null;
   },
   sanitize: sanitizeSetFilterInput,
-  buildPatch: (value, preferences, scopeKey) => {
+  buildPatch: (value, _preferences, scopeKey) => {
     if (!scopeKey) {
       return {};
     }
-    // Construct the full intended setFilters map so the backend can apply
-    // deletions: clearing a column to {} would otherwise be stripped by
-    // sanitization and silently kept on disk via `incoming ?? current`.
-    const nextFilters: SetFiltersBySetId = { ...(preferences.setFilters ?? {}) };
-    if (Object.keys(value).length === 0) {
-      delete nextFilters[scopeKey];
-    } else {
-      nextFilters[scopeKey] = value;
-    }
-    return { setFilters: nextFilters } satisfies Partial<UserPreferences>;
+    return { setFilters: { [scopeKey]: value } } satisfies Partial<UserPreferences>;
   }
 });
 

@@ -4,6 +4,7 @@ import { loadActiveSetSnapshot } from "../../../application/use-cases/load-activ
 import type { AdoContextPort } from "../../../application/ports/ado-context.port.js";
 import type { SetRepositoryPort } from "../../../application/ports/set-repository.port.js";
 import type { ActiveSetSnapshot } from "../../../application/dto/active-set-snapshot.dto.js";
+import { isRelationLinkedInSnapshot } from "../../../domain/relations/snapshot-relation-index.js";
 import type { TestCaseProjection } from "../../../domain/test-management/test-case-projection.js";
 import type { WorkItem } from "../../../domain/work-items/work-item.js";
 import type { AdoRuntime } from "../../composition/runtime.js";
@@ -65,6 +66,7 @@ export function registerActiveSetSnapshotDebugRoute(
           setRepository: deps.setRepository,
           adoContext: deps.adoContext,
           testManagement: await deps.ado.testManagement(),
+          testCaseHydration: await deps.ado.testCaseHydration(),
           workItemHydration: await deps.ado.workItemHydration(),
           savedQuery: await deps.ado.savedQuery()
         }
@@ -172,20 +174,19 @@ function buildLinkageReport(
   const projections = snapshot.projections.filter((p) => p.workItemId === tcId);
   const workItem = snapshot.workItemsFromQuery.find((wi) => wi.id === wiId) ?? null;
 
-  const testCaseHasWorkItem = projections.some((p) => p.relatedIds.includes(wiId));
-  const workItemHasTestCase = workItem ? workItem.relatedIds.includes(tcId) : false;
-  const workItemPresentInQuery = workItem !== null;
-  const testCasePresentInProjections = projections.length > 0;
-
   return {
-    testCaseHasWorkItemInRelatedIds: testCaseHasWorkItem,
-    workItemHasTestCaseInRelatedIds: workItemHasTestCase,
-    workItemPresentInQuery,
-    testCasePresentInProjections,
-    wouldRenderLine:
-      testCasePresentInProjections &&
-      workItemPresentInQuery &&
-      (testCaseHasWorkItem || workItemHasTestCase)
+    testCaseHasWorkItemInRelatedIds: projections.some((p) => p.relatedIds.includes(wiId)),
+    workItemHasTestCaseInRelatedIds: workItem ? workItem.relatedIds.includes(tcId) : false,
+    workItemPresentInQuery: workItem !== null,
+    testCasePresentInProjections: projections.length > 0,
+    // Authoritative answer: identical rule to the one the relations view uses
+    // when deciding whether to render a line for this pair.
+    wouldRenderLine: isRelationLinkedInSnapshot(
+      snapshot.projections,
+      snapshot.workItemsFromQuery,
+      tcId,
+      wiId
+    )
   };
 }
 

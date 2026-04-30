@@ -1,4 +1,6 @@
-import { sanitizeUserPreferences, type UserPreferences } from "./user-preferences.schema.js";
+import type { UserPreferencesClientPort } from "../../application/ports/client/user-preferences-client.port.js";
+
+import type { UserPreferences } from "./user-preferences.schema.js";
 
 export type {
   SetFilterPreference,
@@ -12,108 +14,51 @@ export type {
   WorkItemColumnFilterPreference
 } from "./user-preferences.schema.js";
 
-const USER_PREFERENCES_ENDPOINT = "/phase2/user-preferences";
-const ADO_CSRF_META_SELECTOR = 'meta[name="ado-csrf-token"]';
-const ADO_CSRF_HEADER = "x-ado-csrf-token";
+/**
+ * Module-level facade over {@link UserPreferencesClientPort}.
+ *
+ * Feature stores were created at import time long before client ports existed,
+ * so they reach for these top-level functions instead of `useClientPorts()`.
+ * The composition root calls {@link installUserPreferencesPort} on startup;
+ * tests can install a stub port (or rely on `vi.spyOn` to intercept the
+ * facade exports directly).
+ *
+ * Until a port is installed, calls fall back to the no-op port so feature
+ * code never observes `undefined` reads — this matches the pre-port behaviour
+ * where the cache simply started empty before hydration.
+ */
+let installedPort: UserPreferencesClientPort = createNoopPort();
 
-let cachedPreferences: UserPreferences = {};
-let hydrated = false;
-let hydrationInFlight: Promise<UserPreferences> | null = null;
-
-export function getCachedUserPreferences(): UserPreferences {
-  return cachedPreferences;
+export function installUserPreferencesPort(port: UserPreferencesClientPort): void {
+  installedPort = port;
 }
 
-export function resetUserPreferencesCacheForTests(): void {
-  cachedPreferences = {};
-  hydrated = false;
-  hydrationInFlight = null;
+export function getCachedUserPreferences(): UserPreferences {
+  return installedPort.getCached();
 }
 
 export async function hydrateUserPreferences(): Promise<UserPreferences> {
-  if (hydrated) {
-    return cachedPreferences;
-  }
-
-  if (hydrationInFlight) {
-    return hydrationInFlight;
-  }
-
-  hydrationInFlight = loadUserPreferencesFromServer()
-    .then((next) => {
-      cachedPreferences = next;
-      hydrated = true;
-      return cachedPreferences;
-    })
-    .catch(() => cachedPreferences)
-    .finally(() => {
-      hydrationInFlight = null;
-    });
-
-  return hydrationInFlight;
+  return installedPort.hydrate();
 }
 
 export function persistUserPreferencesPatch(patch: Partial<UserPreferences>): void {
-  const sanitizedPatch = sanitizeUserPreferences(patch);
-  cachedPreferences = {
-    ...cachedPreferences,
-    ...sanitizedPatch
+  installedPort.persistPatch(patch);
+}
+
+/**
+ * Test seam. Resets the installed port to the no-op default so a fresh suite
+ * does not carry cache state from a previous test.
+ */
+export function resetUserPreferencesCacheForTests(): void {
+  installedPort = createNoopPort();
+}
+
+function createNoopPort(): UserPreferencesClientPort {
+  return {
+    getCached: () => ({}),
+    hydrate: () => Promise.resolve({}),
+    persistPatch: () => {
+      // no-op until a real adapter is installed
+    }
   };
-
-  void postUserPreferencesPatch(sanitizedPatch).catch(() => {
-    // Local state stays even if the local server is briefly unreachable.
-  });
-}
-
-async function loadUserPreferencesFromServer(): Promise<UserPreferences> {
-  if (typeof fetch === "undefined") {
-    return cachedPreferences;
-  }
-
-  const response = await fetch(USER_PREFERENCES_ENDPOINT, {
-    method: "GET",
-    headers: { accept: "application/json" }
-  });
-
-  if (!response.ok) {
-    return cachedPreferences;
-  }
-
-  const payload = (await response.json()) as { preferences?: unknown };
-  return sanitizeUserPreferences(payload.preferences);
-}
-
-async function postUserPreferencesPatch(patch: UserPreferences): Promise<void> {
-  if (typeof fetch === "undefined") {
-    return;
-  }
-
-  const headers: Record<string, string> = {
-    "content-type": "application/json",
-    accept: "application/json"
-  };
-  const csrfToken = readCsrfTokenFromMeta();
-  if (csrfToken) {
-    headers[ADO_CSRF_HEADER] = csrfToken;
-  }
-
-  await fetch(USER_PREFERENCES_ENDPOINT, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ preferences: patch })
-  });
-}
-
-function readCsrfTokenFromMeta(): string | null {
-  if (typeof document === "undefined") {
-    return null;
-  }
-
-  const meta = document.querySelector(ADO_CSRF_META_SELECTOR);
-  if (!(meta instanceof HTMLMetaElement)) {
-    return null;
-  }
-
-  const token = meta.content.trim();
-  return token.length > 0 ? token : null;
 }

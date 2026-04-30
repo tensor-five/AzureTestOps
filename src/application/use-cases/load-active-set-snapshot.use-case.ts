@@ -3,6 +3,7 @@ import type { ActiveSetSnapshot } from "../dto/active-set-snapshot.dto.js";
 import type { AdoContextPort } from "../ports/ado-context.port.js";
 import type { SavedQueryPort } from "../ports/saved-query.port.js";
 import type { SetRepositoryPort } from "../ports/set-repository.port.js";
+import type { TestCaseHydrationPort } from "../ports/test-case-hydration.port.js";
 import type { TestManagementReadPort } from "../ports/test-management.port.js";
 import type { WorkItemHydrationPort } from "../ports/work-item-hydration.port.js";
 
@@ -34,6 +35,7 @@ export type LoadActiveSetSnapshotInput = {
 export type LoadActiveSetSnapshotDeps = {
   setRepository: SetRepositoryPort;
   testManagement: TestManagementReadPort;
+  testCaseHydration: TestCaseHydrationPort;
   workItemHydration: WorkItemHydrationPort;
   savedQuery: SavedQueryPort;
   /** Optional fail-fast guard: throws when ADO context is not yet configured. */
@@ -85,7 +87,7 @@ export async function loadActiveSetSnapshot(
       { planId, rootSuiteId },
       {
         testManagement: deps.testManagement,
-        workItemHydration: deps.workItemHydration,
+        testCaseHydration: deps.testCaseHydration,
         concurrency: deps.concurrency
       }
     ).then((result) => {

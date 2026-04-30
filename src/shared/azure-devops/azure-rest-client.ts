@@ -38,11 +38,3 @@ export function buildAdoBaseUrl(context: AdoOrgProjectContext): string {
   const project = encodeURIComponent(context.project.trim());
   return `https://dev.azure.com/${encodeURIComponent(organization)}/${project}`;
 }
-
-/**
- * Builds the deep link to a work item's edit view in the Azure DevOps web UI.
- * Used by the relations view to open IDs in a new tab.
- */
-export function buildWorkItemUrl(context: AdoOrgProjectContext, workItemId: number): string {
-  return `${buildAdoBaseUrl(context)}/_workitems/edit/${workItemId}`;
-}

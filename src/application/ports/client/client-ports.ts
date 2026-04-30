@@ -5,6 +5,8 @@ import type { RelationMutationsClientPort } from "./relation-mutations-client.po
 import type { SavedQueryClientPort } from "./saved-query-client.port.js";
 import type { SetManagementClientPort } from "./set-management-client.port.js";
 import type { TestCatalogClientPort } from "./test-catalog-client.port.js";
+import type { UserPreferencesClientPort } from "./user-preferences-client.port.js";
+import type { WorkItemDeepLinkClientPort } from "./work-item-deep-link-client.port.js";
 
 /**
  * Bundle of every browser-facing port the UI needs from the local server.
@@ -20,4 +22,6 @@ export type ClientPorts = {
   savedQuery: SavedQueryClientPort;
   setManagement: SetManagementClientPort;
   testCatalog: TestCatalogClientPort;
+  userPreferences: UserPreferencesClientPort;
+  workItemDeepLink: WorkItemDeepLinkClientPort;
 };

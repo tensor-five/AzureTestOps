@@ -4,11 +4,11 @@ import {
   loadTestCaseProjections,
   type LoadTestCaseProjectionsDeps
 } from "./load-test-case-projections.use-case.js";
+import type { TestCaseHydrationData } from "../../domain/test-management/test-case-hydration-data.js";
 import type { TestPoint } from "../../domain/test-management/test-point.js";
 import type { TestResult } from "../../domain/test-management/test-result.js";
 import type { TestRun } from "../../domain/test-management/test-run.js";
 import type { TestSuiteNode } from "../../domain/test-management/test-suite-tree.js";
-import type { WorkItem } from "../../domain/work-items/work-item.js";
 
 describe("loadTestCaseProjections", () => {
   it("composes suite-tree + cases + points + runs + results into projections", async () => {
@@ -53,9 +53,9 @@ describe("loadTestCaseProjections", () => {
       { resultId: 7002, runId: 5000, workItemId: 102, suiteId: 2, pointId: 22, outcome: "Failed", completedDate: "2026-03-01T10:05:00Z" }
     ];
 
-    const workItems = new Map<number, WorkItem>([
-      [101, { id: 101, workItemType: "Test Case", title: "Login", state: "Ready", assignedTo: null, tags: [], areaPath: null, priority: null, relatedIds: [] }],
-      [102, { id: 102, workItemType: "Test Case", title: "Logout", state: "Ready", assignedTo: null, tags: [], areaPath: null, priority: null, relatedIds: [] }]
+    const hydration = new Map<number, TestCaseHydrationData>([
+      [101, { workItemType: "Test Case", title: "Login", state: "Ready", assignedTo: null, tags: [], areaPath: null, priority: null, relatedIds: [] }],
+      [102, { workItemType: "Test Case", title: "Logout", state: "Ready", assignedTo: null, tags: [], areaPath: null, priority: null, relatedIds: [] }]
     ]);
 
     const deps: LoadTestCaseProjectionsDeps = {
@@ -66,13 +66,13 @@ describe("loadTestCaseProjections", () => {
         listRunsForPlan: async () => runs,
         loadResultsForRun: async (runId) => results.filter((r) => r.runId === runId)
       },
-      workItemHydration: {
-        hydrateWorkItems: async (ids) => {
-          const map = new Map<number, WorkItem>();
+      testCaseHydration: {
+        hydrateTestCases: async (ids) => {
+          const map = new Map<number, TestCaseHydrationData>();
           for (const id of ids) {
-            const wi = workItems.get(id);
-            if (wi) {
-              map.set(id, wi);
+            const data = hydration.get(id);
+            if (data) {
+              map.set(id, data);
             }
           }
           return map;
@@ -120,10 +120,10 @@ describe("loadTestCaseProjections", () => {
         listRunsForPlan: async () => [],
         loadResultsForRun: async () => []
       },
-      workItemHydration: {
-        hydrateWorkItems: async () =>
-          new Map<number, WorkItem>([
-            [101, { id: 101, workItemType: "Test Case", title: "Login", state: "Ready", assignedTo: null, tags: [], areaPath: null, priority: null, relatedIds: [] }]
+      testCaseHydration: {
+        hydrateTestCases: async () =>
+          new Map<number, TestCaseHydrationData>([
+            [101, { workItemType: "Test Case", title: "Login", state: "Ready", assignedTo: null, tags: [], areaPath: null, priority: null, relatedIds: [] }]
           ])
       }
     };

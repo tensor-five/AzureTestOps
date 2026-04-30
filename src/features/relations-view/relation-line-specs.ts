@@ -1,4 +1,8 @@
 import type { ActiveSetSnapshot } from "../../application/dto/active-set-snapshot.dto.js";
+import {
+  buildSnapshotRelationIndex,
+  snapshotRelationKey
+} from "../../domain/relations/snapshot-relation-index.js";
 import type { TestCaseProjection } from "../../domain/test-management/test-case-projection.js";
 import type { WorkItem } from "../../domain/work-items/work-item.js";
 import {
@@ -28,39 +32,18 @@ export type RelationPair = {
 
 /**
  * Builds the set of `(testCaseId::workItemId)` keys that are linked in the
- * snapshot. Walks both sides of `relatedIds` because `System.LinkTypes.Related`
- * is symmetric in Azure DevOps but partial data may have one side missing.
+ * snapshot. Delegates to {@link buildSnapshotRelationIndex} so the symmetry
+ * rule (`System.LinkTypes.Related` carrying both sides) lives in the
+ * Relations bounded context and the same logic is reusable from diagnostics.
  */
 export function buildSnapshotRelationSet(snapshot: ActiveSetSnapshot | null): Set<string> {
-  const set = new Set<string>();
   if (!snapshot) {
-    return set;
+    return new Set();
   }
-  const workItemIdsInQuery = new Set<number>();
-  for (const wi of snapshot.workItemsFromQuery) {
-    workItemIdsInQuery.add(wi.id);
-  }
-  const testCaseIdsInProjections = new Set<number>();
-  for (const projection of snapshot.projections) {
-    testCaseIdsInProjections.add(projection.workItemId);
-  }
-
-  for (const projection of snapshot.projections) {
-    for (const relatedId of projection.relatedIds) {
-      if (workItemIdsInQuery.has(relatedId)) {
-        set.add(`${projection.workItemId}::${relatedId}`);
-      }
-    }
-  }
-  for (const wi of snapshot.workItemsFromQuery) {
-    for (const relatedId of wi.relatedIds) {
-      if (testCaseIdsInProjections.has(relatedId)) {
-        set.add(`${relatedId}::${wi.id}`);
-      }
-    }
-  }
-  return set;
+  return new Set(buildSnapshotRelationIndex(snapshot.projections, snapshot.workItemsFromQuery));
 }
+
+export { snapshotRelationKey };
 
 /**
  * Computes the line specs to render. Lines anchor only to endpoints that

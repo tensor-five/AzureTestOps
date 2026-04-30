@@ -10,12 +10,14 @@ import {
 } from "./load-active-set-snapshot.use-case.js";
 
 import type { Set } from "../../domain/sets/set.js";
+import type { TestCaseHydrationData } from "../../domain/test-management/test-case-hydration-data.js";
 import type { TestPoint } from "../../domain/test-management/test-point.js";
 import type { TestResult } from "../../domain/test-management/test-result.js";
 import type { TestRun } from "../../domain/test-management/test-run.js";
 import type { TestSuiteNode } from "../../domain/test-management/test-suite-tree.js";
 import type { WorkItem } from "../../domain/work-items/work-item.js";
 import type { SetRepositoryPort } from "../ports/set-repository.port.js";
+import type { TestCaseHydrationPort } from "../ports/test-case-hydration.port.js";
 import type { TestManagementReadPort } from "../ports/test-management.port.js";
 import type { WorkItemHydrationPort } from "../ports/work-item-hydration.port.js";
 import type { SavedQueryPort } from "../ports/saved-query.port.js";
@@ -110,6 +112,17 @@ describe("loadActiveSetSnapshot", () => {
         return map;
       })
     };
+    const testCaseHydration: TestCaseHydrationPort = {
+      hydrateTestCases: vi.fn(async (ids) => {
+        const map = new Map<number, TestCaseHydrationData>();
+        for (const id of ids) {
+          if (id === 101) {
+            map.set(id, projectWorkItem(testCase));
+          }
+        }
+        return map;
+      })
+    };
     const savedQuery: SavedQueryPort = {
       listSavedQueries: vi.fn(async () => []),
       executeQuery: vi.fn(async () => ({ workItemIds: [201], relations: [] }))
@@ -118,6 +131,7 @@ describe("loadActiveSetSnapshot", () => {
     const deps: LoadActiveSetSnapshotDeps = {
       setRepository: repo,
       testManagement,
+      testCaseHydration,
       workItemHydration,
       savedQuery,
       now: () => new Date("2026-04-29T12:00:00Z")
@@ -236,10 +250,26 @@ function baseDeps(repo: SetRepositoryPort): LoadActiveSetSnapshotDeps {
     workItemHydration: {
       hydrateWorkItems: async () => new Map()
     },
+    testCaseHydration: {
+      hydrateTestCases: async () => new Map()
+    },
     savedQuery: {
       listSavedQueries: async () => [],
       executeQuery: async () => ({ workItemIds: [], relations: [] })
     },
     now: () => new Date("2026-04-29T12:00:00Z")
+  };
+}
+
+function projectWorkItem(item: WorkItem): TestCaseHydrationData {
+  return {
+    title: item.title,
+    state: item.state,
+    workItemType: item.workItemType,
+    assignedTo: item.assignedTo,
+    tags: item.tags,
+    areaPath: item.areaPath,
+    priority: item.priority,
+    relatedIds: item.relatedIds
   };
 }

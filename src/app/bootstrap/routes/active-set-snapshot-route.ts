@@ -68,6 +68,7 @@ export function registerActiveSetSnapshotStreamRoute(
           setRepository: deps.setRepository,
           adoContext: deps.adoContext,
           testManagement: await deps.ado.testManagement(),
+          testCaseHydration: await deps.ado.testCaseHydration(),
           workItemHydration: await deps.ado.workItemHydration(),
           savedQuery: await deps.ado.savedQuery(),
           onProgress: (event: SnapshotProgressEvent) => send("progress", event)

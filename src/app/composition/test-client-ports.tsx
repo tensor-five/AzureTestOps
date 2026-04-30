@@ -52,6 +52,16 @@ export function buildClientPortsStub(overrides: Partial<ClientPorts> = {}): Clie
       listTestPlans: unimplemented("testCatalog.listTestPlans"),
       listSuitesForPlan: unimplemented("testCatalog.listSuitesForPlan"),
       ...overrides.testCatalog
+    },
+    userPreferences: {
+      getCached: () => ({}),
+      hydrate: () => Promise.resolve({}),
+      persistPatch: () => undefined,
+      ...overrides.userPreferences
+    },
+    workItemDeepLink: {
+      buildHref: unimplemented("workItemDeepLink.buildHref") as never,
+      ...overrides.workItemDeepLink
     }
   };
 }

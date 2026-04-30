@@ -125,7 +125,7 @@ describe("useSetFilters", () => {
     harness.unmount();
   });
 
-  it("emits an empty setFilters map when the last column of the only set is cleared", () => {
+  it("emits a single-set deletion patch when the last column of a set is cleared", () => {
     cacheSpy.mockReturnValue({
       setFilters: {
         "set-1": { testCases: { lastOutcomes: ["Failed"] } }
@@ -138,14 +138,14 @@ describe("useSetFilters", () => {
       harness.result.current.clearTestCaseFilter();
     });
 
-    // The patch must carry an explicit empty map so the backend overwrites the
-    // persisted filter instead of falling back to the previous value.
-    expect(persistSpy).toHaveBeenLastCalledWith({ setFilters: {} });
+    // An empty per-set entry signals "delete this entry" to the lowdb adapter,
+    // which applies a per-setId merge instead of replacing the whole map.
+    expect(persistSpy).toHaveBeenLastCalledWith({ setFilters: { "set-1": {} } });
 
     harness.unmount();
   });
 
-  it("preserves sibling sets' filters when one set is fully cleared", () => {
+  it("does not touch sibling sets when one set is fully cleared", () => {
     cacheSpy.mockReturnValue({
       setFilters: {
         "set-1": { testCases: { lastOutcomes: ["Failed"] } },
@@ -159,8 +159,10 @@ describe("useSetFilters", () => {
       harness.result.current.clearTestCaseFilter();
     });
 
+    // Patch only references set-1; the server preserves set-2 because it is
+    // absent from the keyed scope of the patch.
     expect(persistSpy).toHaveBeenLastCalledWith({
-      setFilters: { "set-2": { workItems: { states: ["New"] } } }
+      setFilters: { "set-1": {} }
     });
 
     harness.unmount();

@@ -63,17 +63,98 @@ describe("LowdbUserPreferencesAdapter", () => {
     expect(replaced.sets?.map((set) => set.id)).toEqual(["s3"]);
   });
 
-  it("clears persisted setFilters when the patch carries an explicitly empty map", async () => {
+  it("merges setFilters per setId without clobbering other entries", async () => {
     const adapter = new LowdbUserPreferencesAdapter(filePath, "alice");
 
     await adapter.mergePreferences({
+      setFilters: {
+        "set-1": { testCases: { lastOutcomes: ["Failed"] } },
+        "set-2": { workItems: { states: ["Active"] } }
+      }
+    });
+
+    const merged = await adapter.mergePreferences({
+      setFilters: { "set-1": { testCases: { lastOutcomes: ["Passed"] } } }
+    });
+
+    expect(merged.setFilters).toEqual({
+      "set-1": { testCases: { lastOutcomes: ["Passed"] } },
+      "set-2": { workItems: { states: ["Active"] } }
+    });
+  });
+
+  it("deletes a single setFilters entry when the patch carries an empty value for that setId", async () => {
+    const adapter = new LowdbUserPreferencesAdapter(filePath, "alice");
+
+    await adapter.mergePreferences({
+      setFilters: {
+        "set-1": { testCases: { lastOutcomes: ["Failed"] } },
+        "set-2": { workItems: { states: ["Active"] } }
+      }
+    });
+
+    const cleared = await adapter.mergePreferences({
+      setFilters: { "set-1": {} }
+    });
+
+    expect(cleared.setFilters).toEqual({
+      "set-2": { workItems: { states: ["Active"] } }
+    });
+  });
+
+  it("merges setLayouts per setId without clobbering other entries", async () => {
+    const adapter = new LowdbUserPreferencesAdapter(filePath, "alice");
+
+    await adapter.mergePreferences({
+      setLayouts: {
+        "set-1": { collapsedSuites: ["100"] },
+        "set-2": { workItemOrder: [10, 20] }
+      }
+    });
+
+    const merged = await adapter.mergePreferences({
+      setLayouts: { "set-1": { workItemOrder: [1, 2] } }
+    });
+
+    expect(merged.setLayouts).toEqual({
+      "set-1": { workItemOrder: [1, 2] },
+      "set-2": { workItemOrder: [10, 20] }
+    });
+  });
+
+  it("deletes a single setLayouts entry when the patch carries an empty value for that setId", async () => {
+    const adapter = new LowdbUserPreferencesAdapter(filePath, "alice");
+
+    await adapter.mergePreferences({
+      setLayouts: {
+        "set-1": { collapsedSuites: ["100"] },
+        "set-2": { workItemOrder: [10, 20] }
+      }
+    });
+
+    const cleared = await adapter.mergePreferences({
+      setLayouts: { "set-1": {} }
+    });
+
+    expect(cleared.setLayouts).toEqual({
+      "set-2": { workItemOrder: [10, 20] }
+    });
+  });
+
+  it("treats a patch without setLayouts/setFilters as no-op for those scopes", async () => {
+    const adapter = new LowdbUserPreferencesAdapter(filePath, "alice");
+
+    await adapter.mergePreferences({
+      setLayouts: { "set-1": { collapsedSuites: ["100"] } },
       setFilters: { "set-1": { testCases: { lastOutcomes: ["Failed"] } } }
     });
 
-    const cleared = await adapter.mergePreferences({ setFilters: {} });
-    expect(cleared.setFilters).toEqual({});
+    const after = await adapter.mergePreferences({ themeMode: "dark" });
 
-    const reloaded = await adapter.getPreferences();
-    expect(reloaded.setFilters).toEqual({});
+    expect(after.themeMode).toBe("dark");
+    expect(after.setLayouts).toEqual({ "set-1": { collapsedSuites: ["100"] } });
+    expect(after.setFilters).toEqual({
+      "set-1": { testCases: { lastOutcomes: ["Failed"] } }
+    });
   });
 });
