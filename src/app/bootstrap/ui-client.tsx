@@ -19,17 +19,27 @@ import { useSetManagement } from "../../features/set-management/use-set-manageme
 import { SetManagerDialog } from "../../features/set-management/set-manager-dialog.js";
 import { useActiveSetSnapshot } from "../../features/relations-view/use-active-set-snapshot.js";
 import { RelationsPane } from "../../features/relations-view/relations-pane.js";
+import { ClientPortsProvider } from "../composition/client-ports-context.js";
+import { buildBrowserClientPorts } from "../composition/browser-runtime.js";
+import type { ClientPorts } from "../../application/ports/client/client-ports.js";
 
 const THEME_MODE_STORAGE_KEY = "azure-testops.theme-mode.v1";
 const TENSORFIVE_WEBSITE_URL = "https://tensorfive.com";
 
 export type BootstrapUiClientOptions = {
   container: HTMLElement;
+  /** Override the browser composition root — used by tests to inject mock ports. */
+  ports?: ClientPorts;
 };
 
 export function bootstrapUiClient(options: BootstrapUiClientOptions): void {
+  const ports = options.ports ?? buildBrowserClientPorts();
   const root = createRoot(options.container);
-  root.render(<AppShell />);
+  root.render(
+    <ClientPortsProvider ports={ports}>
+      <AppShell />
+    </ClientPortsProvider>
+  );
 }
 
 function AppShell(): React.ReactElement {

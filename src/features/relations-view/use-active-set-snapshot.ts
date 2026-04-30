@@ -1,6 +1,7 @@
 import * as React from "react";
 
-import type { ActiveSetSnapshot } from "../../domain/sets/set.js";
+import { useClientPorts } from "../../app/composition/client-ports-context.js";
+import type { ActiveSetSnapshot } from "../../application/dto/active-set-snapshot.dto.js";
 import type { SnapshotProgressEvent } from "../../application/use-cases/load-active-set-snapshot.use-case.js";
 
 export type SnapshotState = {
@@ -18,120 +19,72 @@ const INITIAL_STATE: SnapshotState = {
 };
 
 /**
- * Subscribes to the `/phase2/active-set/snapshot/stream` SSE endpoint and
- * exposes a stateful `{ snapshot, progress, isLoading, error }`. Calling
- * `refresh()` re-opens the stream and starts a fresh load.
+ * Subscribes to the active-set snapshot stream via {@link
+ * ActiveSetSnapshotClientPort} and exposes a stateful
+ * `{ snapshot, progress, isLoading, error }`. Calling `refresh()` re-opens the
+ * stream and starts a fresh load.
  *
- * Why we manage the EventSource manually rather than via a library: the
- * payload mixes named events (`progress`, `result`, `error`) and we want
+ * Why we manage the subscription manually rather than via a library: the
+ * stream mixes named events (`progress`, `result`, `error`) and we want
  * deterministic teardown when the user triggers another refresh mid-flight.
  */
 export function useActiveSetSnapshot(setId: string | null): {
   state: SnapshotState;
   refresh(): void;
 } {
+  const { activeSetSnapshot } = useClientPorts();
   const [state, setState] = React.useState<SnapshotState>(INITIAL_STATE);
-  const sourceRef = React.useRef<EventSource | null>(null);
+  const subscriptionRef = React.useRef<{ close(): void } | null>(null);
 
-  const closeSource = React.useCallback(() => {
-    if (sourceRef.current) {
-      sourceRef.current.close();
-      sourceRef.current = null;
+  const closeSubscription = React.useCallback(() => {
+    if (subscriptionRef.current) {
+      subscriptionRef.current.close();
+      subscriptionRef.current = null;
     }
   }, []);
 
   const refresh = React.useCallback(() => {
-    closeSource();
+    closeSubscription();
     if (!setId) {
       setState({ ...INITIAL_STATE });
-      return;
-    }
-    if (typeof EventSource === "undefined") {
-      setState({ ...INITIAL_STATE, error: "SSE not supported in this environment." });
       return;
     }
 
     setState({ snapshot: null, progress: null, isLoading: true, error: null });
 
-    const source = new EventSource(
-      `/phase2/active-set/snapshot/stream?setId=${encodeURIComponent(setId)}`
-    );
-    sourceRef.current = source;
-
-    source.addEventListener("progress", (event) => {
-      try {
-        const data = JSON.parse((event as MessageEvent).data) as SnapshotProgressEvent;
-        setState((current) => ({ ...current, progress: data }));
-      } catch {
-        // Ignore malformed events — nothing actionable client-side.
+    subscriptionRef.current = activeSetSnapshot.subscribe(setId, (event) => {
+      if (event.type === "progress") {
+        setState((current) => ({ ...current, progress: event.progress }));
+        return;
       }
-    });
-
-    source.addEventListener("result", (event) => {
-      try {
-        const payload = JSON.parse((event as MessageEvent).data) as { snapshot: ActiveSetSnapshot };
+      if (event.type === "result") {
         setState((current) => ({
           ...current,
-          snapshot: payload.snapshot,
+          snapshot: event.snapshot,
           progress: { stage: "done", done: 1, total: 1 },
           isLoading: false,
           error: null
         }));
-      } catch {
-        setState((current) => ({
-          ...current,
-          isLoading: false,
-          error: "Received malformed snapshot result."
-        }));
-      } finally {
-        closeSource();
+        closeSubscription();
+        return;
       }
-    });
-
-    source.addEventListener("error", (event) => {
-      const message = readErrorMessage(event) ?? "Snapshot stream failed.";
-      setState((current) => ({
-        ...current,
-        isLoading: false,
-        error: message
-      }));
-      closeSource();
-    });
-
-    source.onerror = () => {
+      // type === "error"
       setState((current) => {
-        if (current.snapshot || current.error) {
+        if (current.snapshot) {
           return current;
         }
-        return { ...current, isLoading: false, error: "Snapshot stream connection lost." };
+        return { ...current, isLoading: false, error: event.message };
       });
-      closeSource();
-    };
-  }, [setId, closeSource]);
+      closeSubscription();
+    });
+  }, [setId, closeSubscription, activeSetSnapshot]);
 
   React.useEffect(() => {
     refresh();
     return () => {
-      closeSource();
+      closeSubscription();
     };
-  }, [refresh, closeSource]);
+  }, [refresh, closeSubscription]);
 
   return { state, refresh };
-}
-
-function readErrorMessage(event: Event): string | null {
-  if (event instanceof MessageEvent && typeof event.data === "string" && event.data.length > 0) {
-    try {
-      const parsed = JSON.parse(event.data) as { code?: unknown; message?: unknown };
-      if (typeof parsed.message === "string") {
-        return parsed.message;
-      }
-      if (typeof parsed.code === "string") {
-        return parsed.code;
-      }
-    } catch {
-      return event.data;
-    }
-  }
-  return null;
 }

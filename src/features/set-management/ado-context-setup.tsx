@@ -1,6 +1,7 @@
 import * as React from "react";
 
-import { getAdoCliDefaults, type AdoContext } from "../api/api-client.js";
+import { useClientPorts } from "../../app/composition/client-ports-context.js";
+import type { AdoContext } from "../../application/ports/ado-context.port.js";
 
 export type AdoContextSetupProps = {
   /**
@@ -22,6 +23,7 @@ export type AdoContextSetupProps = {
  * removes a class of typos before they hit the saved file.
  */
 export function AdoContextSetup(props: AdoContextSetupProps): React.ReactElement {
+  const { adoContext } = useClientPorts();
   const initial = props.initial ?? null;
   const isEditing = initial !== null;
   const [organization, setOrganization] = React.useState(initial?.organization ?? "");
@@ -38,7 +40,7 @@ export function AdoContextSetup(props: AdoContextSetupProps): React.ReactElement
     let cancelled = false;
     void (async () => {
       try {
-        const defaults = await getAdoCliDefaults();
+        const defaults = await adoContext.getCliDefaults();
         if (cancelled) {
           return;
         }
@@ -59,7 +61,7 @@ export function AdoContextSetup(props: AdoContextSetupProps): React.ReactElement
     return () => {
       cancelled = true;
     };
-  }, [isEditing]);
+  }, [isEditing, adoContext]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();

@@ -5,6 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRoot } from "react-dom/client";
 
 import { useRelationMutations, type RelationMutationsApi } from "./use-relation-mutations.js";
+import {
+  WithClientPorts,
+  buildClientPortsStub
+} from "../../app/composition/test-client-ports.js";
 
 type Harness = {
   result: { current: RelationMutationsApi };
@@ -28,6 +32,12 @@ function renderHook(
   const root = createRoot(container);
 
   const result = { current: undefined as unknown as RelationMutationsApi };
+  const ports = buildClientPortsStub({
+    relationMutations: {
+      add: overrides.createRelation,
+      remove: overrides.deleteRelation
+    }
+  });
 
   let currentProps = initial;
 
@@ -42,7 +52,11 @@ function renderHook(
   }
 
   act(() => {
-    root.render(<Capture />);
+    root.render(
+      <WithClientPorts ports={ports}>
+        <Capture />
+      </WithClientPorts>
+    );
   });
 
   return {
@@ -50,7 +64,11 @@ function renderHook(
     rerender(next) {
       currentProps = next;
       act(() => {
-        root.render(<Capture />);
+        root.render(
+          <WithClientPorts ports={ports}>
+            <Capture />
+          </WithClientPorts>
+        );
       });
     },
     unmount() {

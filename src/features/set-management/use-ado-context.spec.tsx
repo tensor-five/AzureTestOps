@@ -5,9 +5,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRoot } from "react-dom/client";
 
 import { useAdoContext } from "./use-ado-context.js";
-import * as apiClient from "../api/api-client.js";
+import {
+  WithClientPorts,
+  buildClientPortsStub
+} from "../../app/composition/test-client-ports.js";
+import { ApiError } from "../../application/dto/api-error.js";
+import type { AdoContext } from "../../application/ports/ado-context.port.js";
+import type { AdoContextClientPort } from "../../application/ports/client/ado-context-client.port.js";
+import type { ClientPorts } from "../../application/ports/client/client-ports.js";
 
-function setupHook<T>(useHook: () => T): {
+function setupHook<T>(
+  useHook: () => T,
+  ports: ClientPorts
+): {
   result: { current: T };
   unmount(): void;
 } {
@@ -22,7 +32,11 @@ function setupHook<T>(useHook: () => T): {
   }
 
   act(() => {
-    root.render(<Capture />);
+    root.render(
+      <WithClientPorts ports={ports}>
+        <Capture />
+      </WithClientPorts>
+    );
   });
 
   return {
@@ -44,9 +58,22 @@ async function flushAsync(): Promise<void> {
 }
 
 describe("useAdoContext", () => {
+  let getContext: ReturnType<typeof vi.fn>;
+  let setContext: ReturnType<typeof vi.fn>;
+  let getCliDefaults: ReturnType<typeof vi.fn>;
+  let adoContext: AdoContextClientPort;
+  let ports: ClientPorts;
+
   beforeEach(() => {
-    vi.spyOn(apiClient, "getAdoContext").mockResolvedValue(null);
-    vi.spyOn(apiClient, "setAdoContext").mockImplementation(async (ctx) => ctx);
+    getContext = vi.fn(async () => null as AdoContext | null);
+    setContext = vi.fn(async (ctx: AdoContext) => ctx);
+    getCliDefaults = vi.fn(async () => ({ organization: "", project: "" }));
+    adoContext = {
+      getContext: getContext as unknown as AdoContextClientPort["getContext"],
+      setContext: setContext as unknown as AdoContextClientPort["setContext"],
+      getCliDefaults: getCliDefaults as unknown as AdoContextClientPort["getCliDefaults"]
+    };
+    ports = buildClientPortsStub({ adoContext });
   });
 
   afterEach(() => {
@@ -54,7 +81,7 @@ describe("useAdoContext", () => {
   });
 
   it("starts in CHECKING state, then reflects an empty context as hasContext=false", async () => {
-    const harness = setupHook(() => useAdoContext());
+    const harness = setupHook(() => useAdoContext(), ports);
 
     expect(harness.result.current.isLoading).toBe(true);
     expect(harness.result.current.hasContext).toBe(false);
@@ -70,12 +97,12 @@ describe("useAdoContext", () => {
   });
 
   it("reflects a loaded context as hasContext=true", async () => {
-    vi.mocked(apiClient.getAdoContext).mockResolvedValue({
+    getContext.mockResolvedValue({
       organization: "tensorfive",
       project: "AzureTestOps"
     });
 
-    const harness = setupHook(() => useAdoContext());
+    const harness = setupHook(() => useAdoContext(), ports);
     await flushAsync();
 
     expect(harness.result.current.context).toEqual({
@@ -89,9 +116,9 @@ describe("useAdoContext", () => {
   });
 
   it("captures the error message when the initial load fails", async () => {
-    vi.mocked(apiClient.getAdoContext).mockRejectedValue(new Error("network down"));
+    getContext.mockRejectedValue(new Error("network down"));
 
-    const harness = setupHook(() => useAdoContext());
+    const harness = setupHook(() => useAdoContext(), ports);
     await flushAsync();
 
     expect(harness.result.current.isLoading).toBe(false);
@@ -103,10 +130,10 @@ describe("useAdoContext", () => {
   });
 
   it("save persists the context, clears the error and updates state immediately", async () => {
-    const harness = setupHook(() => useAdoContext());
+    const harness = setupHook(() => useAdoContext(), ports);
     await flushAsync();
 
-    let saved: apiClient.AdoContext | undefined;
+    let saved: AdoContext | undefined;
     await act(async () => {
       saved = await harness.result.current.save({
         organization: "tensorfive",
@@ -115,7 +142,7 @@ describe("useAdoContext", () => {
     });
 
     expect(saved).toEqual({ organization: "tensorfive", project: "AzureTestOps" });
-    expect(apiClient.setAdoContext).toHaveBeenCalledWith({
+    expect(setContext).toHaveBeenCalledWith({
       organization: "tensorfive",
       project: "AzureTestOps"
     });
@@ -126,21 +153,19 @@ describe("useAdoContext", () => {
   });
 
   it("save surfaces ApiError messages without mutating context", async () => {
-    vi.mocked(apiClient.getAdoContext).mockResolvedValue({
+    getContext.mockResolvedValue({
       organization: "old-org",
       project: "old-project"
     });
-    vi.mocked(apiClient.setAdoContext).mockRejectedValue(
-      new apiClient.ApiError(409, "ADO_CONTEXT_CONFLICT", "context already taken")
-    );
+    setContext.mockRejectedValue(new ApiError(409, "ADO_CONTEXT_CONFLICT", "context already taken"));
 
-    const harness = setupHook(() => useAdoContext());
+    const harness = setupHook(() => useAdoContext(), ports);
     await flushAsync();
 
     await act(async () => {
       await expect(
         harness.result.current.save({ organization: "new", project: "new" })
-      ).rejects.toBeInstanceOf(apiClient.ApiError);
+      ).rejects.toBeInstanceOf(ApiError);
     });
 
     expect(harness.result.current.error).toBe("context already taken");
@@ -153,11 +178,11 @@ describe("useAdoContext", () => {
   });
 
   it("refresh re-runs the load and replaces the cached context", async () => {
-    vi.mocked(apiClient.getAdoContext)
+    getContext
       .mockResolvedValueOnce({ organization: "first", project: "first" })
       .mockResolvedValueOnce({ organization: "second", project: "second" });
 
-    const harness = setupHook(() => useAdoContext());
+    const harness = setupHook(() => useAdoContext(), ports);
     await flushAsync();
 
     expect(harness.result.current.context).toEqual({

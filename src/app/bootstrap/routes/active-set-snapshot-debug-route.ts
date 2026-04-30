@@ -3,7 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { loadActiveSetSnapshot } from "../../../application/use-cases/load-active-set-snapshot.use-case.js";
 import type { AdoContextPort } from "../../../application/ports/ado-context.port.js";
 import type { SetRepositoryPort } from "../../../application/ports/set-repository.port.js";
-import type { ActiveSetSnapshot } from "../../../domain/sets/set.js";
+import type { ActiveSetSnapshot } from "../../../application/dto/active-set-snapshot.dto.js";
 import type { TestCaseProjection } from "../../../domain/test-management/test-case-projection.js";
 import type { WorkItem } from "../../../domain/work-items/work-item.js";
 import type { AdoRuntime } from "../../composition/runtime.js";

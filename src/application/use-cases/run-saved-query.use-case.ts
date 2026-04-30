@@ -1,4 +1,4 @@
-import type { QueryExecutionResult } from "../../domain/queries/saved-query.js";
+import type { QueryExecutionResult } from "../../domain/work-items/saved-query.js";
 import type { WorkItem } from "../../domain/work-items/work-item.js";
 import type { SavedQueryPort } from "../ports/saved-query.port.js";
 import type { WorkItemHydrationPort } from "../ports/work-item-hydration.port.js";

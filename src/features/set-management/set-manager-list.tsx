@@ -1,7 +1,7 @@
 import * as React from "react";
 
 import type { Set } from "../../domain/sets/set.js";
-import type { AdoContext } from "../api/api-client.js";
+import type { AdoContext } from "../../application/ports/ado-context.port.js";
 
 export type SetManagerListProps = {
   sets: Set[];

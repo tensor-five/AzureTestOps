@@ -5,48 +5,49 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRoot } from "react-dom/client";
 
 import { useActiveSetSnapshot } from "./use-active-set-snapshot.js";
+import {
+  WithClientPorts,
+  buildClientPortsStub
+} from "../../app/composition/test-client-ports.js";
+import type {
+  ActiveSetSnapshotClientPort,
+  ActiveSetSnapshotStreamEvent
+} from "../../application/ports/client/active-set-snapshot-client.port.js";
+import type { ClientPorts } from "../../application/ports/client/client-ports.js";
 
-type EventHandler = (event: MessageEvent | Event) => void;
+type EmittedSubscription = {
+  setId: string;
+  emit: (event: ActiveSetSnapshotStreamEvent) => void;
+  closed: boolean;
+};
 
-class StubEventSource {
-  public static lastInstance: StubEventSource | null = null;
-
-  public readonly url: string;
-  public closed = false;
-  public onerror: ((event: Event) => void) | null = null;
-  private readonly handlers = new Map<string, EventHandler[]>();
-
-  public constructor(url: string) {
-    this.url = url;
-    StubEventSource.lastInstance = this;
-  }
-
-  public addEventListener(event: string, handler: EventHandler): void {
-    const list = this.handlers.get(event) ?? [];
-    list.push(handler);
-    this.handlers.set(event, list);
-  }
-
-  public dispatch(event: string, payload: unknown): void {
-    const handlers = this.handlers.get(event) ?? [];
-    const messageEvent = new MessageEvent(event, { data: JSON.stringify(payload) });
-    for (const handler of handlers) {
-      handler(messageEvent);
+function buildSnapshotPort(): {
+  port: ActiveSetSnapshotClientPort;
+  active: () => EmittedSubscription | null;
+} {
+  let active: EmittedSubscription | null = null;
+  const port: ActiveSetSnapshotClientPort = {
+    subscribe(setId, onEvent) {
+      const subscription: EmittedSubscription = {
+        setId,
+        closed: false,
+        emit: (event) => onEvent(event)
+      };
+      active = subscription;
+      return {
+        close: () => {
+          subscription.closed = true;
+        }
+      };
     }
-  }
-
-  public dispatchTransportError(): void {
-    if (this.onerror) {
-      this.onerror(new Event("error"));
-    }
-  }
-
-  public close(): void {
-    this.closed = true;
-  }
+  };
+  return { port, active: () => active };
 }
 
-function setupHookHarness<T>(useHook: () => T): { result: { current: T }; unmount(): void } {
+function setupHookHarness<T>(
+  useHook: () => T,
+  ports: ClientPorts
+): { result: { current: T }; unmount(): void } {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -58,7 +59,11 @@ function setupHookHarness<T>(useHook: () => T): { result: { current: T }; unmoun
   }
 
   act(() => {
-    root.render(<Capture />);
+    root.render(
+      <WithClientPorts ports={ports}>
+        <Capture />
+      </WithClientPorts>
+    );
   });
 
   return {
@@ -80,34 +85,38 @@ async function flushAsync(): Promise<void> {
 }
 
 describe("useActiveSetSnapshot", () => {
+  let snapshotPort: ReturnType<typeof buildSnapshotPort>;
+  let ports: ClientPorts;
+
   beforeEach(() => {
-    vi.stubGlobal("EventSource", StubEventSource as unknown as typeof EventSource);
-    StubEventSource.lastInstance = null;
+    snapshotPort = buildSnapshotPort();
+    ports = buildClientPortsStub({ activeSetSnapshot: snapshotPort.port });
   });
 
   afterEach(() => {
-    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
-  it("opens an EventSource for the active set and tracks loading state", async () => {
-    const harness = setupHookHarness(() => useActiveSetSnapshot("set-1"));
+  it("subscribes for the active set and tracks loading state", async () => {
+    const harness = setupHookHarness(() => useActiveSetSnapshot("set-1"), ports);
     await flushAsync();
 
-    expect(StubEventSource.lastInstance?.url).toBe(
-      "/phase2/active-set/snapshot/stream?setId=set-1"
-    );
+    expect(snapshotPort.active()?.setId).toBe("set-1");
     expect(harness.result.current.state.isLoading).toBe(true);
 
     harness.unmount();
   });
 
   it("forwards progress events into state and resolves on result", async () => {
-    const harness = setupHookHarness(() => useActiveSetSnapshot("set-1"));
+    const harness = setupHookHarness(() => useActiveSetSnapshot("set-1"), ports);
     await flushAsync();
 
-    const source = StubEventSource.lastInstance!;
+    const subscription = snapshotPort.active()!;
     act(() => {
-      source.dispatch("progress", { stage: "test-cases", done: 0, total: 1 });
+      subscription.emit({
+        type: "progress",
+        progress: { stage: "test-cases", done: 0, total: 1 }
+      });
     });
     expect(harness.result.current.state.progress?.stage).toBe("test-cases");
 
@@ -119,37 +128,37 @@ describe("useActiveSetSnapshot", () => {
       loadedAt: "2026-04-29T12:00:00.000Z"
     };
     act(() => {
-      source.dispatch("result", { snapshot });
+      subscription.emit({ type: "result", snapshot });
     });
 
     expect(harness.result.current.state.snapshot).toEqual(snapshot);
     expect(harness.result.current.state.isLoading).toBe(false);
-    expect(source.closed).toBe(true);
+    expect(subscription.closed).toBe(true);
 
     harness.unmount();
   });
 
-  it("captures error events with the server-supplied message", async () => {
-    const harness = setupHookHarness(() => useActiveSetSnapshot("set-1"));
+  it("captures error events with the port-supplied message", async () => {
+    const harness = setupHookHarness(() => useActiveSetSnapshot("set-1"), ports);
     await flushAsync();
 
-    const source = StubEventSource.lastInstance!;
+    const subscription = snapshotPort.active()!;
     act(() => {
-      source.dispatch("error", { code: "SET_NOT_FOUND", message: "Set ghost not found." });
+      subscription.emit({ type: "error", message: "Set ghost not found." });
     });
 
     expect(harness.result.current.state.error).toContain("Set ghost not found.");
     expect(harness.result.current.state.isLoading).toBe(false);
-    expect(source.closed).toBe(true);
+    expect(subscription.closed).toBe(true);
 
     harness.unmount();
   });
 
   it("resets state when called with a null setId", async () => {
-    const harness = setupHookHarness(() => useActiveSetSnapshot(null));
+    const harness = setupHookHarness(() => useActiveSetSnapshot(null), ports);
     await flushAsync();
 
-    expect(StubEventSource.lastInstance).toBeNull();
+    expect(snapshotPort.active()).toBeNull();
     expect(harness.result.current.state).toEqual({
       snapshot: null,
       progress: null,
@@ -160,12 +169,12 @@ describe("useActiveSetSnapshot", () => {
     harness.unmount();
   });
 
-  it("treats a transport error as a failed snapshot when no result has arrived", async () => {
-    const harness = setupHookHarness(() => useActiveSetSnapshot("set-1"));
+  it("treats an error event as a failed snapshot when no result has arrived", async () => {
+    const harness = setupHookHarness(() => useActiveSetSnapshot("set-1"), ports);
     await flushAsync();
 
     act(() => {
-      StubEventSource.lastInstance!.dispatchTransportError();
+      snapshotPort.active()!.emit({ type: "error", message: "Snapshot stream connection lost." });
     });
 
     expect(harness.result.current.state.isLoading).toBe(false);

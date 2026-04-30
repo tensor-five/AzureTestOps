@@ -1,4 +1,5 @@
-import type { ActiveSetSnapshot, Set } from "../../domain/sets/set.js";
+import type { Set } from "../../domain/sets/set.js";
+import type { ActiveSetSnapshot } from "../dto/active-set-snapshot.dto.js";
 import type { AdoContextPort } from "../ports/ado-context.port.js";
 import type { SavedQueryPort } from "../ports/saved-query.port.js";
 import type { SetRepositoryPort } from "../ports/set-repository.port.js";

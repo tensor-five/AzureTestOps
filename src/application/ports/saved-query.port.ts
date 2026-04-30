@@ -1,14 +1,14 @@
 import type {
   QueryExecutionResult,
   SavedQuery
-} from "../../domain/queries/saved-query.js";
+} from "../../domain/work-items/saved-query.js";
 
 /**
- * Boundary contract for read access to Azure DevOps Saved Queries.
+ * Boundary contract for read access to Saved Queries (Work Items context).
  *
  * The adapter is responsible for talking to `/_apis/wit/queries` (catalog)
  * and `/_apis/wit/wiql/{id}` (execution); the application layer stays
- * Azure-agnostic and merely orchestrates listing + execution + hydration.
+ * transport-agnostic and merely orchestrates listing + execution + hydration.
  */
 export interface SavedQueryPort {
   /**

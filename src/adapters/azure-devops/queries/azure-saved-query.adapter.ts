@@ -8,7 +8,7 @@ import type { SavedQueryPort } from "../../../application/ports/saved-query.port
 import type {
   QueryExecutionResult,
   SavedQuery
-} from "../../../domain/queries/saved-query.js";
+} from "../../../domain/work-items/saved-query.js";
 
 const API_VERSION_71 = "7.1";
 const SHARED_QUERIES_PATH = "Shared%20Queries";

@@ -3,9 +3,11 @@ import {
   flattenSuiteTree,
   type TestSuiteNode
 } from "../../domain/test-management/test-suite-tree.js";
+import type { TestCaseHydrationData } from "../../domain/test-management/test-case-hydration-data.js";
 import type { TestCaseProjection } from "../../domain/test-management/test-case-projection.js";
 import type { TestPoint } from "../../domain/test-management/test-point.js";
 import type { TestResult } from "../../domain/test-management/test-result.js";
+import type { WorkItem } from "../../domain/work-items/work-item.js";
 import type { TestManagementReadPort } from "../ports/test-management.port.js";
 import type { WorkItemHydrationPort } from "../ports/work-item-hydration.port.js";
 import { mapConcurrent } from "../../shared/utils/concurrency.js";
@@ -81,8 +83,27 @@ export async function loadTestCaseProjections(
     testCasesBySuiteId,
     pointsBySuiteId,
     results: allResults,
-    workItemsById
+    hydrationByWorkItemId: projectHydration(workItemsById)
   });
 
   return { suiteTree, projections };
+}
+
+function projectHydration(
+  workItemsById: Map<number, WorkItem>
+): Map<number, TestCaseHydrationData> {
+  const projected = new Map<number, TestCaseHydrationData>();
+  for (const [id, item] of workItemsById) {
+    projected.set(id, {
+      title: item.title,
+      state: item.state,
+      workItemType: item.workItemType,
+      assignedTo: item.assignedTo,
+      tags: item.tags,
+      areaPath: item.areaPath,
+      priority: item.priority,
+      relatedIds: item.relatedIds
+    });
+  }
+  return projected;
 }

@@ -6,8 +6,17 @@ import { createRoot } from "react-dom/client";
 
 import { useAuthPreflight } from "./use-auth-preflight.js";
 import type { PreflightStatus } from "./header.js";
+import {
+  WithClientPorts,
+  buildClientPortsStub
+} from "../../app/composition/test-client-ports.js";
+import type { AuthPreflightClientPort } from "../../application/ports/client/auth-preflight-client.port.js";
+import type { ClientPorts } from "../../application/ports/client/client-ports.js";
 
-function setupHook<T>(useHook: () => T): {
+function setupHook<T>(
+  useHook: () => T,
+  ports: ClientPorts
+): {
   result: { current: T };
   unmount(): void;
 } {
@@ -22,7 +31,11 @@ function setupHook<T>(useHook: () => T): {
   }
 
   act(() => {
-    root.render(<Capture />);
+    root.render(
+      <WithClientPorts ports={ports}>
+        <Capture />
+      </WithClientPorts>
+    );
   });
 
   return {
@@ -43,47 +56,39 @@ async function flushAsync(): Promise<void> {
   });
 }
 
-function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
-  return new Response(JSON.stringify(body), {
-    status: 200,
-    headers: { "content-type": "application/json" },
-    ...init
-  });
-}
-
 describe("useAuthPreflight", () => {
-  let fetchMock: ReturnType<typeof vi.fn>;
+  let checkSpy: ReturnType<typeof vi.fn>;
+  let authPreflight: AuthPreflightClientPort;
+  let ports: ClientPorts;
 
   beforeEach(() => {
-    fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
+    checkSpy = vi.fn(async () => "READY" as PreflightStatus);
+    authPreflight = {
+      check: checkSpy as unknown as AuthPreflightClientPort["check"]
+    };
+    ports = buildClientPortsStub({ authPreflight });
   });
 
   afterEach(() => {
-    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
-  it("starts in CHECKING then transitions to the server-reported status", async () => {
-    fetchMock.mockResolvedValue(jsonResponse({ result: { status: "READY" } }));
-
-    const harness = setupHook(() => useAuthPreflight());
+  it("starts in CHECKING then transitions to the port-reported status", async () => {
+    const harness = setupHook(() => useAuthPreflight(), ports);
     expect(harness.result.current).toBe<PreflightStatus>("CHECKING");
 
     await flushAsync();
 
     expect(harness.result.current).toBe<PreflightStatus>("READY");
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/phase2/auth-preflight",
-      expect.objectContaining({ headers: { accept: "application/json" } })
-    );
+    expect(checkSpy).toHaveBeenCalledTimes(1);
 
     harness.unmount();
   });
 
-  it("falls back to UNKNOWN_ERROR when the response is not OK", async () => {
-    fetchMock.mockResolvedValue(new Response("nope", { status: 503 }));
+  it("falls back to UNKNOWN_ERROR when the port resolves with UNKNOWN_ERROR", async () => {
+    checkSpy.mockResolvedValue("UNKNOWN_ERROR" as PreflightStatus);
 
-    const harness = setupHook(() => useAuthPreflight());
+    const harness = setupHook(() => useAuthPreflight(), ports);
     await flushAsync();
 
     expect(harness.result.current).toBe<PreflightStatus>("UNKNOWN_ERROR");
@@ -91,10 +96,10 @@ describe("useAuthPreflight", () => {
     harness.unmount();
   });
 
-  it("falls back to UNKNOWN_ERROR when fetch rejects", async () => {
-    fetchMock.mockRejectedValue(new Error("offline"));
+  it("falls back to UNKNOWN_ERROR when the port rejects", async () => {
+    checkSpy.mockRejectedValue(new Error("offline"));
 
-    const harness = setupHook(() => useAuthPreflight());
+    const harness = setupHook(() => useAuthPreflight(), ports);
     await flushAsync();
 
     expect(harness.result.current).toBe<PreflightStatus>("UNKNOWN_ERROR");
@@ -103,15 +108,17 @@ describe("useAuthPreflight", () => {
   });
 
   it("ignores a late response after unmount instead of warning about state on an unmounted component", async () => {
-    let resolveFetch: ((value: Response) => void) | undefined;
-    fetchMock.mockReturnValue(new Promise<Response>((resolve) => {
-      resolveFetch = resolve;
-    }));
+    let resolveCheck: ((status: PreflightStatus) => void) | undefined;
+    checkSpy.mockReturnValue(
+      new Promise<PreflightStatus>((resolve) => {
+        resolveCheck = resolve;
+      })
+    );
 
-    const harness = setupHook(() => useAuthPreflight());
+    const harness = setupHook(() => useAuthPreflight(), ports);
     harness.unmount();
 
-    resolveFetch?.(jsonResponse({ result: { status: "READY" } }));
+    resolveCheck?.("READY");
     // Flushing must not throw — the cancellation flag inside the hook should
     // swallow the response.
     await act(async () => {

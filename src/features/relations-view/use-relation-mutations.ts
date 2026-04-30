@@ -1,10 +1,7 @@
 import * as React from "react";
 
-import {
-  createRelationRequest,
-  deleteRelationRequest,
-  type RelationLinkRequest
-} from "../api/api-client.js";
+import { useClientPorts } from "../../app/composition/client-ports-context.js";
+import type { RelationLinkRequest } from "../../application/dto/relation-link.dto.js";
 
 type Override = "added" | "removed";
 
@@ -26,14 +23,14 @@ export type RelationMutationsDeps = {
   snapshotKey: string | null;
   /** Source of truth: does Azure DevOps currently know this `Related` link? */
   isRelatedInSnapshot(testCaseId: number, workItemId: number): boolean;
-  /** Override seam for tests; production wiring uses {@link createRelationRequest}. */
+  /** Override seam for tests; production wiring uses the relation-mutations client port. */
   createRelation?: (link: RelationLinkRequest) => Promise<void>;
-  /** Override seam for tests; production wiring uses {@link deleteRelationRequest}. */
+  /** Override seam for tests; production wiring uses the relation-mutations client port. */
   deleteRelation?: (link: RelationLinkRequest) => Promise<void>;
 };
 
 /**
- * Optimistic-update layer on top of the relations REST API.
+ * Optimistic-update layer on top of the relation-mutations client port.
  *
  * Render-time queries go through {@link RelationMutationsApi.isRelated}, which
  * combines snapshot truth with local overrides ("added" / "removed"). The
@@ -42,8 +39,9 @@ export type RelationMutationsDeps = {
  * toast without juggling promise rejections in event handlers.
  */
 export function useRelationMutations(deps: RelationMutationsDeps): RelationMutationsApi {
-  const create = deps.createRelation ?? createRelationRequest;
-  const remove = deps.deleteRelation ?? deleteRelationRequest;
+  const { relationMutations } = useClientPorts();
+  const create = deps.createRelation ?? ((link) => relationMutations.add(link));
+  const remove = deps.deleteRelation ?? ((link) => relationMutations.remove(link));
 
   const [overrides, setOverrides] = React.useState<Map<string, Override>>(() => new Map());
   const [pending, setPending] = React.useState<Set<string>>(() => new Set());

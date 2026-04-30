@@ -1,12 +1,6 @@
 import * as React from "react";
 
-import {
-  createSetRequest,
-  deleteSetRequest,
-  listSets,
-  setActiveSetRequest,
-  updateSetRequest
-} from "../api/api-client.js";
+import { useClientPorts } from "../../app/composition/client-ports-context.js";
 import type { Set, SetDraft } from "../../domain/sets/set.js";
 
 export type SetManagementState = {
@@ -26,11 +20,13 @@ export type SetManagementApi = SetManagementState & {
 
 /**
  * Owns the set list + active-set pointer for the UI. Keeps a single source of
- * truth in component state — mutations go through the API and then mirror
- * back into local state so the dropdown / dialog reflect the server response
- * without an extra round-trip.
+ * truth in component state — mutations go through the
+ * {@link SetManagementClientPort} (resolved from {@link useClientPorts}) and
+ * then mirror back into local state so the dropdown / dialog reflect the
+ * server response without an extra round-trip.
  */
 export function useSetManagement(): SetManagementApi {
+  const { setManagement } = useClientPorts();
   const [state, setState] = React.useState<SetManagementState>({
     sets: [],
     activeSetId: null,
@@ -41,7 +37,7 @@ export function useSetManagement(): SetManagementApi {
   const refresh = React.useCallback(async () => {
     setState((current) => ({ ...current, isLoading: true, error: null }));
     try {
-      const result = await listSets();
+      const result = await setManagement.list();
       setState({
         sets: result.sets,
         activeSetId: result.activeSetId,
@@ -55,7 +51,7 @@ export function useSetManagement(): SetManagementApi {
         error: error instanceof Error ? error.message : "Failed to load sets."
       }));
     }
-  }, []);
+  }, [setManagement]);
 
   React.useEffect(() => {
     void refresh();
@@ -63,7 +59,7 @@ export function useSetManagement(): SetManagementApi {
 
   const create = React.useCallback<SetManagementApi["create"]>(
     async (draft) => {
-      const created = await createSetRequest(draft);
+      const created = await setManagement.create(draft);
       setState((current) => ({
         ...current,
         sets: [...current.sets, created],
@@ -72,12 +68,12 @@ export function useSetManagement(): SetManagementApi {
       }));
       return created;
     },
-    []
+    [setManagement]
   );
 
   const update = React.useCallback<SetManagementApi["update"]>(
     async (setId, patch) => {
-      const updated = await updateSetRequest(setId, patch);
+      const updated = await setManagement.update(setId, patch);
       setState((current) => ({
         ...current,
         sets: current.sets.map((entry) => (entry.id === setId ? updated : entry)),
@@ -85,25 +81,28 @@ export function useSetManagement(): SetManagementApi {
       }));
       return updated;
     },
-    []
+    [setManagement]
   );
 
-  const remove = React.useCallback<SetManagementApi["remove"]>(async (setId) => {
-    await deleteSetRequest(setId);
-    setState((current) => ({
-      ...current,
-      sets: current.sets.filter((entry) => entry.id !== setId),
-      activeSetId: current.activeSetId === setId ? null : current.activeSetId,
-      error: null
-    }));
-  }, []);
+  const remove = React.useCallback<SetManagementApi["remove"]>(
+    async (setId) => {
+      await setManagement.delete(setId);
+      setState((current) => ({
+        ...current,
+        sets: current.sets.filter((entry) => entry.id !== setId),
+        activeSetId: current.activeSetId === setId ? null : current.activeSetId,
+        error: null
+      }));
+    },
+    [setManagement]
+  );
 
   const setActive = React.useCallback<SetManagementApi["setActive"]>(
     async (setId) => {
-      await setActiveSetRequest(setId);
+      await setManagement.setActive(setId);
       setState((current) => ({ ...current, activeSetId: setId, error: null }));
     },
-    []
+    [setManagement]
   );
 
   return {

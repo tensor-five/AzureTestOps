@@ -5,11 +5,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRoot } from "react-dom/client";
 
 import { useSetManagement } from "./use-set-management.js";
-import * as api from "../api/api-client.js";
+import {
+  WithClientPorts,
+  buildClientPortsStub
+} from "../../app/composition/test-client-ports.js";
+import type { ClientPorts } from "../../application/ports/client/client-ports.js";
+import type { SetManagementClientPort } from "../../application/ports/client/set-management-client.port.js";
 
 import type { Set } from "../../domain/sets/set.js";
 
-function setupHookHarness<T>(useHook: () => T): { result: { current: T }; unmount(): void; container: HTMLDivElement } {
+function setupHookHarness<T>(
+  useHook: () => T,
+  ports: ClientPorts
+): { result: { current: T }; unmount(): void; container: HTMLDivElement } {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -22,7 +30,11 @@ function setupHookHarness<T>(useHook: () => T): { result: { current: T }; unmoun
   }
 
   act(() => {
-    root.render(<Capture />);
+    root.render(
+      <WithClientPorts ports={ports}>
+        <Capture />
+      </WithClientPorts>
+    );
   });
 
   return {
@@ -38,12 +50,6 @@ function setupHookHarness<T>(useHook: () => T): { result: { current: T }; unmoun
 }
 
 describe("useSetManagement", () => {
-  let listSetsSpy: ReturnType<typeof vi.spyOn>;
-  let createSetSpy: ReturnType<typeof vi.spyOn>;
-  let setActiveSpy: ReturnType<typeof vi.spyOn>;
-  let updateSpy: ReturnType<typeof vi.spyOn>;
-  let deleteSpy: ReturnType<typeof vi.spyOn>;
-
   const sample: Set = {
     id: "abc",
     name: "Sprint 24",
@@ -52,32 +58,39 @@ describe("useSetManagement", () => {
     queryId: "Q-A"
   };
 
+  let setManagement: SetManagementClientPort;
+  let listSpy: ReturnType<typeof vi.fn>;
+  let createSpy: ReturnType<typeof vi.fn>;
+  let updateSpy: ReturnType<typeof vi.fn>;
+  let deleteSpy: ReturnType<typeof vi.fn>;
+  let setActiveSpy: ReturnType<typeof vi.fn>;
+  let ports: ClientPorts;
+
   beforeEach(() => {
-    listSetsSpy = vi
-      .spyOn(api, "listSets")
-      .mockResolvedValue({ sets: [sample], activeSetId: null });
-    createSetSpy = vi.spyOn(api, "createSetRequest").mockResolvedValue({
-      ...sample,
-      id: "new",
-      name: "New"
-    });
-    setActiveSpy = vi.spyOn(api, "setActiveSetRequest").mockResolvedValue();
-    updateSpy = vi.spyOn(api, "updateSetRequest").mockResolvedValue({
-      ...sample,
-      name: "Renamed"
-    });
-    deleteSpy = vi.spyOn(api, "deleteSetRequest").mockResolvedValue();
+    listSpy = vi.fn(async () => ({ sets: [sample], activeSetId: null as string | null }));
+    createSpy = vi.fn(async () => ({ ...sample, id: "new", name: "New" }));
+    updateSpy = vi.fn(async () => ({ ...sample, name: "Renamed" }));
+    deleteSpy = vi.fn(async () => undefined);
+    setActiveSpy = vi.fn(async () => undefined);
+    setManagement = {
+      list: listSpy as unknown as SetManagementClientPort["list"],
+      create: createSpy as unknown as SetManagementClientPort["create"],
+      update: updateSpy as unknown as SetManagementClientPort["update"],
+      delete: deleteSpy as unknown as SetManagementClientPort["delete"],
+      setActive: setActiveSpy as unknown as SetManagementClientPort["setActive"]
+    };
+    ports = buildClientPortsStub({ setManagement });
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("loads sets on mount via the API client", async () => {
-    const harness = setupHookHarness(() => useSetManagement());
+  it("loads sets on mount via the client port", async () => {
+    const harness = setupHookHarness(() => useSetManagement(), ports);
     await flushAsync();
 
-    expect(listSetsSpy).toHaveBeenCalled();
+    expect(listSpy).toHaveBeenCalled();
     expect(harness.result.current.sets).toEqual([sample]);
     expect(harness.result.current.isLoading).toBe(false);
 
@@ -85,7 +98,7 @@ describe("useSetManagement", () => {
   });
 
   it("optimistically merges created sets into local state", async () => {
-    const harness = setupHookHarness(() => useSetManagement());
+    const harness = setupHookHarness(() => useSetManagement(), ports);
     await flushAsync();
 
     await act(async () => {
@@ -98,7 +111,7 @@ describe("useSetManagement", () => {
       });
     });
 
-    expect(createSetSpy).toHaveBeenCalled();
+    expect(createSpy).toHaveBeenCalled();
     expect(harness.result.current.sets.map((entry) => entry.id)).toEqual(["abc", "new"]);
     expect(harness.result.current.activeSetId).toBe("new");
 
@@ -106,11 +119,9 @@ describe("useSetManagement", () => {
   });
 
   it("removes sets and clears the active pointer when deleting the active set", async () => {
-    const harness = setupHookHarness(() => useSetManagement());
-    listSetsSpy.mockResolvedValueOnce({ sets: [sample], activeSetId: "abc" });
-    await act(async () => {
-      await harness.result.current.refresh();
-    });
+    listSpy.mockResolvedValueOnce({ sets: [sample], activeSetId: "abc" });
+    const harness = setupHookHarness(() => useSetManagement(), ports);
+    await flushAsync();
 
     await act(async () => {
       await harness.result.current.remove("abc");
@@ -123,8 +134,8 @@ describe("useSetManagement", () => {
     harness.unmount();
   });
 
-  it("updates a set in place via the API", async () => {
-    const harness = setupHookHarness(() => useSetManagement());
+  it("updates a set in place via the client port", async () => {
+    const harness = setupHookHarness(() => useSetManagement(), ports);
     await flushAsync();
 
     await act(async () => {
@@ -138,7 +149,7 @@ describe("useSetManagement", () => {
   });
 
   it("flips the active pointer through setActive()", async () => {
-    const harness = setupHookHarness(() => useSetManagement());
+    const harness = setupHookHarness(() => useSetManagement(), ports);
     await flushAsync();
 
     await act(async () => {

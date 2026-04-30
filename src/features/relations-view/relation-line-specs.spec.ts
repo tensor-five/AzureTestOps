@@ -7,7 +7,7 @@ import {
   resolvePairFromItemKeys,
   type RelationStatusReader
 } from "./relation-line-specs.js";
-import type { ActiveSetSnapshot } from "../../domain/sets/set.js";
+import type { ActiveSetSnapshot } from "../../application/dto/active-set-snapshot.dto.js";
 import type { TestCaseProjection } from "../../domain/test-management/test-case-projection.js";
 import type { WorkItem } from "../../domain/work-items/work-item.js";
 

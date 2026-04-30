@@ -1,10 +1,32 @@
 import { describe, expect, it } from "vitest";
 
 import { aggregateTestCaseProjections } from "./outcome-aggregator.js";
+import type { TestCaseHydrationData } from "./test-case-hydration-data.js";
 import type { TestPoint } from "./test-point.js";
 import type { TestResult } from "./test-result.js";
 import type { TestSuiteFlatEntry } from "./test-suite-tree.js";
-import type { WorkItem } from "../work-items/work-item.js";
+
+function hydrate(
+  workItemId: number,
+  overrides: Partial<TestCaseHydrationData> = {}
+): Map<number, TestCaseHydrationData> {
+  return new Map([
+    [
+      workItemId,
+      {
+        title: `Test Case ${workItemId}`,
+        state: "Design",
+        workItemType: "Test Case",
+        assignedTo: null,
+        tags: [],
+        areaPath: null,
+        priority: null,
+        relatedIds: [],
+        ...overrides
+      }
+    ]
+  ]);
+}
 
 const suite = (id: number, name: string, path: string): TestSuiteFlatEntry => ({
   id,
@@ -12,19 +34,6 @@ const suite = (id: number, name: string, path: string): TestSuiteFlatEntry => ({
   parentSuiteId: null,
   path,
   depth: 0
-});
-
-const workItem = (id: number, overrides: Partial<WorkItem> = {}): WorkItem => ({
-  id,
-  workItemType: "Test Case",
-  title: `Test Case ${id}`,
-  state: "Design",
-  assignedTo: null,
-  tags: [],
-  areaPath: null,
-  priority: null,
-  relatedIds: [],
-  ...overrides
 });
 
 const point = (
@@ -68,7 +77,7 @@ describe("aggregateTestCaseProjections", () => {
       testCasesBySuiteId: new Map([[10, [101]]]),
       pointsBySuiteId: new Map([[10, [point(1, 101, 10)]]]),
       results: [],
-      workItemsById: new Map([[101, workItem(101)]])
+      hydrationByWorkItemId: hydrate(101)
     });
 
     expect(projections).toHaveLength(1);
@@ -87,7 +96,7 @@ describe("aggregateTestCaseProjections", () => {
         result(901, 101, 10, "Passed", "2026-02-20T08:00:00Z"),
         result(902, 101, 10, "Blocked", "2026-01-10T08:00:00Z")
       ],
-      workItemsById: new Map([[101, workItem(101)]])
+      hydrationByWorkItemId: hydrate(101)
     });
 
     expect(projections).toHaveLength(1);
@@ -105,7 +114,7 @@ describe("aggregateTestCaseProjections", () => {
         result(900, 101, 10, "Failed", null),
         result(901, 101, null, "Passed", "2026-02-20T08:00:00Z")
       ],
-      workItemsById: new Map([[101, workItem(101)]])
+      hydrationByWorkItemId: hydrate(101)
     });
 
     expect(projections[0].lastOutcome).toBe("NotRun");
@@ -129,7 +138,7 @@ describe("aggregateTestCaseProjections", () => {
         result(900, 101, 10, "Passed", "2026-02-20T08:00:00Z"),
         result(901, 101, 20, "Failed", "2026-02-21T08:00:00Z")
       ],
-      workItemsById: new Map([[101, workItem(101)]])
+      hydrationByWorkItemId: hydrate(101)
     });
 
     expect(projections).toHaveLength(2);
@@ -145,7 +154,7 @@ describe("aggregateTestCaseProjections", () => {
         [10, [point(1, 101, 10), point(2, 102, 10)]]
       ]),
       results: [],
-      workItemsById: new Map([[101, workItem(101)]])
+      hydrationByWorkItemId: hydrate(101)
     });
 
     expect(projections).toHaveLength(1);
@@ -162,7 +171,7 @@ describe("aggregateTestCaseProjections", () => {
       // Result has no testSuite.id — Azure sometimes drops the link, so the
       // join fails and only the point's published outcome remains.
       results: [result(900, 101, null, "Failed", "2026-02-20T08:00:00Z")],
-      workItemsById: new Map([[101, workItem(101)]])
+      hydrationByWorkItemId: hydrate(101)
     });
 
     expect(projections[0].lastOutcome).toBe("Passed");
@@ -182,7 +191,7 @@ describe("aggregateTestCaseProjections", () => {
         result(900, 101, 10, "Failed", "2026-02-20T08:00:00Z"),
         result(901, 101, 10, "Passed", "2026-02-20T08:00:00.500Z")
       ],
-      workItemsById: new Map([[101, workItem(101)]])
+      hydrationByWorkItemId: hydrate(101)
     });
 
     expect(projections[0].lastResultId).toBe(901);
@@ -195,7 +204,7 @@ describe("aggregateTestCaseProjections", () => {
       testCasesBySuiteId: new Map([[10, [101]]]),
       pointsBySuiteId: new Map([[10, [point(1, 101, 10, { lastRunId: 555 })]]]),
       results: [],
-      workItemsById: new Map([[101, workItem(101)]])
+      hydrationByWorkItemId: hydrate(101)
     });
 
     expect(projections[0].lastRunId).toBe(555);
@@ -207,19 +216,14 @@ describe("aggregateTestCaseProjections", () => {
       testCasesBySuiteId: new Map([[10, [101]]]),
       pointsBySuiteId: new Map([[10, []]]),
       results: [],
-      workItemsById: new Map([
-        [
-          101,
-          workItem(101, {
-            title: "Login redirects to dashboard",
-            state: "Ready",
-            tags: ["smoke", "auth"],
-            assignedTo: "Alice",
-            priority: 2,
-            relatedIds: [9001]
-          })
-        ]
-      ])
+      hydrationByWorkItemId: hydrate(101, {
+        title: "Login redirects to dashboard",
+        state: "Ready",
+        tags: ["smoke", "auth"],
+        assignedTo: "Alice",
+        priority: 2,
+        relatedIds: [9001]
+      })
     });
 
     expect(projections[0].suitePath).toBe("Root > API > Auth");

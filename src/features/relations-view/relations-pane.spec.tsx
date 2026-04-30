@@ -8,7 +8,11 @@ import { RelationsPane } from "./relations-pane.js";
 import { clearSetLayoutPreferenceForTests } from "./set-layout-preference-store.js";
 import { clearSetFilterPreferenceForTests } from "../filters/set-filter-preference-store.js";
 import * as preferencesClient from "../../shared/user-preferences/user-preferences.client.js";
-import type { ActiveSetSnapshot } from "../../domain/sets/set.js";
+import type { ActiveSetSnapshot } from "../../application/dto/active-set-snapshot.dto.js";
+import {
+  WithClientPorts,
+  buildClientPortsStub
+} from "../../app/composition/test-client-ports.js";
 
 function makeSnapshot(): ActiveSetSnapshot {
   return {
@@ -71,11 +75,18 @@ function render(ui: React.ReactElement): { container: HTMLDivElement; unmount():
   vi.spyOn(preferencesClient, "getCachedUserPreferences").mockReturnValue({});
   vi.spyOn(preferencesClient, "persistUserPreferencesPatch").mockReturnValue();
 
+  const ports = buildClientPortsStub({
+    relationMutations: {
+      add: async () => undefined,
+      remove: async () => undefined
+    }
+  });
+
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
   act(() => {
-    root.render(ui);
+    root.render(<WithClientPorts ports={ports}>{ui}</WithClientPorts>);
   });
   return {
     container,

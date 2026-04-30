@@ -1,7 +1,7 @@
 import type { TestSuiteFlatEntry } from "./test-suite-tree.js";
 import type { TestPoint } from "./test-point.js";
 import type { TestResult } from "./test-result.js";
-import type { WorkItem } from "../work-items/work-item.js";
+import type { TestCaseHydrationData } from "./test-case-hydration-data.js";
 import {
   projectionKey,
   type TestCaseProjection,
@@ -18,8 +18,8 @@ export type OutcomeAggregatorInput = {
   pointsBySuiteId: Map<number, TestPoint[]>;
   /** Flat list of test results across all runs of the active plan. */
   results: TestResult[];
-  /** Hydrated work items keyed by id (Test Case work items only). */
-  workItemsById: Map<number, WorkItem>;
+  /** Hydrated test-case work-item data keyed by id (Test Case work items only). */
+  hydrationByWorkItemId: Map<number, TestCaseHydrationData>;
 };
 
 /**
@@ -43,8 +43,8 @@ export function aggregateTestCaseProjections(
     );
 
     for (const workItemId of caseIds) {
-      const workItem = input.workItemsById.get(workItemId);
-      if (!workItem) {
+      const hydration = input.hydrationByWorkItemId.get(workItemId);
+      if (!hydration) {
         continue;
       }
 
@@ -58,14 +58,14 @@ export function aggregateTestCaseProjections(
         workItemId,
         suiteId: suite.id,
         suitePath: suite.path,
-        title: workItem.title,
-        state: workItem.state,
-        workItemType: workItem.workItemType,
-        assignedTo: workItem.assignedTo,
-        tags: workItem.tags,
-        areaPath: workItem.areaPath,
-        priority: workItem.priority,
-        relatedIds: workItem.relatedIds,
+        title: hydration.title,
+        state: hydration.state,
+        workItemType: hydration.workItemType,
+        assignedTo: hydration.assignedTo,
+        tags: hydration.tags,
+        areaPath: hydration.areaPath,
+        priority: hydration.priority,
+        relatedIds: hydration.relatedIds,
         testPointId: point?.pointId ?? null,
         configurationId: point?.configurationId ?? null,
         configurationName: point?.configurationName ?? null,

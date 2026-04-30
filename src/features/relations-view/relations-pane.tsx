@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import type { ActiveSetSnapshot } from "../../domain/sets/set.js";
+import type { ActiveSetSnapshot } from "../../application/dto/active-set-snapshot.dto.js";
 import {
   FilterBar,
   toggleStringList,

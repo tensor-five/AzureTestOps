@@ -1,7 +1,7 @@
 /**
- * Azure DevOps "Saved Query" (Work Item Query Language entry stored under
- * `Shared Queries`). Domain stays Azure-agnostic; adapters translate the
- * REST shape into this value object.
+ * A "Saved Query" (Work Item Query Language entry stored under
+ * `Shared Queries`). The domain stays transport-agnostic; adapters translate
+ * the upstream REST shape into this value object.
  */
 export type SavedQuery = {
   id: string;
