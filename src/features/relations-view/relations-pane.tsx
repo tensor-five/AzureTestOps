@@ -121,28 +121,6 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
     [filteredProjections, filteredWorkItems, mutations]
   );
 
-  // Temporary diagnostic hook — exposes client-side snapshot state on
-  // `window.__azureTestOpsDebug` so we can investigate why relation lines
-  // aren't drawn even when the server-side snapshot has the correct links.
-  // Remove once the root cause is fixed.
-  if (typeof window !== "undefined") {
-    (window as unknown as { __azureTestOpsDebug?: unknown }).__azureTestOpsDebug = {
-      snapshot: props.snapshot,
-      snapshotRelations: Array.from(snapshotRelations),
-      projections,
-      workItems,
-      filteredProjections,
-      filteredWorkItems,
-      lines,
-      probe: (tcId: number, wiId: number) => ({
-        snapshotHasPair: snapshotRelations.has(`${tcId}::${wiId}`),
-        isRelated: mutations.isRelated(tcId, wiId),
-        projection: projections.find((p) => p.workItemId === tcId) ?? null,
-        workItem: workItems.find((wi) => wi.id === wiId) ?? null
-      })
-    };
-  }
-
   const handleToggleTestCaseFacet = React.useCallback(
     (kind: FilterFacetKind, value: string) => {
       const current = filters.testCaseFilter;
