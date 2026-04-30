@@ -1,14 +1,11 @@
 import * as React from "react";
 
 import type { TestCaseProjection } from "../../domain/test-management/test-case-projection.js";
-import type { ItemPositioningApi } from "./use-item-positioning.js";
 import { testCaseItemKey } from "./item-key.js";
-import { buildDraggableCardSurface } from "./draggable-card.js";
 
 export type TestCaseCardProps = {
   projection: TestCaseProjection;
-  positioning: ItemPositioningApi;
-  onEditPointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
+  onLinePointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
 };
 
 type OutcomeDisplay = { slug: string; shortLabel: string };
@@ -33,26 +30,27 @@ function outcomeDisplay(outcome: string): OutcomeDisplay {
 }
 
 export function TestCaseCard(props: TestCaseCardProps): React.ReactElement {
-  const { projection, positioning } = props;
+  const { projection, onLinePointerDown } = props;
   const itemKey = testCaseItemKey(projection.workItemId, projection.suiteId);
   const display = outcomeDisplay(projection.lastOutcome);
 
-  const surface = buildDraggableCardSurface(
-    positioning,
-    itemKey,
-    [
-      "relations-view-card",
-      "relations-view-card-test-case",
-      `relations-view-card-outcome-${display.slug}`
-    ],
-    { editPointerDown: props.onEditPointerDown }
-  );
+  const className = [
+    "relations-view-card",
+    "relations-view-card-test-case",
+    `relations-view-card-outcome-${display.slug}`,
+    onLinePointerDown ? "relations-view-card-line-source" : null
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const handlePointerDown = onLinePointerDown
+    ? (event: React.PointerEvent<HTMLElement>) => onLinePointerDown(itemKey, event)
+    : undefined;
 
   return (
     <article
-      className={surface.className}
-      style={surface.style}
-      onPointerDown={surface.onPointerDown}
+      className={className}
+      onPointerDown={handlePointerDown}
       data-relations-anchor="left"
       data-item-key={itemKey}
       title={buildTooltip(projection)}

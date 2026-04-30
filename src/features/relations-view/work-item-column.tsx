@@ -2,15 +2,13 @@ import * as React from "react";
 
 import type { WorkItem } from "../../domain/work-items/work-item.js";
 import { WorkItemCard } from "./work-item-card.js";
-import type { ItemPositioningApi } from "./use-item-positioning.js";
 
 export type WorkItemColumnProps = {
   /** Already filtered by the active filter bar. */
   workItems: readonly WorkItem[];
   unfilteredCount: number;
-  positioning: ItemPositioningApi;
   filterBar?: React.ReactNode;
-  onEditPointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
+  onLinePointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
 };
 
 export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
@@ -40,8 +38,7 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
             <li key={workItem.id} className="relations-view-work-item-list-item">
               <WorkItemCard
                 workItem={workItem}
-                positioning={props.positioning}
-                onEditPointerDown={props.onEditPointerDown}
+                onLinePointerDown={props.onLinePointerDown}
               />
             </li>
           ))}

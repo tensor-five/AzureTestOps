@@ -7,7 +7,6 @@ import { createRoot } from "react-dom/client";
 import { TestCaseColumn } from "./test-case-column.js";
 import type { TestSuiteNode } from "../../domain/test-management/test-suite-tree.js";
 import type { TestCaseProjection } from "../../domain/test-management/test-case-projection.js";
-import type { ItemPositioningApi } from "./use-item-positioning.js";
 import type { SuiteCollapseApi } from "./use-suite-collapse.js";
 
 function tree(): TestSuiteNode {
@@ -66,17 +65,6 @@ function projection(workItemId: number, suiteId: number, title: string): TestCas
   };
 }
 
-function makePositioning(): ItemPositioningApi {
-  return {
-    positions: {},
-    enabled: false,
-    getOffset: () => ({ x: 0, y: 0 }),
-    isDragging: () => false,
-    startDrag: () => {},
-    resetItem: () => {}
-  };
-}
-
 function makeCollapse(collapsedIds: number[]): SuiteCollapseApi {
   const set = new Set(collapsedIds.map(String));
   return {
@@ -115,7 +103,6 @@ describe("TestCaseColumn", () => {
           projection(201, 4, "Header renders brand")
         ]}
         unfilteredCount={3}
-        positioning={makePositioning()}
         collapse={makeCollapse([])}
       />
     );
@@ -138,7 +125,6 @@ describe("TestCaseColumn", () => {
           projection(202, 4, "UI case")
         ]}
         unfilteredCount={2}
-        positioning={makePositioning()}
         collapse={makeCollapse([2])}
       />
     );
@@ -162,7 +148,6 @@ describe("TestCaseColumn", () => {
         suiteTree={tree()}
         projections={[]}
         unfilteredCount={0}
-        positioning={makePositioning()}
         collapse={makeCollapse([])}
       />
     );

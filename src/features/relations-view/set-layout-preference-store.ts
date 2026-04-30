@@ -7,13 +7,11 @@ import type {
 const SET_LAYOUT_STORAGE_KEY = "azure-testops.set-layouts.v1";
 
 /**
- * Per-Set layout preference (positions + collapsedSuites). Both
- * `useItemPositioning` and `useSuiteCollapse` write through this store so the
- * `setLayouts[setId]` shape is patched in one place. The on-disk compaction
- * (drop empty entries) is handled centrally by `sanitizeUserPreferences` in
- * the persist path; the store-level sanitiser keeps explicit empty shapes
- * intact so callers can clear individual subfields (e.g. `positions: {}` on
- * reset) without losing the rest of the layout.
+ * Per-Set layout preference (currently `collapsedSuites`; the schema also
+ * carries legacy `positions` so older preference files round-trip cleanly).
+ * `useSuiteCollapse` writes through this store so the `setLayouts[setId]`
+ * shape is patched in one place. The on-disk compaction (drop empty entries)
+ * is handled centrally by `sanitizeUserPreferences` in the persist path.
  */
 export function clearSetLayoutPreferenceForTests(): void {
   setLayoutPreferenceStore.clearForTests();

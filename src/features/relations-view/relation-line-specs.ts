@@ -127,12 +127,3 @@ export function parseLineId(lineId: string): RelationPair | null {
   }
   return resolvePairFromItemKeys(left, right);
 }
-
-/**
- * Cheap layout-version signal for the SVG line layer: a change in the number
- * of saved offsets is enough to trigger a recompute, since each card also
- * fires a ResizeObserver event when its transform style updates.
- */
-export function countPositions(positions: Readonly<Record<string, unknown>>): number {
-  return Object.keys(positions).length;
-}

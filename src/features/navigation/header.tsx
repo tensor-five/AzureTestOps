@@ -2,7 +2,6 @@ import * as React from "react";
 
 import { SetDropdown } from "../set-management/set-dropdown.js";
 import { RefreshProgressBar } from "../relations-view/refresh-progress-bar.js";
-import { modeLabel, type RelationsViewMode } from "../relations-view/mode.js";
 import {
   iconForThemeMode,
   labelForThemeMode,
@@ -39,8 +38,6 @@ export type AppHeaderProps = {
   isSetsLoading: boolean;
   onSelectSet(setId: string): void;
   onManageSets(): void;
-  mode: RelationsViewMode;
-  onToggleMode(): void;
   onRefresh(): void;
   refreshDisabled: boolean;
   snapshotProgress: SnapshotProgressEvent | null;
@@ -50,7 +47,7 @@ export type AppHeaderProps = {
 
 /**
  * Top-of-shell header. Composes the AzureGanttOps look (preflight badge,
- * dropdowns, mode toggle, refresh, theme toggle) with no business logic — all
+ * dropdowns, refresh, theme toggle) with no business logic — all
  * decisions are deferred to the orchestrator that owns state.
  */
 export function AppHeader(props: AppHeaderProps): React.ReactElement {
@@ -68,15 +65,6 @@ export function AppHeader(props: AppHeaderProps): React.ReactElement {
           onSelect={props.onSelectSet}
           onManageSets={props.onManageSets}
         />
-        <button
-          type="button"
-          className={`ui-shell-mode-toggle ui-shell-mode-toggle-${props.mode}`}
-          onClick={props.onToggleMode}
-          aria-pressed={props.mode === "edit-relations"}
-        >
-          <span aria-hidden="true">{props.mode === "edit-relations" ? "✎" : "↔"}</span>
-          <span>{modeLabel(props.mode)}</span>
-        </button>
         <button
           type="button"
           className="ui-shell-refresh-button"

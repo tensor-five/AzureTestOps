@@ -19,11 +19,6 @@ import { useSetManagement } from "../../features/set-management/use-set-manageme
 import { SetManagerDialog } from "../../features/set-management/set-manager-dialog.js";
 import { useActiveSetSnapshot } from "../../features/relations-view/use-active-set-snapshot.js";
 import { RelationsPane } from "../../features/relations-view/relations-pane.js";
-import {
-  DEFAULT_MODE,
-  nextMode,
-  type RelationsViewMode
-} from "../../features/relations-view/mode.js";
 
 const THEME_MODE_STORAGE_KEY = "azure-testops.theme-mode.v1";
 const TENSORFIVE_WEBSITE_URL = "https://tensorfive.com";
@@ -42,7 +37,6 @@ function AppShell(): React.ReactElement {
     readPersistedThemeMode(THEME_MODE_STORAGE_KEY, getCachedUserPreferences().themeMode ?? null)
   );
   const [isSetManagerOpen, setSetManagerOpen] = React.useState(false);
-  const [mode, setMode] = React.useState<RelationsViewMode>(DEFAULT_MODE);
 
   React.useEffect(() => {
     void hydrateUserPreferences().then((preferences) => {
@@ -86,8 +80,6 @@ function AppShell(): React.ReactElement {
         isSetsLoading={setManagement.isLoading}
         onSelectSet={handleSelectSet}
         onManageSets={() => setSetManagerOpen(true)}
-        mode={mode}
-        onToggleMode={() => setMode((current) => nextMode(current))}
         onRefresh={refreshSnapshot}
         refreshDisabled={!setManagement.activeSetId || snapshotState.isLoading}
         snapshotProgress={snapshotState.progress}
@@ -98,7 +90,6 @@ function AppShell(): React.ReactElement {
         <RelationsPane
           setId={setManagement.activeSetId}
           snapshot={snapshotState.snapshot}
-          mode={mode}
           isLoading={snapshotState.isLoading}
           error={snapshotState.error}
           hasActiveSet={Boolean(setManagement.activeSetId)}

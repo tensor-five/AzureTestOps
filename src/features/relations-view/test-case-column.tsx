@@ -7,7 +7,6 @@ import {
 } from "../../domain/test-management/test-suite-tree.js";
 import type { TestCaseProjection } from "../../domain/test-management/test-case-projection.js";
 import { TestCaseCard } from "./test-case-card.js";
-import type { ItemPositioningApi } from "./use-item-positioning.js";
 import type { SuiteCollapseApi } from "./use-suite-collapse.js";
 
 export type TestCaseColumnProps = {
@@ -19,10 +18,9 @@ export type TestCaseColumnProps = {
    */
   projections: readonly TestCaseProjection[];
   unfilteredCount: number;
-  positioning: ItemPositioningApi;
   collapse: SuiteCollapseApi;
   filterBar?: React.ReactNode;
-  onEditPointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
+  onLinePointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
 };
 
 type SuiteWithProjections = {
@@ -68,9 +66,8 @@ export function TestCaseColumn(props: TestCaseColumnProps): React.ReactElement {
             <SuiteGroup
               key={entry.suite.id}
               entry={entry}
-              positioning={props.positioning}
               collapse={props.collapse}
-              onEditPointerDown={props.onEditPointerDown}
+              onLinePointerDown={props.onLinePointerDown}
             />
           ))}
         </ol>
@@ -81,11 +78,10 @@ export function TestCaseColumn(props: TestCaseColumnProps): React.ReactElement {
 
 function SuiteGroup(props: {
   entry: SuiteWithProjections;
-  positioning: ItemPositioningApi;
   collapse: SuiteCollapseApi;
-  onEditPointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
+  onLinePointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
 }): React.ReactElement {
-  const { entry, positioning, collapse } = props;
+  const { entry, collapse } = props;
   const isCollapsed = collapse.isCollapsed(entry.suite.id);
 
   return (
@@ -113,8 +109,7 @@ function SuiteGroup(props: {
             <TestCaseCard
               key={`${projection.workItemId}::${projection.suiteId}`}
               projection={projection}
-              positioning={positioning}
-              onEditPointerDown={props.onEditPointerDown}
+              onLinePointerDown={props.onLinePointerDown}
             />
           ))}
         </div>

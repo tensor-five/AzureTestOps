@@ -95,7 +95,6 @@ describe("RelationsPane", () => {
       <RelationsPane
         setId={null}
         snapshot={null}
-        mode="move-items"
         isLoading={false}
         error={null}
         hasActiveSet={false}
@@ -114,14 +113,13 @@ describe("RelationsPane", () => {
       <RelationsPane
         setId="set-1"
         snapshot={makeSnapshot()}
-        mode="move-items"
         isLoading={false}
         error={null}
         hasActiveSet={true}
       />
     );
 
-    expect(harness.container.querySelector('.relations-view[data-mode="move-items"]')).not.toBeNull();
+    expect(harness.container.querySelector(".relations-view")).not.toBeNull();
     expect(harness.container.querySelectorAll(".relations-view-column").length).toBe(2);
     expect(harness.container.querySelectorAll(".relations-view-card").length).toBe(2);
 
@@ -133,7 +131,6 @@ describe("RelationsPane", () => {
       <RelationsPane
         setId="set-1"
         snapshot={null}
-        mode="move-items"
         isLoading={true}
         error={null}
         hasActiveSet={true}
@@ -152,7 +149,6 @@ describe("RelationsPane", () => {
       <RelationsPane
         setId="set-1"
         snapshot={null}
-        mode="move-items"
         isLoading={false}
         error="Set ghost not found."
         hasActiveSet={true}

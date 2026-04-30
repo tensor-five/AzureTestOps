@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   buildLineSpecs,
   buildSnapshotRelationSet,
-  countPositions,
   parseLineId,
   resolvePairFromItemKeys,
   type RelationStatusReader
@@ -175,14 +174,6 @@ describe("parseLineId", () => {
   it("returns null when the separator is missing", () => {
     expect(parseLineId("tc:100:10")).toBeNull();
     expect(parseLineId("")).toBeNull();
-  });
-});
-
-describe("countPositions", () => {
-  it("returns the number of stored offsets", () => {
-    expect(countPositions({})).toBe(0);
-    expect(countPositions({ "wi:1": { x: 0, y: 0 } })).toBe(1);
-    expect(countPositions({ "wi:1": null, "tc:2:3": null })).toBe(2);
   });
 });
 

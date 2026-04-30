@@ -16,10 +16,8 @@ import {
   filterWorkItems
 } from "../filters/work-item-filters.js";
 import { useSetFilters } from "../filters/use-set-filters.js";
-import type { RelationsViewMode } from "./mode.js";
 import { TestCaseColumn } from "./test-case-column.js";
 import { WorkItemColumn } from "./work-item-column.js";
-import { useItemPositioning } from "./use-item-positioning.js";
 import { useSuiteCollapse } from "./use-suite-collapse.js";
 import { useRelationMutations } from "./use-relation-mutations.js";
 import { useLineDrawing } from "./use-line-drawing.js";
@@ -28,7 +26,6 @@ import { RelationLineLayer } from "./relation-line-layer.js";
 import {
   buildLineSpecs,
   buildSnapshotRelationSet,
-  countPositions,
   parseLineId,
   resolvePairFromItemKeys
 } from "./relation-line-specs.js";
@@ -36,14 +33,12 @@ import {
 export type RelationsPaneProps = {
   setId: string | null;
   snapshot: ActiveSetSnapshot | null;
-  mode: RelationsViewMode;
   isLoading: boolean;
   error: string | null;
   hasActiveSet: boolean;
 };
 
 export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
-  const positioning = useItemPositioning(props.setId, props.mode === "move-items");
   const collapse = useSuiteCollapse(props.setId);
   const filters = useSetFilters(props.setId);
   const containerRef = React.useRef<HTMLElement | null>(null);
@@ -91,7 +86,7 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
 
   const drawing = useLineDrawing({
     containerRef,
-    enabled: props.mode === "edit-relations",
+    enabled: true,
     onConnect: (sourceItemKey, targetItemKey) => {
       const link = resolvePairFromItemKeys(sourceItemKey, targetItemKey);
       if (!link) {
@@ -102,7 +97,7 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
   });
 
   const selection = useLineSelection({
-    enabled: props.mode === "edit-relations",
+    enabled: true,
     onDeleteRequested: (lineId) => {
       const pair = parseLineId(lineId);
       if (!pair) {
@@ -111,12 +106,6 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
       void mutations.removeRelation(pair.testCaseId, pair.workItemId);
     }
   });
-
-  React.useEffect(() => {
-    if (props.mode !== "edit-relations") {
-      selection.clearSelection();
-    }
-  }, [props.mode, selection]);
 
   const lines = React.useMemo(
     () => buildLineSpecs(filteredProjections, filteredWorkItems, mutations),
@@ -207,9 +196,6 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
   }
 
   const { snapshot } = props;
-  const editEnabled = props.mode === "edit-relations";
-  const editPointerDown = editEnabled ? drawing.startFromCard : undefined;
-  const positionsVersion = countPositions(positioning.positions);
 
   const testCaseFilterFacets = buildTestCaseFacets(testCaseFacets, filters.testCaseFilter);
   const workItemFilterFacets = buildWorkItemFacets(workItemFacets, filters.workItemFilter);
@@ -238,7 +224,6 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
   return (
     <section
       className="relations-view"
-      data-mode={props.mode}
       ref={(node) => {
         containerRef.current = node;
       }}
@@ -247,17 +232,15 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
         suiteTree={snapshot.suiteTree}
         projections={filteredProjections}
         unfilteredCount={snapshot.projections.length}
-        positioning={positioning}
         collapse={collapse}
         filterBar={testCaseFilterBar}
-        onEditPointerDown={editPointerDown}
+        onLinePointerDown={drawing.startFromCard}
       />
       <WorkItemColumn
         workItems={filteredWorkItems}
         unfilteredCount={snapshot.workItemsFromQuery.length}
-        positioning={positioning}
         filterBar={workItemFilterBar}
-        onEditPointerDown={editPointerDown}
+        onLinePointerDown={drawing.startFromCard}
       />
       <RelationLineLayer
         containerRef={containerRef}
@@ -265,7 +248,7 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
         draft={drawing.draft}
         selectedLineId={selection.selectedLineId}
         onSelectLine={selection.selectLine}
-        layoutVersion={positionsVersion}
+        layoutVersion={collapse.collapsedSuiteIds.size}
       />
       {mutations.error ? (
         <RelationErrorBanner message={mutations.error} onDismiss={mutations.clearError} />
@@ -378,4 +361,3 @@ function RelationErrorBanner(props: {
     </div>
   );
 }
-
