@@ -203,6 +203,11 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
               }
               data-work-item-id={workItem.id}
             >
+              <WorkItemCard
+                workItem={workItem}
+                onLinePointerDown={props.onLinePointerDown}
+                getWorkItemHref={props.getWorkItemHref}
+              />
               {reorderEnabled ? (
                 <button
                   type="button"
@@ -218,11 +223,6 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
                   <span aria-hidden="true">⠿</span>
                 </button>
               ) : null}
-              <WorkItemCard
-                workItem={workItem}
-                onLinePointerDown={props.onLinePointerDown}
-                getWorkItemHref={props.getWorkItemHref}
-              />
             </li>
           ))}
         </ol>
