@@ -6,10 +6,12 @@ import { workItemItemKey } from "./item-key.js";
 export type WorkItemCardProps = {
   workItem: WorkItem;
   onLinePointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
+  /** Resolves the Azure DevOps deep link for a work item id, or null if unavailable. */
+  getWorkItemHref?: (workItemId: number) => string | null;
 };
 
 export function WorkItemCard(props: WorkItemCardProps): React.ReactElement {
-  const { workItem, onLinePointerDown } = props;
+  const { workItem, onLinePointerDown, getWorkItemHref } = props;
   const itemKey = workItemItemKey(workItem.id);
   const typeSlug = workItemTypeSlug(workItem.workItemType);
   const stateLabel = workItem.state.trim();
@@ -28,6 +30,8 @@ export function WorkItemCard(props: WorkItemCardProps): React.ReactElement {
     ? (event: React.PointerEvent<HTMLElement>) => onLinePointerDown(itemKey, event)
     : undefined;
 
+  const href = getWorkItemHref?.(workItem.id) ?? null;
+
   return (
     <article
       className={className}
@@ -36,7 +40,20 @@ export function WorkItemCard(props: WorkItemCardProps): React.ReactElement {
       data-item-key={itemKey}
       title={buildTooltip(workItem)}
     >
-      <span className="relations-view-card-id">#{workItem.id}</span>
+      {href ? (
+        <a
+          className="relations-view-card-id"
+          href={href}
+          target="_blank"
+          rel="noreferrer noopener"
+          onPointerDown={(event) => event.stopPropagation()}
+          aria-label={`Open work item #${workItem.id} in Azure DevOps (new tab)`}
+        >
+          #{workItem.id}
+        </a>
+      ) : (
+        <span className="relations-view-card-id">#{workItem.id}</span>
+      )}
       <span
         className={`relations-view-type-chip relations-view-type-chip-${typeSlug}`}
         aria-label={`Type: ${workItem.workItemType || "Unknown"}`}

@@ -72,4 +72,33 @@ describe("WorkItemCard", () => {
 
     harness.unmount();
   });
+
+  it("renders the id as an external link when getWorkItemHref returns a URL", () => {
+    const harness = render(
+      <WorkItemCard
+        workItem={workItem({ id: 4711 })}
+        getWorkItemHref={(id) => `https://dev.azure.com/contoso/delivery/_workitems/edit/${id}`}
+      />
+    );
+
+    const anchor = harness.container.querySelector<HTMLAnchorElement>("a.relations-view-card-id");
+    expect(anchor).not.toBeNull();
+    expect(anchor?.getAttribute("href")).toBe(
+      "https://dev.azure.com/contoso/delivery/_workitems/edit/4711"
+    );
+    expect(anchor?.getAttribute("target")).toBe("_blank");
+    expect(anchor?.getAttribute("rel")).toBe("noreferrer noopener");
+    expect(anchor?.textContent).toBe("#4711");
+
+    harness.unmount();
+  });
+
+  it("falls back to a plain span when no link builder is provided", () => {
+    const harness = render(<WorkItemCard workItem={workItem({ id: 4711 })} />);
+
+    expect(harness.container.querySelector("a.relations-view-card-id")).toBeNull();
+    expect(harness.container.querySelector("span.relations-view-card-id")?.textContent).toBe("#4711");
+
+    harness.unmount();
+  });
 });

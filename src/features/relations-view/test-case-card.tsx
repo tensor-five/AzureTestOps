@@ -6,6 +6,8 @@ import { testCaseItemKey } from "./item-key.js";
 export type TestCaseCardProps = {
   projection: TestCaseProjection;
   onLinePointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
+  /** Resolves the Azure DevOps deep link for a work item id, or null if unavailable. */
+  getWorkItemHref?: (workItemId: number) => string | null;
 };
 
 type OutcomeDisplay = { slug: string; shortLabel: string };
@@ -30,9 +32,10 @@ function outcomeDisplay(outcome: string): OutcomeDisplay {
 }
 
 export function TestCaseCard(props: TestCaseCardProps): React.ReactElement {
-  const { projection, onLinePointerDown } = props;
+  const { projection, onLinePointerDown, getWorkItemHref } = props;
   const itemKey = testCaseItemKey(projection.workItemId, projection.suiteId);
   const display = outcomeDisplay(projection.lastOutcome);
+  const href = getWorkItemHref?.(projection.workItemId) ?? null;
 
   const className = [
     "relations-view-card",
@@ -55,7 +58,20 @@ export function TestCaseCard(props: TestCaseCardProps): React.ReactElement {
       data-item-key={itemKey}
       title={buildTooltip(projection)}
     >
-      <span className="relations-view-card-id">#{projection.workItemId}</span>
+      {href ? (
+        <a
+          className="relations-view-card-id"
+          href={href}
+          target="_blank"
+          rel="noreferrer noopener"
+          onPointerDown={(event) => event.stopPropagation()}
+          aria-label={`Open test case #${projection.workItemId} in Azure DevOps (new tab)`}
+        >
+          #{projection.workItemId}
+        </a>
+      ) : (
+        <span className="relations-view-card-id">#{projection.workItemId}</span>
+      )}
       <span
         className={`relations-view-outcome-chip relations-view-outcome-chip-${display.slug}`}
         aria-label={`Outcome: ${projection.lastOutcome || "Unknown"}`}

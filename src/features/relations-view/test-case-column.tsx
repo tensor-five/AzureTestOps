@@ -27,6 +27,8 @@ export type TestCaseColumnProps = {
   onLinePointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
   /** Persists the drag-and-drop ordering per (Set, Suite); absent → fixed title sort. */
   order?: TestCaseOrderApi;
+  /** Resolves the Azure DevOps deep link for a work item id, or null if unavailable. */
+  getWorkItemHref?: (workItemId: number) => string | null;
 };
 
 type SuiteWithProjections = {
@@ -111,6 +113,7 @@ export function TestCaseColumn(props: TestCaseColumnProps): React.ReactElement {
               entry={entry}
               collapse={props.collapse}
               onLinePointerDown={props.onLinePointerDown}
+              getWorkItemHref={props.getWorkItemHref}
               order={order}
               dragSourceRef={dragSourceRef}
               draggedKey={draggedKey}
@@ -128,6 +131,7 @@ function SuiteGroup(props: {
   entry: SuiteWithProjections;
   collapse: SuiteCollapseApi;
   onLinePointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
+  getWorkItemHref?: (workItemId: number) => string | null;
   order?: TestCaseOrderApi;
   dragSourceRef: React.MutableRefObject<DragSource | null>;
   draggedKey: string | null;
@@ -313,6 +317,7 @@ function SuiteGroup(props: {
                 <TestCaseCard
                   projection={projection}
                   onLinePointerDown={props.onLinePointerDown}
+                  getWorkItemHref={props.getWorkItemHref}
                 />
               </div>
             );

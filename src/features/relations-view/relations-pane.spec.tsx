@@ -76,6 +76,11 @@ function render(ui: React.ReactElement): { container: HTMLDivElement; unmount():
   vi.spyOn(preferencesClient, "persistUserPreferencesPatch").mockReturnValue();
 
   const ports = buildClientPortsStub({
+    adoContext: {
+      getContext: async () => null,
+      setContext: async (ctx) => ctx,
+      getCliDefaults: async () => ({ organization: "", project: "" })
+    },
     relationMutations: {
       add: async () => undefined,
       remove: async () => undefined

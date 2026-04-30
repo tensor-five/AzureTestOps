@@ -1,6 +1,8 @@
 import * as React from "react";
 
 import type { ActiveSetSnapshot } from "../../application/dto/active-set-snapshot.dto.js";
+import { buildWorkItemUrl } from "../../shared/azure-devops/azure-rest-client.js";
+import { useAdoContext } from "../set-management/use-ado-context.js";
 import {
   FilterBar,
   toggleStringList,
@@ -45,6 +47,15 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
   const workItemOrder = useWorkItemOrder(props.setId);
   const testCaseOrder = useTestCaseOrder(props.setId);
   const filters = useSetFilters(props.setId);
+  const adoContextState = useAdoContext();
+  const adoContext = adoContextState.context;
+  const getWorkItemHref = React.useMemo<((workItemId: number) => string | null) | undefined>(
+    () =>
+      adoContext
+        ? (workItemId: number) => buildWorkItemUrl(adoContext, workItemId)
+        : undefined,
+    [adoContext]
+  );
   // Container is held as both a ref (for `useLineDrawing`, which reads it
   // lazily on pointer events) and as state (for the line layer, whose
   // initial-mount layout effect would otherwise fire before the section's
@@ -247,6 +258,7 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
         filterBar={testCaseFilterBar}
         onLinePointerDown={drawing.startFromCard}
         order={testCaseOrder}
+        getWorkItemHref={getWorkItemHref}
       />
       <WorkItemColumn
         workItems={filteredWorkItems}
@@ -254,6 +266,7 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
         filterBar={workItemFilterBar}
         onLinePointerDown={drawing.startFromCard}
         order={workItemOrder}
+        getWorkItemHref={getWorkItemHref}
       />
       <RelationLineLayer
         container={containerEl}

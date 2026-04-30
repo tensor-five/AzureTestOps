@@ -15,6 +15,8 @@ export type WorkItemColumnProps = {
   onLinePointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
   /** Persists the drag-and-drop ordering per Set; absent → fixed id sort. */
   order?: WorkItemOrderApi;
+  /** Resolves the Azure DevOps deep link for a work item id, or null if unavailable. */
+  getWorkItemHref?: (workItemId: number) => string | null;
 };
 
 type DropTarget = { workItemId: number; edge: "before" | "after"; element: HTMLElement };
@@ -219,6 +221,7 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
               <WorkItemCard
                 workItem={workItem}
                 onLinePointerDown={props.onLinePointerDown}
+                getWorkItemHref={props.getWorkItemHref}
               />
             </li>
           ))}
