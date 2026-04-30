@@ -453,7 +453,69 @@ section[role="tabpanel"]:hover {
 }
 
 .relations-view-work-item-list-item {
-  display: block;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.relations-view-work-item-list-item > .relations-view-card {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.relations-view-work-item-list-item-dragging {
+  opacity: 0.55;
+}
+
+.relations-view-work-item-list-item[data-drop-edge="before"]::before,
+.relations-view-work-item-list-item[data-drop-edge="after"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--color-primary);
+  border-radius: var(--radius-pill);
+  pointer-events: none;
+}
+
+.relations-view-work-item-list-item[data-drop-edge="before"]::before {
+  top: -3px;
+}
+
+.relations-view-work-item-list-item[data-drop-edge="after"]::after {
+  bottom: -3px;
+}
+
+.relations-view-drag-handle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--text-base);
+  line-height: 1;
+  cursor: grab;
+  user-select: none;
+}
+
+.relations-view-drag-handle:hover,
+.relations-view-drag-handle:focus-visible {
+  border-color: var(--color-border);
+  background: var(--color-bg-muted);
+  color: var(--color-text);
+  outline: none;
+}
+
+.relations-view-drag-handle:active {
+  cursor: grabbing;
 }
 
 .relations-view-card {

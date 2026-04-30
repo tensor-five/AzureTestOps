@@ -67,6 +67,21 @@ describe("sanitizeUserPreferences", () => {
     });
   });
 
+  it("preserves and dedupes positive-integer workItemOrder entries per set", () => {
+    const input = {
+      setLayouts: {
+        s1: {
+          workItemOrder: [501, 503, 501, 502, "504", -1, 0, 502.5, NaN]
+        }
+      }
+    };
+
+    const sanitized = sanitizeUserPreferences(input);
+    expect(sanitized.setLayouts).toEqual({
+      s1: { workItemOrder: [501, 503, 502] }
+    });
+  });
+
   it("normalizes typed setFilters and drops empty / unkeyed entries", () => {
     const input = {
       setFilters: {

@@ -19,6 +19,7 @@ import { useSetFilters } from "../filters/use-set-filters.js";
 import { TestCaseColumn } from "./test-case-column.js";
 import { WorkItemColumn } from "./work-item-column.js";
 import { useSuiteCollapse } from "./use-suite-collapse.js";
+import { useWorkItemOrder } from "./use-work-item-order.js";
 import { useRelationMutations } from "./use-relation-mutations.js";
 import { useLineDrawing } from "./use-line-drawing.js";
 import { useLineSelection } from "./use-line-selection.js";
@@ -40,6 +41,7 @@ export type RelationsPaneProps = {
 
 export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
   const collapse = useSuiteCollapse(props.setId);
+  const workItemOrder = useWorkItemOrder(props.setId);
   const filters = useSetFilters(props.setId);
   // Container is held as both a ref (for `useLineDrawing`, which reads it
   // lazily on pointer events) and as state (for the line layer, whose
@@ -248,6 +250,7 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
         unfilteredCount={snapshot.workItemsFromQuery.length}
         filterBar={workItemFilterBar}
         onLinePointerDown={drawing.startFromCard}
+        order={workItemOrder}
       />
       <RelationLineLayer
         container={containerEl}

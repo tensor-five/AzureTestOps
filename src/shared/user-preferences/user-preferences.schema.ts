@@ -4,10 +4,16 @@ export type ThemeModePreference = "system" | "light" | "dark";
  * Persisted layout per Set: item positions on the canvas plus collapsed Test Suite ids.
  * Filled in Phase 6 (RelationsView) — kept generic-record here so Phase 1 can persist
  * the schema envelope without locking the field shape too early.
+ *
+ * `workItemOrder` is the user-curated ordering of Work Items in the right
+ * column (drag-and-drop reorder). Stored as the raw `WorkItem.id` sequence so
+ * stale ids dropped from the active set survive a round-trip without
+ * silently shifting the ordering of items still in the snapshot.
  */
 export type SetLayoutPreference = {
   positions?: Record<string, { x: number; y: number }>;
   collapsedSuites?: string[];
+  workItemOrder?: number[];
 };
 
 export type SetLayoutPreferencesBySetId = Record<string, SetLayoutPreference>;
@@ -298,11 +304,37 @@ function sanitizeSetLayoutPreference(value: unknown): SetLayoutPreference | null
     }
   }
 
+  if (Array.isArray(value.workItemOrder)) {
+    const seen = new Set<number>();
+    const ordered: number[] = [];
+    for (const entry of value.workItemOrder) {
+      const id = readPositiveInteger(entry);
+      if (id === null || seen.has(id)) {
+        continue;
+      }
+      seen.add(id);
+      ordered.push(id);
+    }
+    if (ordered.length > 0) {
+      next.workItemOrder = ordered;
+    }
+  }
+
   if (Object.keys(next).length === 0) {
     return null;
   }
 
   return next;
+}
+
+function readPositiveInteger(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return null;
+  }
+  if (!Number.isInteger(value) || value <= 0) {
+    return null;
+  }
+  return value;
 }
 
 function readNonEmptyString(value: unknown): string | undefined {

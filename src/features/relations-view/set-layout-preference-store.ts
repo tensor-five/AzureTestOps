@@ -72,6 +72,22 @@ function sanitizeSetLayoutInput(value: unknown): SetLayoutPreference | null {
     next.collapsedSuites = collapsed;
   }
 
+  if (Array.isArray(value.workItemOrder)) {
+    const seen = new Set<number>();
+    const ordered: number[] = [];
+    for (const entry of value.workItemOrder) {
+      if (typeof entry !== "number" || !Number.isFinite(entry)) {
+        continue;
+      }
+      if (!Number.isInteger(entry) || entry <= 0 || seen.has(entry)) {
+        continue;
+      }
+      seen.add(entry);
+      ordered.push(entry);
+    }
+    next.workItemOrder = ordered;
+  }
+
   return next;
 }
 
