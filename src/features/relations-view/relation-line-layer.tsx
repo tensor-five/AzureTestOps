@@ -19,7 +19,13 @@ export type LineCoords = {
 };
 
 export type RelationLineLayerProps = {
-  containerRef: React.RefObject<HTMLElement | null>;
+  /**
+   * The DOM element that anchors line coordinates. Passed as a value (not a
+   * ref) so a `null → element` transition triggers a re-render and re-runs
+   * the layout effect; with a ref we'd miss the initial mount because the
+   * layer's `useLayoutEffect` fires before the parent's section ref callback.
+   */
+  container: HTMLElement | null;
   lines: readonly LineSpec[];
   draft: DraftLine | null;
   selectedLineId: string | null;
@@ -45,7 +51,7 @@ export function RelationLineLayer(props: RelationLineLayerProps): React.ReactEle
   const [coords, setCoords] = React.useState<Map<string, LineCoords>>(() => new Map());
 
   React.useLayoutEffect(() => {
-    const container = props.containerRef.current;
+    const container = props.container;
     if (!container) {
       return undefined;
     }
@@ -83,7 +89,7 @@ export function RelationLineLayer(props: RelationLineLayerProps): React.ReactEle
       window.removeEventListener("resize", onWindowChange);
       window.removeEventListener("scroll", onWindowChange, true);
     };
-  }, [props.lines, props.layoutVersion, props.containerRef]);
+  }, [props.lines, props.layoutVersion, props.container]);
 
   const onWrapperPointerDown = (event: React.PointerEvent<SVGSVGElement>): void => {
     // Clicks on the SVG background (not on a line stroke) clear selection.

@@ -41,7 +41,16 @@ export type RelationsPaneProps = {
 export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
   const collapse = useSuiteCollapse(props.setId);
   const filters = useSetFilters(props.setId);
+  // Container is held as both a ref (for `useLineDrawing`, which reads it
+  // lazily on pointer events) and as state (for the line layer, whose
+  // initial-mount layout effect would otherwise fire before the section's
+  // ref callback). The single callback ref below keeps both in sync.
   const containerRef = React.useRef<HTMLElement | null>(null);
+  const [containerEl, setContainerEl] = React.useState<HTMLElement | null>(null);
+  const setContainer = React.useCallback((node: HTMLElement | null) => {
+    containerRef.current = node;
+    setContainerEl(node);
+  }, []);
 
   const projections = props.snapshot?.projections ?? [];
   const workItems = props.snapshot?.workItemsFromQuery ?? [];
@@ -246,9 +255,7 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
   return (
     <section
       className="relations-view"
-      ref={(node) => {
-        containerRef.current = node;
-      }}
+      ref={setContainer}
     >
       <TestCaseColumn
         suiteTree={snapshot.suiteTree}
@@ -265,7 +272,7 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
         onLinePointerDown={drawing.startFromCard}
       />
       <RelationLineLayer
-        containerRef={containerRef}
+        container={containerEl}
         lines={lines}
         draft={drawing.draft}
         selectedLineId={selection.selectedLineId}
