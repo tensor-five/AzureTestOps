@@ -174,7 +174,7 @@ section[role="tabpanel"]:hover {
   position: relative;
   display: grid;
   grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
-  gap: var(--space-16);
+  gap: 8rem;
   align-items: start;
   width: 100%;
 }
