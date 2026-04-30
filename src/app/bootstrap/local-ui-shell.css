@@ -541,6 +541,55 @@ section[role="tabpanel"]:hover {
   background: color-mix(in srgb, var(--color-primary) 14%, var(--color-surface-elevated));
 }
 
+.relations-view-state-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 18px;
+  padding: 0 8px;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: var(--font-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg-muted);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.relations-view-state-chip-new,
+.relations-view-state-chip-proposed,
+.relations-view-state-chip-to-do {
+  border-color: color-mix(in srgb, var(--color-primary) 50%, var(--color-border-strong));
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface-elevated));
+  color: var(--color-text);
+}
+
+.relations-view-state-chip-active,
+.relations-view-state-chip-committed,
+.relations-view-state-chip-in-progress,
+.relations-view-state-chip-doing {
+  border-color: var(--color-warning-border);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.relations-view-state-chip-resolved,
+.relations-view-state-chip-done,
+.relations-view-state-chip-closed {
+  border-color: color-mix(in srgb, var(--color-secondary) 70%, var(--color-border-strong));
+  background: color-mix(in srgb, var(--color-secondary) 22%, var(--color-surface-elevated));
+  color: var(--color-text);
+}
+
+.relations-view-state-chip-removed {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
 @media (max-width: 1024px) {
   .relations-view {
     grid-template-columns: 1fr;

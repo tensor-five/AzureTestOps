@@ -12,6 +12,8 @@ export function WorkItemCard(props: WorkItemCardProps): React.ReactElement {
   const { workItem, onLinePointerDown } = props;
   const itemKey = workItemItemKey(workItem.id);
   const typeSlug = workItemTypeSlug(workItem.workItemType);
+  const stateLabel = workItem.state.trim();
+  const stateSlug = stateSlugify(stateLabel);
 
   const className = [
     "relations-view-card",
@@ -41,6 +43,12 @@ export function WorkItemCard(props: WorkItemCardProps): React.ReactElement {
       >
         {workItemShortType(workItem.workItemType)}
       </span>
+      <span
+        className={`relations-view-state-chip relations-view-state-chip-${stateSlug}`}
+        aria-label={`State: ${stateLabel || "Unknown"}`}
+      >
+        {stateLabel || "—"}
+      </span>
       <span className="relations-view-card-title">{workItem.title}</span>
     </article>
   );
@@ -65,6 +73,11 @@ function buildTooltip(wi: WorkItem): string {
 function workItemTypeSlug(type: string): string {
   const trimmed = type.trim().toLowerCase().replace(/\s+/g, "-");
   return trimmed.length > 0 ? trimmed : "unknown";
+}
+
+function stateSlugify(state: string): string {
+  const slug = state.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return slug.length > 0 ? slug : "unknown";
 }
 
 function workItemShortType(type: string): string {
