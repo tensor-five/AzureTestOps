@@ -24,6 +24,7 @@ import { buildBrowserClientPorts } from "../composition/browser-runtime.js";
 import type { ClientPorts } from "../../application/ports/client/client-ports.js";
 
 const THEME_MODE_STORAGE_KEY = "azure-testops.theme-mode.v1";
+const GITHUB_REPO_URL = "https://github.com/tensor-five/AzureTestOps";
 const TENSORFIVE_WEBSITE_URL = "https://tensorfive.com";
 
 export type BootstrapUiClientOptions = {
@@ -106,7 +107,11 @@ function AppShell(): React.ReactElement {
         />
       </div>
       <footer className="ui-shell-footer">
-        <span>Azure TestOps · </span>
+        <span>An </span>
+        <a href={GITHUB_REPO_URL} target="_blank" rel="noreferrer">
+          Open Source Project
+        </a>
+        <span> by Christian Betz @ </span>
         <a href={TENSORFIVE_WEBSITE_URL} target="_blank" rel="noreferrer">
           TensorFive GmbH
         </a>
