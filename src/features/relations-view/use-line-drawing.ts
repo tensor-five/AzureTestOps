@@ -60,7 +60,12 @@ export function useLineDrawing(deps: UseLineDrawingDeps): LineDrawingApi {
       if (!container) {
         return;
       }
-      const sourceCard = event.currentTarget;
+      const pointerSource = event.currentTarget;
+      // The pointer-down may originate on a dedicated anchor handle nested
+      // inside the card; walk up to the article that carries the
+      // `data-relations-anchor` attribute for geometry.
+      const sourceCard =
+        pointerSource.closest<HTMLElement>("[data-relations-anchor]") ?? pointerSource;
       const containerRect = container.getBoundingClientRect();
       const anchor = readAnchorPoint(sourceCard, containerRect, container);
       if (!anchor) {
@@ -68,7 +73,7 @@ export function useLineDrawing(deps: UseLineDrawingDeps): LineDrawingApi {
       }
 
       try {
-        sourceCard.setPointerCapture(event.pointerId);
+        pointerSource.setPointerCapture(event.pointerId);
       } catch {
         // jsdom + some browsers reject capture on synthetic events; the
         // rest of the gesture is still tracked via window listeners below.
@@ -102,8 +107,8 @@ export function useLineDrawing(deps: UseLineDrawingDeps): LineDrawingApi {
         window.removeEventListener("pointerup", onUp);
         window.removeEventListener("pointercancel", onCancel);
         try {
-          if (sourceCard.hasPointerCapture(pointerId)) {
-            sourceCard.releasePointerCapture(pointerId);
+          if (pointerSource.hasPointerCapture(pointerId)) {
+            pointerSource.releasePointerCapture(pointerId);
           }
         } catch {
           // ignore — capture may not be held in jsdom

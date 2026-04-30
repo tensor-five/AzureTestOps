@@ -178,13 +178,56 @@ section[role="tabpanel"]:hover {
   width: 100%;
 }
 
-.relations-view-card-line-source {
-  cursor: crosshair;
-}
-
 .relations-view-card-line-source:hover {
   border-color: var(--color-primary);
   box-shadow: var(--shadow-md);
+}
+
+.relations-view-card-line-anchor {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.relations-view-card-line-anchor::before {
+  content: "";
+  display: block;
+  width: 4px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--color-border);
+  transition: background-color var(--transition-duration-fast) var(--transition-easing-standard);
+}
+
+.relations-view-card-line-anchor:hover::before {
+  background: var(--color-primary);
+}
+
+.relations-view-card-line-anchor-left {
+  left: 0;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+}
+
+.relations-view-card-line-anchor-right {
+  right: 0;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.relations-view-card-work-item.relations-view-card-line-source {
+  padding-left: 22px;
+}
+
+.relations-view-card-test-case.relations-view-card-line-source {
+  padding-right: 22px;
 }
 
 .relations-view-column {

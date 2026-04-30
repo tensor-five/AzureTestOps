@@ -53,7 +53,6 @@ export function TestCaseCard(props: TestCaseCardProps): React.ReactElement {
   return (
     <article
       className={className}
-      onPointerDown={handlePointerDown}
       data-relations-anchor="left"
       data-item-key={itemKey}
       title={buildTooltip(projection)}
@@ -79,6 +78,14 @@ export function TestCaseCard(props: TestCaseCardProps): React.ReactElement {
         {display.shortLabel}
       </span>
       <span className="relations-view-card-title">{projection.title}</span>
+      {handlePointerDown ? (
+        <span
+          className="relations-view-card-line-anchor relations-view-card-line-anchor-right"
+          onPointerDown={handlePointerDown}
+          role="button"
+          aria-label={`Drag to create related link from test case #${projection.workItemId}`}
+        />
+      ) : null}
     </article>
   );
 }

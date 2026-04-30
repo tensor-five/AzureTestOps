@@ -35,11 +35,18 @@ export function WorkItemCard(props: WorkItemCardProps): React.ReactElement {
   return (
     <article
       className={className}
-      onPointerDown={handlePointerDown}
       data-relations-anchor="right"
       data-item-key={itemKey}
       title={buildTooltip(workItem)}
     >
+      {handlePointerDown ? (
+        <span
+          className="relations-view-card-line-anchor relations-view-card-line-anchor-left"
+          onPointerDown={handlePointerDown}
+          role="button"
+          aria-label={`Drag to create related link from work item #${workItem.id}`}
+        />
+      ) : null}
       {href ? (
         <a
           className="relations-view-card-id"
