@@ -31,6 +31,7 @@ import { registerAdoContextRoutes } from "./routes/ado-context-routes.js";
 import { registerSetRoutes } from "./routes/sets-routes.js";
 import { registerCatalogRoutes } from "./routes/catalog-routes.js";
 import { registerActiveSetSnapshotStreamRoute } from "./routes/active-set-snapshot-route.js";
+import { registerActiveSetSnapshotDebugRoute } from "./routes/active-set-snapshot-debug-route.js";
 import { registerRelationsRoutes } from "./routes/relations-routes.js";
 import { renderRootHtml } from "./bootstrap-html.js";
 import { writeFaviconSvg } from "./favicon-svg.js";
@@ -134,6 +135,13 @@ function buildRouter(deps: RouterDeps): Router {
         adoContext: deps.deps.adoContext
       })
     : null;
+  const snapshotDebugRoute = deps.deps.ado
+    ? registerActiveSetSnapshotDebugRoute({
+        ado: deps.deps.ado,
+        setRepository: deps.deps.setRepository,
+        adoContext: deps.deps.adoContext
+      })
+    : null;
   const relationsRoutes = deps.deps.ado ? registerRelationsRoutes(deps.deps.ado) : null;
 
   return async function route(req, res) {
@@ -182,6 +190,7 @@ function buildRouter(deps: RouterDeps): Router {
     if (await setRoutes(method, pathname, req, res)) return;
     if (catalogRoutes && (await catalogRoutes(method, pathname, url, req, res))) return;
     if (snapshotRoute && (await snapshotRoute(method, pathname, url, req, res))) return;
+    if (snapshotDebugRoute && (await snapshotDebugRoute(method, pathname, url, req, res))) return;
     if (relationsRoutes && (await relationsRoutes(method, pathname, req, res))) return;
 
     if (method === "GET" && (pathname === "/" || pathname === "/index.html")) {
