@@ -77,6 +77,21 @@ function fireDrag(
   return event;
 }
 
+function stubBounds(el: HTMLElement, top: number, height: number): void {
+  el.getBoundingClientRect = () =>
+    ({
+      top,
+      bottom: top + height,
+      left: 0,
+      right: 100,
+      width: 100,
+      height,
+      x: 0,
+      y: top,
+      toJSON: () => ""
+    }) as DOMRect;
+}
+
 describe("WorkItemColumn drag-and-drop reorder", () => {
   it("falls back to id-ascending sort when no order api is provided", () => {
     const harness = render(
@@ -123,7 +138,7 @@ describe("WorkItemColumn drag-and-drop reorder", () => {
     harness.unmount();
   });
 
-  it("calls order.move(draggedId, targetId, edge) on drop, deriving edge from cursor Y", () => {
+  it("drops anywhere on the list — cursor above the first row inserts before it", () => {
     const order: WorkItemOrderApi = {
       sortByStoredOrder: (items) => items.slice(),
       move: vi.fn()
@@ -131,70 +146,136 @@ describe("WorkItemColumn drag-and-drop reorder", () => {
 
     const harness = render(
       <WorkItemColumn
-        workItems={[workItem({ id: 501 }), workItem({ id: 502 })]}
-        unfilteredCount={2}
+        workItems={[workItem({ id: 501 }), workItem({ id: 502 }), workItem({ id: 503 })]}
+        unfilteredCount={3}
         order={order}
       />
     );
 
-    const items = harness.container.querySelectorAll<HTMLElement>("[data-work-item-id]");
-    const sourceLi = items[0];
-    const targetLi = items[1];
-    expect(sourceLi).toBeDefined();
-    expect(targetLi).toBeDefined();
+    const ol = harness.container.querySelector<HTMLOListElement>(
+      ".relations-view-work-item-list"
+    )!;
+    const items = ol.querySelectorAll<HTMLElement>("[data-work-item-id]");
+    stubBounds(items[0], 30, 30);
+    stubBounds(items[1], 60, 30);
+    stubBounds(items[2], 90, 30);
 
-    const sourceRect = { top: 0, height: 30 };
-    const targetRect = { top: 30, height: 30 };
-    sourceLi.getBoundingClientRect = () =>
-      ({
-        top: sourceRect.top,
-        bottom: sourceRect.top + sourceRect.height,
-        left: 0,
-        right: 100,
-        width: 100,
-        height: sourceRect.height,
-        x: 0,
-        y: sourceRect.top,
-        toJSON: () => ""
-      }) as DOMRect;
-    targetLi.getBoundingClientRect = () =>
-      ({
-        top: targetRect.top,
-        bottom: targetRect.top + targetRect.height,
-        left: 0,
-        right: 100,
-        width: 100,
-        height: targetRect.height,
-        x: 0,
-        y: targetRect.top,
-        toJSON: () => ""
-      }) as DOMRect;
-
-    const handle = sourceLi.querySelector<HTMLButtonElement>(".relations-view-drag-handle");
-    expect(handle).not.toBeNull();
-
+    const handle = items[2].querySelector<HTMLButtonElement>(
+      ".relations-view-drag-handle"
+    )!;
     const dt = buildDataTransferStub();
 
     act(() => {
-      fireDrag(handle!, "dragstart", { dataTransfer: dt });
+      fireDrag(handle, "dragstart", { dataTransfer: dt });
     });
+    // Cursor far above row 0 — should target row 0 with edge "before".
     act(() => {
-      fireDrag(targetLi, "dragover", { dataTransfer: dt, clientY: 32 });
+      fireDrag(ol, "dragover", { dataTransfer: dt, clientY: 5 });
     });
-
-    expect(targetLi.getAttribute("data-drop-edge")).toBe("before");
+    expect(items[0].getAttribute("data-drop-edge")).toBe("before");
 
     act(() => {
-      fireDrag(targetLi, "drop", { dataTransfer: dt, clientY: 32 });
+      fireDrag(ol, "drop", { dataTransfer: dt, clientY: 5 });
     });
-
-    expect(order.move).toHaveBeenCalledWith(501, 502, "before");
-    expect(targetLi.getAttribute("data-drop-edge")).toBeNull();
+    expect(order.move).toHaveBeenCalledWith(503, 501, "before");
 
     harness.unmount();
   });
 
-  it("returns 'after' when the drop point is below the row midpoint", () => {
+  it("drops anywhere on the list — cursor in the gap between rows resolves to the right side", () => {
+    const order: WorkItemOrderApi = {
+      sortByStoredOrder: (items) => items.slice(),
+      move: vi.fn()
+    };
+
+    const harness = render(
+      <WorkItemColumn
+        workItems={[workItem({ id: 501 }), workItem({ id: 502 }), workItem({ id: 503 })]}
+        unfilteredCount={3}
+        order={order}
+      />
+    );
+
+    const ol = harness.container.querySelector<HTMLOListElement>(
+      ".relations-view-work-item-list"
+    )!;
+    const items = ol.querySelectorAll<HTMLElement>("[data-work-item-id]");
+    // Three rows: 0..30, 40..70, 80..110. Gaps at 30..40 and 70..80.
+    stubBounds(items[0], 0, 30);
+    stubBounds(items[1], 40, 30);
+    stubBounds(items[2], 80, 30);
+
+    const handle = items[0].querySelector<HTMLButtonElement>(
+      ".relations-view-drag-handle"
+    )!;
+    const dt = buildDataTransferStub();
+
+    act(() => {
+      fireDrag(handle, "dragstart", { dataTransfer: dt });
+    });
+    // Cursor sits in the visual gap between row 1 (mid 55) and row 2 (mid 95).
+    // It is past row 1's midpoint but before row 2's midpoint, so the
+    // closest insertion point is "before row 2".
+    act(() => {
+      fireDrag(ol, "dragover", { dataTransfer: dt, clientY: 75 });
+    });
+    expect(items[2].getAttribute("data-drop-edge")).toBe("before");
+    expect(items[0].getAttribute("data-drop-edge")).toBeNull();
+    expect(items[1].getAttribute("data-drop-edge")).toBeNull();
+
+    act(() => {
+      fireDrag(ol, "drop", { dataTransfer: dt, clientY: 75 });
+    });
+    expect(order.move).toHaveBeenCalledWith(501, 503, "before");
+
+    harness.unmount();
+  });
+
+  it("drops anywhere on the list — cursor below the last row appends after it", () => {
+    const order: WorkItemOrderApi = {
+      sortByStoredOrder: (items) => items.slice(),
+      move: vi.fn()
+    };
+
+    const harness = render(
+      <WorkItemColumn
+        workItems={[workItem({ id: 501 }), workItem({ id: 502 }), workItem({ id: 503 })]}
+        unfilteredCount={3}
+        order={order}
+      />
+    );
+
+    const ol = harness.container.querySelector<HTMLOListElement>(
+      ".relations-view-work-item-list"
+    )!;
+    const items = ol.querySelectorAll<HTMLElement>("[data-work-item-id]");
+    stubBounds(items[0], 0, 30);
+    stubBounds(items[1], 30, 30);
+    stubBounds(items[2], 60, 30);
+
+    const handle = items[0].querySelector<HTMLButtonElement>(
+      ".relations-view-drag-handle"
+    )!;
+    const dt = buildDataTransferStub();
+
+    act(() => {
+      fireDrag(handle, "dragstart", { dataTransfer: dt });
+    });
+    // Cursor far below the last row — append after it.
+    act(() => {
+      fireDrag(ol, "dragover", { dataTransfer: dt, clientY: 500 });
+    });
+    expect(items[2].getAttribute("data-drop-edge")).toBe("after");
+
+    act(() => {
+      fireDrag(ol, "drop", { dataTransfer: dt, clientY: 500 });
+    });
+    expect(order.move).toHaveBeenCalledWith(501, 503, "after");
+
+    harness.unmount();
+  });
+
+  it("clears the drop edge marker on drag end so it does not linger", () => {
     const order: WorkItemOrderApi = {
       sortByStoredOrder: (items) => items.slice(),
       move: vi.fn()
@@ -208,33 +289,30 @@ describe("WorkItemColumn drag-and-drop reorder", () => {
       />
     );
 
-    const items = harness.container.querySelectorAll<HTMLElement>("[data-work-item-id]");
-    const sourceLi = items[0];
-    const targetLi = items[1];
-    targetLi.getBoundingClientRect = () =>
-      ({
-        top: 30,
-        bottom: 60,
-        left: 0,
-        right: 100,
-        width: 100,
-        height: 30,
-        x: 0,
-        y: 30,
-        toJSON: () => ""
-      }) as DOMRect;
+    const ol = harness.container.querySelector<HTMLOListElement>(
+      ".relations-view-work-item-list"
+    )!;
+    const items = ol.querySelectorAll<HTMLElement>("[data-work-item-id]");
+    stubBounds(items[0], 0, 30);
+    stubBounds(items[1], 30, 30);
 
-    const handle = sourceLi.querySelector<HTMLButtonElement>(".relations-view-drag-handle")!;
+    const handle = items[0].querySelector<HTMLButtonElement>(
+      ".relations-view-drag-handle"
+    )!;
     const dt = buildDataTransferStub();
 
     act(() => {
       fireDrag(handle, "dragstart", { dataTransfer: dt });
     });
     act(() => {
-      fireDrag(targetLi, "drop", { dataTransfer: dt, clientY: 55 });
+      fireDrag(ol, "dragover", { dataTransfer: dt, clientY: 45 });
     });
+    expect(items[1].getAttribute("data-drop-edge")).toBe("after");
 
-    expect(order.move).toHaveBeenCalledWith(501, 502, "after");
+    act(() => {
+      fireDrag(handle, "dragend", { dataTransfer: dt });
+    });
+    expect(items[1].getAttribute("data-drop-edge")).toBeNull();
 
     harness.unmount();
   });

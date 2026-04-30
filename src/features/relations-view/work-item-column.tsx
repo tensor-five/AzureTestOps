@@ -17,6 +17,8 @@ export type WorkItemColumnProps = {
   order?: WorkItemOrderApi;
 };
 
+type DropTarget = { workItemId: number; edge: "before" | "after"; element: HTMLElement };
+
 export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
   const baseSorted = React.useMemo(
     () => props.workItems.slice().sort((a, b) => a.id - b.id),
@@ -28,8 +30,19 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
     [baseSorted, props.order]
   );
 
-  const dragState = React.useRef<{ draggedId: number | null }>({ draggedId: null });
+  const draggedIdRef = React.useRef<number | null>(null);
   const [draggedId, setDraggedId] = React.useState<number | null>(null);
+  const listRef = React.useRef<HTMLOListElement | null>(null);
+
+  const clearDropEdges = React.useCallback(() => {
+    const ol = listRef.current;
+    if (!ol) {
+      return;
+    }
+    ol.querySelectorAll(`[${DRAG_DROP_EDGE_ATTR}]`).forEach((el) =>
+      el.removeAttribute(DRAG_DROP_EDGE_ATTR)
+    );
+  }, []);
 
   const handleDragStart = React.useCallback(
     (workItemId: number, event: React.DragEvent<HTMLElement>) => {
@@ -44,65 +57,113 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
       if (card && typeof event.dataTransfer.setDragImage === "function") {
         event.dataTransfer.setDragImage(card, 12, 12);
       }
-      dragState.current.draggedId = workItemId;
+      draggedIdRef.current = workItemId;
       setDraggedId(workItemId);
     },
     [props.order]
   );
 
   const handleDragEnd = React.useCallback(() => {
-    dragState.current.draggedId = null;
+    draggedIdRef.current = null;
     setDraggedId(null);
-    document
-      .querySelectorAll(`[${DRAG_DROP_EDGE_ATTR}]`)
-      .forEach((el) => el.removeAttribute(DRAG_DROP_EDGE_ATTR));
-  }, []);
+    clearDropEdges();
+  }, [clearDropEdges]);
 
-  const handleDragOver = React.useCallback(
-    (event: React.DragEvent<HTMLLIElement>) => {
-      if (!props.order || dragState.current.draggedId === null) {
+  const resolveDropTarget = React.useCallback(
+    (clientY: number): DropTarget | null => {
+      const ol = listRef.current;
+      if (!ol) {
+        return null;
+      }
+      const rows = Array.from(
+        ol.querySelectorAll<HTMLElement>(":scope > [data-work-item-id]")
+      );
+      if (rows.length === 0) {
+        return null;
+      }
+      for (const row of rows) {
+        const rect = row.getBoundingClientRect();
+        const midpoint = rect.top + rect.height / 2;
+        if (clientY < midpoint) {
+          const id = Number.parseInt(row.dataset.workItemId ?? "", 10);
+          if (!Number.isFinite(id)) {
+            return null;
+          }
+          return { workItemId: id, edge: "before", element: row };
+        }
+      }
+      const last = rows[rows.length - 1];
+      const id = Number.parseInt(last.dataset.workItemId ?? "", 10);
+      if (!Number.isFinite(id)) {
+        return null;
+      }
+      return { workItemId: id, edge: "after", element: last };
+    },
+    []
+  );
+
+  const handleListDragOver = React.useCallback(
+    (event: React.DragEvent<HTMLOListElement>) => {
+      if (!props.order || draggedIdRef.current === null) {
         return;
       }
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
-      const li = event.currentTarget;
-      const rect = li.getBoundingClientRect();
-      const edge = event.clientY < rect.top + rect.height / 2 ? "before" : "after";
-      if (li.getAttribute(DRAG_DROP_EDGE_ATTR) !== edge) {
-        li.setAttribute(DRAG_DROP_EDGE_ATTR, edge);
+      const target = resolveDropTarget(event.clientY);
+      if (!target) {
+        return;
+      }
+      const ol = listRef.current;
+      if (!ol) {
+        return;
+      }
+      ol.querySelectorAll(`[${DRAG_DROP_EDGE_ATTR}]`).forEach((el) => {
+        if (el !== target.element) {
+          el.removeAttribute(DRAG_DROP_EDGE_ATTR);
+        }
+      });
+      if (target.element.getAttribute(DRAG_DROP_EDGE_ATTR) !== target.edge) {
+        target.element.setAttribute(DRAG_DROP_EDGE_ATTR, target.edge);
       }
     },
-    [props.order]
+    [props.order, resolveDropTarget]
   );
 
-  const handleDragLeave = React.useCallback((event: React.DragEvent<HTMLLIElement>) => {
-    event.currentTarget.removeAttribute(DRAG_DROP_EDGE_ATTR);
-  }, []);
+  const handleListDragLeave = React.useCallback(
+    (event: React.DragEvent<HTMLOListElement>) => {
+      // dragleave fires when the pointer moves from the OL into a descendant
+      // too. Only clear the edge marker when we truly leave the list, i.e.
+      // the relatedTarget is outside this OL.
+      const next = event.relatedTarget as Node | null;
+      if (next && event.currentTarget.contains(next)) {
+        return;
+      }
+      clearDropEdges();
+    },
+    [clearDropEdges]
+  );
 
-  const handleDrop = React.useCallback(
-    (targetId: number, event: React.DragEvent<HTMLLIElement>) => {
+  const handleListDrop = React.useCallback(
+    (event: React.DragEvent<HTMLOListElement>) => {
       if (!props.order) {
         return;
       }
       event.preventDefault();
       const raw = event.dataTransfer.getData(DRAG_DATA_TYPE);
       const draggedFromData = Number.parseInt(raw, 10);
-      const draggedFromState = dragState.current.draggedId;
+      const draggedFromState = draggedIdRef.current;
       const draggedId = Number.isFinite(draggedFromData) && draggedFromData > 0
         ? draggedFromData
         : draggedFromState;
-      if (draggedId === null || draggedId === targetId) {
+      const target = resolveDropTarget(event.clientY);
+      if (draggedId === null || !target || draggedId === target.workItemId) {
         handleDragEnd();
         return;
       }
-      const li = event.currentTarget;
-      const rect = li.getBoundingClientRect();
-      const edge: "before" | "after" =
-        event.clientY < rect.top + rect.height / 2 ? "before" : "after";
-      props.order.move(draggedId, targetId, edge);
+      props.order.move(draggedId, target.workItemId, target.edge);
       handleDragEnd();
     },
-    [props.order, handleDragEnd]
+    [props.order, resolveDropTarget, handleDragEnd]
   );
 
   const reorderEnabled = props.order !== undefined;
@@ -123,7 +184,13 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
       ) : sorted.length === 0 ? (
         <p className="relations-view-column-empty">No work items match the active filter.</p>
       ) : (
-        <ol className="relations-view-work-item-list">
+        <ol
+          ref={listRef}
+          className="relations-view-work-item-list"
+          onDragOver={reorderEnabled ? handleListDragOver : undefined}
+          onDragLeave={reorderEnabled ? handleListDragLeave : undefined}
+          onDrop={reorderEnabled ? handleListDrop : undefined}
+        >
           {sorted.map((workItem) => (
             <li
               key={workItem.id}
@@ -133,9 +200,6 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
                   : "relations-view-work-item-list-item"
               }
               data-work-item-id={workItem.id}
-              onDragOver={reorderEnabled ? handleDragOver : undefined}
-              onDragLeave={reorderEnabled ? handleDragLeave : undefined}
-              onDrop={reorderEnabled ? (event) => handleDrop(workItem.id, event) : undefined}
             >
               {reorderEnabled ? (
                 <button
