@@ -1,0 +1,119 @@
+main[data-ui-shell="phase-6-runtime"] {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 70px 0 var(--space-8);
+}
+
+.ui-shell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-height: calc(100vh - 114px);
+}
+
+.ui-shell-content {
+  display: block;
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: none;
+  padding: 0 var(--space-4);
+}
+
+.ui-shell-placeholder {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-8);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface-elevated);
+}
+
+.ui-shell-placeholder h2 {
+  margin: 0 0 var(--space-3);
+  color: var(--color-text);
+}
+
+.relations-view-notice-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+}
+
+.ui-shell-footer {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 45;
+  margin-top: 0;
+  padding: var(--space-1) var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  text-align: center;
+  background: color-mix(in srgb, var(--color-surface) 82%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.ui-shell-footer a {
+  color: var(--color-primary);
+}
+
+.ui-shell-footer span,
+.ui-shell-footer a {
+  opacity: 0.6;
+}
+
+.ui-shell-footer a:hover,
+.ui-shell-footer a:focus-visible {
+  color: var(--color-primary-dark);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .ui-shell-workspace:hover,
+  section[role="tabpanel"]:hover {
+    transform: none;
+  }
+
+  body::after {
+    background-attachment: initial;
+  }
+}
+
+@media (min-width: 1025px) {
+  body::after {
+    opacity: 0.03;
+    background-attachment: fixed;
+  }
+}
+
+@media (max-width: 1024px) {
+  main[data-ui-shell="phase-6-runtime"] {
+    width: 100%;
+    padding-top: 70px;
+  }
+}
+
+@media (max-width: 768px) {
+  .ui-shell-content {
+    display: block;
+  }
+}
+
+@media (max-width: 480px) {
+  .ui-shell-workspace,
+  section[role="tabpanel"] {
+    border-radius: var(--radius-lg);
+  }
+}

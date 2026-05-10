@@ -1,0 +1,40 @@
+import { AzureWorkItemDeepLinkAdapter } from "../../adapters/azure-devops/work-items/azure-work-item-deep-link.adapter.js";
+import type { ClientPorts } from "../../application/ports/client/client-ports.js";
+import { HttpAdoContextAdapter } from "../../adapters/http/http-ado-context.adapter.js";
+import { HttpAuthPreflightAdapter } from "../../adapters/http/http-auth-preflight.adapter.js";
+import { HttpRelationMutationsAdapter } from "../../adapters/http/http-relation-mutations.adapter.js";
+import { HttpSavedQueryAdapter } from "../../adapters/http/http-saved-query.adapter.js";
+import { HttpSetManagementAdapter } from "../../adapters/http/http-set-management.adapter.js";
+import { HttpTestCatalogAdapter } from "../../adapters/http/http-test-catalog.adapter.js";
+import { HttpUserPreferencesAdapter } from "../../adapters/http/http-user-preferences.adapter.js";
+import { SseActiveSetSnapshotAdapter } from "../../adapters/http/sse-active-set-snapshot.adapter.js";
+import { installUserPreferencesPort } from "../../shared/user-preferences/user-preferences.client.js";
+
+/**
+ * Composition root for the browser-side hexagon.
+ *
+ * Instantiates the HTTP / SSE adapters that implement each client port and
+ * returns a single {@link ClientPorts} bundle the React tree consumes via
+ * the `<ClientPortsProvider>`. Tests build their own bundle (typed
+ * mocks per port) and never go through this factory.
+ */
+export function buildBrowserClientPorts(): ClientPorts {
+  const userPreferences = new HttpUserPreferencesAdapter();
+  // Side-channel install: feature stores were created at module-import time
+  // (long before client ports existed) and reach for the top-level facade
+  // exports rather than `useClientPorts()`. Wiring the same instance into the
+  // facade keeps both code paths in sync until those stores are migrated.
+  installUserPreferencesPort(userPreferences);
+
+  return {
+    activeSetSnapshot: new SseActiveSetSnapshotAdapter(),
+    adoContext: new HttpAdoContextAdapter(),
+    authPreflight: new HttpAuthPreflightAdapter(),
+    relationMutations: new HttpRelationMutationsAdapter(),
+    savedQuery: new HttpSavedQueryAdapter(),
+    setManagement: new HttpSetManagementAdapter(),
+    testCatalog: new HttpTestCatalogAdapter(),
+    userPreferences,
+    workItemDeepLink: new AzureWorkItemDeepLinkAdapter()
+  };
+}

@@ -1,0 +1,377 @@
+.relations-view {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(320px, 1fr));
+  gap: var(--space-32);
+  align-items: start;
+  width: 100%;
+}
+
+.relations-view-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 240px;
+  padding: var(--space-4);
+}
+
+.relations-view-column-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.relations-view-column-header h3 {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-base);
+  font-weight: var(--font-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.relations-view-column-count {
+  margin-left: auto;
+}
+
+.relations-view-column-empty {
+  margin: 0;
+  padding: var(--space-4);
+}
+
+.relations-view-suite-list,
+.relations-view-work-item-list,
+.relations-view-suite-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.relations-view-work-item-list {
+  padding: var(--space-2) 0;
+  min-height: 80px;
+}
+
+.relations-view-suite {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-left: calc(var(--space-4) * var(--suite-depth, 0));
+}
+
+.relations-view-suite-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  font-weight: var(--font-bold);
+  text-align: left;
+}
+
+.relations-view-suite-toggle:hover,
+.relations-view-suite-toggle:focus-visible,
+.relations-view-drag-handle:hover,
+.relations-view-drag-handle:focus-visible {
+  background: var(--color-bg-muted);
+  color: var(--color-text);
+}
+
+.relations-view-suite-toggle-icon {
+  display: inline-block;
+  width: var(--space-3);
+  color: var(--color-primary);
+}
+
+.relations-view-suite-name,
+.relations-view-card-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.relations-view-suite-name,
+.relations-view-card-title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.relations-view-suite-cards {
+  padding: var(--space-1) 0 var(--space-1) var(--space-4-5);
+}
+
+.relations-view-test-case-row,
+.relations-view-work-item-list-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.relations-view-test-case-row > .relations-view-card,
+.relations-view-work-item-list-item > .relations-view-card {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.relations-view-test-case-row-dragging,
+.relations-view-work-item-list-item-dragging {
+  opacity: 0.55;
+}
+
+.relations-view-test-case-row[data-drop-edge="before"]::before,
+.relations-view-test-case-row[data-drop-edge="after"]::after,
+.relations-view-work-item-list-item[data-drop-edge="before"]::before,
+.relations-view-work-item-list-item[data-drop-edge="after"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  pointer-events: none;
+}
+
+.relations-view-test-case-row[data-drop-edge="before"]::before,
+.relations-view-work-item-list-item[data-drop-edge="before"]::before {
+  top: -3px;
+}
+
+.relations-view-test-case-row[data-drop-edge="after"]::after,
+.relations-view-work-item-list-item[data-drop-edge="after"]::after {
+  bottom: -3px;
+}
+
+.relations-view-drag-handle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-4-5);
+  height: var(--space-7);
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: grab;
+  font-size: var(--text-base);
+  line-height: 1;
+  user-select: none;
+}
+
+.relations-view-drag-handle:hover,
+.relations-view-drag-handle:focus-visible {
+  border-color: var(--color-border);
+  outline: none;
+}
+
+.relations-view-drag-handle:active {
+  cursor: grabbing;
+}
+
+.relations-view-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--space-7);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  transition:
+    border-color var(--transition-duration-fast) var(--transition-easing-standard),
+    box-shadow var(--transition-duration-fast) var(--transition-easing-standard),
+    transform var(--transition-duration-fast) var(--transition-easing-standard);
+  touch-action: none;
+  user-select: none;
+}
+
+.relations-view-card-line-source:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
+}
+
+.relations-view-card-work-item.relations-view-card-line-source {
+  padding-left: var(--space-5-5);
+}
+
+.relations-view-card-test-case.relations-view-card-line-source {
+  padding-right: var(--space-5-5);
+}
+
+.relations-view-card-id {
+  flex: none;
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-bold);
+}
+
+.relations-view-card-title {
+  color: var(--color-text);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+}
+
+.relations-view-card-line-anchor {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-3-5);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.relations-view-card-line-anchor::before {
+  content: "";
+  width: var(--space-1);
+  height: var(--space-3-5);
+  border-radius: var(--radius-sm);
+  background: var(--color-border);
+  transition: background-color var(--transition-duration-fast) var(--transition-easing-standard);
+}
+
+.relations-view-card-line-anchor:hover::before {
+  background: var(--color-primary);
+}
+
+.relations-view-card-line-anchor-left {
+  left: 0;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+}
+
+.relations-view-card-line-anchor-right {
+  right: 0;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.relations-view-outcome-chip,
+.relations-view-type-chip,
+.relations-view-state-chip {
+  flex: none;
+  height: var(--space-4-5);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg-muted);
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.relations-view-outcome-chip,
+.relations-view-type-chip {
+  min-width: var(--space-5-5);
+  color: var(--color-text);
+}
+
+.relations-view-state-chip {
+  white-space: nowrap;
+}
+
+.relations-view-outcome-chip-passed,
+.relations-view-state-chip-resolved,
+.relations-view-state-chip-done,
+.relations-view-state-chip-closed {
+  border-color: color-mix(in srgb, var(--color-secondary) 70%, var(--color-border-strong));
+  background: color-mix(in srgb, var(--color-secondary) 22%, var(--color-surface-elevated));
+  color: var(--color-text);
+}
+
+.relations-view-outcome-chip-failed,
+.relations-view-type-chip-bug,
+.relations-view-state-chip-active,
+.relations-view-state-chip-committed,
+.relations-view-state-chip-in-progress,
+.relations-view-state-chip-doing {
+  border-color: var(--color-warning-border);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.relations-view-outcome-chip-blocked,
+.relations-view-type-chip-user-story,
+.relations-view-state-chip-new,
+.relations-view-state-chip-proposed,
+.relations-view-state-chip-to-do {
+  border-color: color-mix(in srgb, var(--color-primary) 55%, var(--color-border-strong));
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface-elevated));
+  color: var(--color-text);
+}
+
+.relations-view-state-chip-removed {
+  opacity: 0.7;
+  text-decoration: line-through;
+}
+
+.relations-view-line-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.relations-view-line {
+  cursor: pointer;
+  pointer-events: stroke;
+}
+
+.relations-view-line-hitbox,
+.relations-view-line-stroke,
+.relations-view-line-draft {
+  fill: none;
+}
+
+.relations-view-line-hitbox {
+  stroke: transparent;
+  stroke-width: 14;
+}
+
+.relations-view-line-stroke {
+  stroke: color-mix(in srgb, var(--color-primary) 70%, var(--color-border-strong));
+  stroke-width: 2;
+  transition: stroke var(--transition-duration-fast) var(--transition-easing-standard);
+}
+
+.relations-view-line:hover .relations-view-line-stroke,
+.relations-view-line-selected .relations-view-line-stroke {
+  stroke: var(--color-primary);
+  stroke-width: 3;
+}
+
+.relations-view-line-pending .relations-view-line-stroke {
+  opacity: 0.7;
+  stroke-dasharray: 6 4;
+}
+
+.relations-view-line-draft {
+  stroke: var(--color-primary);
+  stroke-width: 2;
+  stroke-dasharray: 4 4;
+  pointer-events: none;
+}
+
+@media (max-width: 1024px) {
+  .relations-view {
+    grid-template-columns: 1fr;
+  }
+}
