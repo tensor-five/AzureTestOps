@@ -72,7 +72,6 @@ Copy values from `.env.example` into your environment as needed. Key variables:
 - `PORT`: local HTTP port (default 8081)
 - `ADO_PAT` / `AZURE_DEVOPS_EXT_PAT`: optional PAT auth (otherwise Azure CLI token flow)
 - `ADO_VERBOSE_LOGS`: verbose runtime logs (`1` or `0`)
-- `ADO_WRITE_ENABLED`: enables relation write-back (`1` or `0`)
 
 ## Local data
 
