@@ -42,7 +42,7 @@ export function AppHeader(props: AppHeaderProps): React.ReactElement {
   return (
     <section className="ui-shell-header">
       <div className="ui-shell-brand">
-        <h1>Azure TestOps</h1>
+        <h1>AzureTestOps</h1>
       </div>
       <div className="ui-shell-header-actions">
         <PreflightBadge status={props.preflightStatus} />

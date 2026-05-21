@@ -45,7 +45,7 @@ const ROOT_HTML = `<!doctype html>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="ado-csrf-token" content="${ADO_CSRF_META_PLACEHOLDER}" />
-    <title>Azure TestOps</title>
+    <title>AzureTestOps</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <script>
       ${PRE_PAINT_THEME_SCRIPT}

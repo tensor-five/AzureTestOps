@@ -78,7 +78,7 @@ describe("http-server", () => {
     expect(response.status).toBe(200);
     const body = await response.text();
     expect(body).toContain('<div id="app"></div>');
-    expect(body).toContain("<title>Azure TestOps</title>");
+    expect(body).toContain("<title>AzureTestOps</title>");
     expect(csrfToken.length).toBeGreaterThan(20);
   });
 
