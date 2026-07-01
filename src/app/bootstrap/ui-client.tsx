@@ -25,6 +25,7 @@ import { RelationsPane } from "../../features/relations-view/relations-pane.js";
 import { ClientPortsProvider, useClientPorts } from "../composition/client-ports-context.js";
 import { buildBrowserClientPorts } from "../composition/browser-runtime.js";
 import type { ClientPorts } from "../../application/ports/client/client-ports.js";
+import { resolveSetAdoContext } from "./resolve-set-ado-context.js";
 
 const THEME_MODE_STORAGE_KEY = "azure-testops.theme-mode.v1";
 const GITHUB_REPO_URL = "https://github.com/tensor-five/AzureTestOps";
@@ -92,6 +93,14 @@ function AppShell(): React.ReactElement {
       : undefined;
   }, [adoContextState.context, ports.workItemDeepLink]);
 
+  const getSuiteHref = React.useMemo<((suiteId: number) => string | null) | undefined>(() => {
+    const set = snapshotState.snapshot?.set;
+    const context = resolveSetAdoContext(set, adoContextState.context);
+    return set && context
+      ? (suiteId: number) => ports.testSuiteDeepLink.buildHref(context, set.planId, suiteId)
+      : undefined;
+  }, [adoContextState.context, ports.testSuiteDeepLink, snapshotState.snapshot?.set]);
+
   return (
     <main data-ui-shell="phase-6-runtime" className="ui-shell">
       <AppHeader
@@ -135,6 +144,7 @@ function AppShell(): React.ReactElement {
           error={snapshotState.error}
           hasActiveSet={Boolean(setManagement.activeSetId)}
           getWorkItemHref={getWorkItemHref}
+          getSuiteHref={getSuiteHref}
         />
       </div>
       <footer className="ui-shell-footer">

@@ -5,6 +5,7 @@ import type { RelationMutationsClientPort } from "./relation-mutations-client.po
 import type { SavedQueryClientPort } from "./saved-query-client.port.js";
 import type { SetManagementClientPort } from "./set-management-client.port.js";
 import type { TestCatalogClientPort } from "./test-catalog-client.port.js";
+import type { TestSuiteDeepLinkClientPort } from "./test-suite-deep-link-client.port.js";
 import type { UserPreferencesClientPort } from "./user-preferences-client.port.js";
 import type { WorkItemDeepLinkClientPort } from "./work-item-deep-link-client.port.js";
 
@@ -22,6 +23,7 @@ export type ClientPorts = {
   savedQuery: SavedQueryClientPort;
   setManagement: SetManagementClientPort;
   testCatalog: TestCatalogClientPort;
+  testSuiteDeepLink: TestSuiteDeepLinkClientPort;
   userPreferences: UserPreferencesClientPort;
   workItemDeepLink: WorkItemDeepLinkClientPort;
 };

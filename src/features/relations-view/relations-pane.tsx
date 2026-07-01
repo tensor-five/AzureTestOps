@@ -40,6 +40,7 @@ export type RelationsPaneProps = {
   error: string | null;
   hasActiveSet: boolean;
   getWorkItemHref?: (workItemId: number) => string | null;
+  getSuiteHref?: (suiteId: number) => string | null;
 };
 
 export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
@@ -250,6 +251,7 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
         onLinePointerDown={drawing.startFromCard}
         order={testCaseOrder}
         getWorkItemHref={props.getWorkItemHref}
+        getSuiteHref={props.getSuiteHref}
       />
       <WorkItemColumn
         workItems={filteredWorkItems}

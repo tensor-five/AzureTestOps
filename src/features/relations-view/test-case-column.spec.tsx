@@ -158,6 +158,30 @@ describe("TestCaseColumn", () => {
 
     harness.unmount();
   });
+
+  it("renders a suite results link next to every visible suite name", () => {
+    const harness = render(
+      <TestCaseColumn
+        suiteTree={tree()}
+        projections={[projection(101, 3, "Auth case")]}
+        unfilteredCount={1}
+        collapse={makeCollapse([])}
+        getSuiteHref={(suiteId) =>
+          `https://dev.azure.com/contoso/delivery/_testPlans/execute?view=_TestManagement&planId=9&suiteId=${suiteId}`}
+      />
+    );
+
+    const links = harness.container.querySelectorAll<HTMLAnchorElement>(
+      ".relations-view-suite-link"
+    );
+    expect(links.length).toBe(4);
+    expect(links[2].getAttribute("href")).toBe(
+      "https://dev.azure.com/contoso/delivery/_testPlans/execute?view=_TestManagement&planId=9&suiteId=3"
+    );
+    expect(links[2].getAttribute("aria-label")).toContain("suite Auth");
+
+    harness.unmount();
+  });
 });
 
 function buildDataTransferStub(): DataTransfer {

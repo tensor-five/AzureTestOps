@@ -1,4 +1,5 @@
 import { AzureWorkItemDeepLinkAdapter } from "../../adapters/azure-devops/work-items/azure-work-item-deep-link.adapter.js";
+import { AzureTestSuiteDeepLinkAdapter } from "../../adapters/azure-devops/test-management/azure-test-suite-deep-link.adapter.js";
 import type { ClientPorts } from "../../application/ports/client/client-ports.js";
 import { HttpAdoContextAdapter } from "../../adapters/http/http-ado-context.adapter.js";
 import { HttpAuthPreflightAdapter } from "../../adapters/http/http-auth-preflight.adapter.js";
@@ -34,6 +35,7 @@ export function buildBrowserClientPorts(): ClientPorts {
     savedQuery: new HttpSavedQueryAdapter(),
     setManagement: new HttpSetManagementAdapter(),
     testCatalog: new HttpTestCatalogAdapter(),
+    testSuiteDeepLink: new AzureTestSuiteDeepLinkAdapter(),
     userPreferences,
     workItemDeepLink: new AzureWorkItemDeepLinkAdapter()
   };

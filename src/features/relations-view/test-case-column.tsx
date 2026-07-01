@@ -29,6 +29,8 @@ export type TestCaseColumnProps = {
   order?: TestCaseOrderApi;
   /** Resolves the Azure DevOps deep link for a work item id, or null if unavailable. */
   getWorkItemHref?: (workItemId: number) => string | null;
+  /** Resolves the Azure DevOps results-page deep link for a suite id, or null if unavailable. */
+  getSuiteHref?: (suiteId: number) => string | null;
 };
 
 type SuiteWithProjections = {
@@ -119,6 +121,7 @@ export function TestCaseColumn(props: TestCaseColumnProps): React.ReactElement {
               draggedKey={draggedKey}
               onDragStart={beginDrag}
               onDragEnd={endDrag}
+              getSuiteHref={props.getSuiteHref}
             />
           ))}
         </ol>
@@ -141,9 +144,11 @@ function SuiteGroup(props: {
     event: React.DragEvent<HTMLElement>
   ) => void;
   onDragEnd: () => void;
+  getSuiteHref?: (suiteId: number) => string | null;
 }): React.ReactElement {
   const { entry, collapse, order, dragSourceRef, onDragEnd, onDragStart, draggedKey } = props;
   const isCollapsed = collapse.isCollapsed(entry.suite.id);
+  const suiteHref = props.getSuiteHref?.(entry.suite.id) ?? null;
   const containerRef = React.useRef<HTMLDivElement | null>(null);
 
   const ordered = React.useMemo(() => {
@@ -261,20 +266,36 @@ function SuiteGroup(props: {
       className={`relations-view-suite ${isCollapsed ? "relations-view-suite-collapsed" : ""}`}
       style={{ "--suite-depth": entry.suite.depth } as React.CSSProperties}
     >
-      <button
-        type="button"
-        className="relations-view-suite-toggle"
-        onClick={() => collapse.toggle(entry.suite.id)}
-        aria-expanded={!isCollapsed}
-      >
-        <span className="relations-view-suite-toggle-icon" aria-hidden>
-          {isCollapsed ? "▸" : "▾"}
-        </span>
-        <span className="relations-view-suite-name" title={entry.suite.path}>
-          {entry.suite.name}
-        </span>
+      <div className="relations-view-suite-header">
+        <button
+          type="button"
+          className="relations-view-suite-toggle"
+          onClick={() => collapse.toggle(entry.suite.id)}
+          aria-expanded={!isCollapsed}
+        >
+          <span className="relations-view-suite-toggle-icon" aria-hidden>
+            {isCollapsed ? "▸" : "▾"}
+          </span>
+          <span className="relations-view-suite-name" title={entry.suite.path}>
+            {entry.suite.name}
+          </span>
+        </button>
+        {suiteHref ? (
+          <a
+            className="relations-view-suite-link"
+            href={suiteHref}
+            target="_blank"
+            rel="noreferrer noopener"
+            onClick={(event) => event.stopPropagation()}
+            onPointerDown={(event) => event.stopPropagation()}
+            aria-label={`Open results page for suite ${entry.suite.name} in Azure DevOps (new tab)`}
+            title="Open suite results in Azure DevOps"
+          >
+            <span aria-hidden="true">↗</span>
+          </a>
+        ) : null}
         <span className="relations-view-suite-count">{entry.projections.length}</span>
-      </button>
+      </div>
       {!isCollapsed && ordered.length > 0 ? (
         <div
           className="relations-view-suite-cards"

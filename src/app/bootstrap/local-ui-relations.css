@@ -61,11 +61,19 @@
   padding-left: calc(var(--space-4) * var(--suite-depth, 0));
 }
 
-.relations-view-suite-toggle {
+.relations-view-suite-header {
   display: flex;
   align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.relations-view-suite-toggle {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
   gap: var(--space-2);
-  width: 100%;
+  min-width: 0;
   padding: var(--space-1) var(--space-2);
   border: 0;
   border-radius: var(--radius-md);
@@ -78,10 +86,35 @@
 
 .relations-view-suite-toggle:hover,
 .relations-view-suite-toggle:focus-visible,
+.relations-view-suite-link:hover,
+.relations-view-suite-link:focus-visible,
 .relations-view-drag-handle:hover,
 .relations-view-drag-handle:focus-visible {
   background: var(--color-bg-muted);
   color: var(--color-text);
+}
+
+.relations-view-suite-link {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-4-5);
+  height: var(--space-4-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
+  line-height: 1;
+  text-decoration: none;
+}
+
+.relations-view-suite-link:hover,
+.relations-view-suite-link:focus-visible {
+  border-color: var(--color-primary);
+  outline: none;
 }
 
 .relations-view-suite-toggle-icon {
