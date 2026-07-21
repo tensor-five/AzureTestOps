@@ -3,7 +3,6 @@ import * as React from "react";
 import type { TestSuiteNode } from "../../domain/test-management/test-suite-tree.js";
 import type { TestCaseProjection } from "../../domain/test-management/test-case-projection.js";
 import { HighlightedText } from "../../shared/search/highlighted-text.js";
-import { ChevronIcon } from "../../shared/ui/chevron-icon.js";
 import { resolveAdjacentItemMove } from "./item-order.js";
 import { TestCaseCard } from "./test-case-card.js";
 import type { SuiteCollapseApi } from "./use-suite-collapse.js";
@@ -380,7 +379,7 @@ function SuiteGroup(props: {
           data-parent-suite-id={entry.suite.parentSuiteId ?? undefined}
         >
           <span className="relations-view-suite-toggle-icon" aria-hidden="true">
-            {canCollapse ? <ChevronIcon direction={isCollapsed ? "right" : "down"} /> : null}
+            {canCollapse ? <SuiteDisclosureIcon collapsed={isCollapsed} /> : null}
           </span>
           <span className="relations-view-suite-folder-icon" aria-hidden="true">
             <FolderIcon open={!isCollapsed && entry.hasChildren} />
@@ -478,6 +477,20 @@ function SuiteGroup(props: {
 function readTestCaseId(row: HTMLElement): number | null {
   const id = Number.parseInt(row.dataset.testCaseId ?? "", 10);
   return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+function SuiteDisclosureIcon(props: { collapsed: boolean }): React.ReactElement {
+  return (
+    <svg
+      className="relations-view-suite-disclosure-icon"
+      data-direction={props.collapsed ? "right" : "down"}
+      viewBox="0 0 16 16"
+      focusable="false"
+      aria-hidden="true"
+    >
+      <path d="M4 5.25 8 9.5l4-4.25Z" />
+    </svg>
+  );
 }
 
 function FolderIcon(props: { open: boolean }): React.ReactElement {

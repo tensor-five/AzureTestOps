@@ -298,18 +298,31 @@
 }
 
 .relations-view-suite-toggle-icon {
-  width: var(--space-3);
-  height: var(--space-3);
-  flex: 0 0 var(--space-3);
+  width: var(--space-4);
+  height: var(--space-4);
+  flex: 0 0 var(--space-4);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-primary);
+  color: var(--color-text-muted);
+  transition: color var(--transition-duration-fast) var(--transition-easing-standard);
 }
 
-.relations-view-suite-toggle-icon .u-chevron-icon {
-  width: 100%;
-  height: 100%;
+.relations-view-suite-toggle:hover .relations-view-suite-toggle-icon {
+  color: var(--color-text);
+}
+
+.relations-view-suite-disclosure-icon {
+  display: block;
+  width: calc(var(--space-2) + var(--space-0-5));
+  height: calc(var(--space-2) + var(--space-0-5));
+  fill: currentColor;
+  transform-origin: center;
+  transition: transform var(--transition-duration-fast) var(--transition-easing-standard);
+}
+
+.relations-view-suite-disclosure-icon[data-direction="right"] {
+  transform: rotate(-90deg);
 }
 
 .relations-view-suite-folder-icon {
