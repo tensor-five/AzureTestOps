@@ -31,11 +31,17 @@ describe("ui-client-theme", () => {
 
   it("persists and applies theme mode", () => {
     persistThemeMode("theme-key", "light");
-    expect(readPersistedThemeMode("theme-key", null)).toBe("light");
+    expect(readPersistedThemeMode("theme-key", null, true)).toBe("light");
 
     applyThemeMode("dark");
     expect(document.documentElement.dataset.themeMode).toBe("dark");
     expect(document.documentElement.dataset.theme).toBe("dark");
+  });
+
+  it("ignores localStorage when lowdb hydration was authoritative", () => {
+    localStorage.setItem("theme-key", "dark");
+
+    expect(readPersistedThemeMode("theme-key", null, false)).toBe("system");
   });
 
   it("uses system preference for effective theme", () => {

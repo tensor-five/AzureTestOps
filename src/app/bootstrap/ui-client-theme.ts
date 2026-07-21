@@ -9,7 +9,11 @@ export function resolveEffectiveTheme(mode: ThemeMode): "light" | "dark" {
     return "light";
   }
 
-  if (typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+  if (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+  ) {
     return "dark";
   }
 
@@ -26,12 +30,16 @@ export function applyThemeMode(mode: ThemeMode): void {
   root.dataset.theme = resolveEffectiveTheme(mode);
 }
 
-export function readPersistedThemeMode(storageKey: string, cachedThemeMode: unknown): ThemeMode {
+export function readPersistedThemeMode(
+  storageKey: string,
+  cachedThemeMode: unknown,
+  allowLocalStorageFallback: boolean
+): ThemeMode {
   if (cachedThemeMode === "system" || cachedThemeMode === "dark" || cachedThemeMode === "light") {
     return cachedThemeMode;
   }
 
-  if (typeof localStorage === "undefined") {
+  if (!allowLocalStorageFallback || typeof localStorage === "undefined") {
     return "system";
   }
 

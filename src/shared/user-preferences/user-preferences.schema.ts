@@ -18,6 +18,7 @@ export type ThemeModePreference = "system" | "light" | "dark";
 export type SetLayoutPreference = {
   positions?: Record<string, { x: number; y: number }>;
   collapsedSuites?: string[];
+  hideEmptySuites?: boolean;
   workItemOrder?: number[];
   testCaseOrder?: Record<string, number[]>;
 };
@@ -37,6 +38,7 @@ export type TestCaseColumnFilterPreference = {
   assignedTo?: string[];
   tags?: string[];
   workItemTypes?: string[];
+  relationVisibility?: RelationVisibilityPreference;
 };
 
 export type WorkItemColumnFilterPreference = {
@@ -45,7 +47,11 @@ export type WorkItemColumnFilterPreference = {
   assignedTo?: string[];
   tags?: string[];
   workItemTypes?: string[];
+  relationVisibility?: RelationVisibilityPreference;
+  openBugsOnly?: boolean;
 };
+
+export type RelationVisibilityPreference = "all" | "linked" | "unlinked";
 
 export type SetFilterPreference = {
   testCases?: TestCaseColumnFilterPreference;
@@ -227,6 +233,10 @@ export function sanitizeSetFilterPreference(value: unknown): SetFilterPreference
   return Object.keys(next).length === 0 ? null : next;
 }
 
+function isRelationVisibility(value: unknown): value is RelationVisibilityPreference {
+  return value === "all" || value === "linked" || value === "unlinked";
+}
+
 function sanitizeTestCaseColumnFilter(
   value: unknown
 ): TestCaseColumnFilterPreference | null {
@@ -241,6 +251,9 @@ function sanitizeTestCaseColumnFilter(
   applyStringList(next, "assignedTo", value.assignedTo);
   applyStringList(next, "tags", value.tags);
   applyStringList(next, "workItemTypes", value.workItemTypes);
+  if (isRelationVisibility(value.relationVisibility)) {
+    next.relationVisibility = value.relationVisibility;
+  }
 
   return Object.keys(next).length === 0 ? null : next;
 }
@@ -258,6 +271,12 @@ function sanitizeWorkItemColumnFilter(
   applyStringList(next, "assignedTo", value.assignedTo);
   applyStringList(next, "tags", value.tags);
   applyStringList(next, "workItemTypes", value.workItemTypes);
+  if (isRelationVisibility(value.relationVisibility)) {
+    next.relationVisibility = value.relationVisibility;
+  }
+  if (typeof value.openBugsOnly === "boolean") {
+    next.openBugsOnly = value.openBugsOnly;
+  }
 
   return Object.keys(next).length === 0 ? null : next;
 }
@@ -333,6 +352,10 @@ function sanitizeSetLayoutPreference(value: unknown): SetLayoutPreference | null
     if (collapsed.length > 0) {
       next.collapsedSuites = collapsed;
     }
+  }
+
+  if (typeof value.hideEmptySuites === "boolean") {
+    next.hideEmptySuites = value.hideEmptySuites;
   }
 
   if (Array.isArray(value.workItemOrder)) {

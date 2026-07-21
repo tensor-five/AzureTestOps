@@ -23,7 +23,11 @@ function workItem(overrides: Partial<WorkItem> = {}): WorkItem {
   };
 }
 
-function render(ui: React.ReactElement): { container: HTMLDivElement; unmount(): void } {
+function render(ui: React.ReactElement): {
+  container: HTMLDivElement;
+  rerender(next: React.ReactElement): void;
+  unmount(): void;
+} {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -32,6 +36,11 @@ function render(ui: React.ReactElement): { container: HTMLDivElement; unmount():
   });
   return {
     container,
+    rerender: (next) => {
+      act(() => {
+        root.render(next);
+      });
+    },
     unmount: () => {
       act(() => {
         root.unmount();
@@ -177,12 +186,12 @@ describe("WorkItemColumn drag-and-drop reorder", () => {
     act(() => {
       fireDrag(ol, "drop", { dataTransfer: dt, clientY: 5 });
     });
-    expect(order.move).toHaveBeenCalledWith(503, 501, "before");
+    expect(order.move).toHaveBeenCalledWith(503, 501, "before", [501, 502, 503]);
 
     harness.unmount();
   });
 
-  it("drops anywhere on the list — cursor in the gap between rows resolves to the right side", () => {
+  it("drops anywhere on the list — cursor in the gap resolves after the preceding row", () => {
     const order: WorkItemOrderApi = {
       sortByStoredOrder: (items) => items.slice(),
       move: vi.fn()
@@ -213,20 +222,18 @@ describe("WorkItemColumn drag-and-drop reorder", () => {
     act(() => {
       fireDrag(handle, "dragstart", { dataTransfer: dt });
     });
-    // Cursor sits in the visual gap between row 1 (mid 55) and row 2 (mid 95).
-    // It is past row 1's midpoint but before row 2's midpoint, so the
-    // closest insertion point is "before row 2".
+    // Cursor sits in the visual gap after row 1.
     act(() => {
       fireDrag(ol, "dragover", { dataTransfer: dt, clientY: 75 });
     });
-    expect(items[2].getAttribute("data-drop-edge")).toBe("before");
+    expect(items[1].getAttribute("data-drop-edge")).toBe("after");
     expect(items[0].getAttribute("data-drop-edge")).toBeNull();
-    expect(items[1].getAttribute("data-drop-edge")).toBeNull();
+    expect(items[2].getAttribute("data-drop-edge")).toBeNull();
 
     act(() => {
       fireDrag(ol, "drop", { dataTransfer: dt, clientY: 75 });
     });
-    expect(order.move).toHaveBeenCalledWith(501, 503, "before");
+    expect(order.move).toHaveBeenCalledWith(501, 502, "after", [501, 502, 503]);
 
     harness.unmount();
   });
@@ -270,7 +277,7 @@ describe("WorkItemColumn drag-and-drop reorder", () => {
     act(() => {
       fireDrag(ol, "drop", { dataTransfer: dt, clientY: 500 });
     });
-    expect(order.move).toHaveBeenCalledWith(501, 503, "after");
+    expect(order.move).toHaveBeenCalledWith(501, 503, "after", [501, 502, 503]);
 
     harness.unmount();
   });
@@ -313,6 +320,165 @@ describe("WorkItemColumn drag-and-drop reorder", () => {
       fireDrag(handle, "dragend", { dataTransfer: dt });
     });
     expect(items[1].getAttribute("data-drop-edge")).toBeNull();
+
+    harness.unmount();
+  });
+
+  it("drops at the last previewed target and includes filtered-out ids in the move", () => {
+    const order: WorkItemOrderApi = {
+      sortByStoredOrder: (items) => items.slice(),
+      move: vi.fn()
+    };
+    const allWorkItems = Array.from({ length: 8 }, (_, index) =>
+      workItem({ id: index + 1, title: `Item ${index + 1}` })
+    );
+
+    const harness = render(
+      <WorkItemColumn
+        workItems={[allWorkItems[1], allWorkItems[7]]}
+        allWorkItems={allWorkItems}
+        unfilteredCount={8}
+        order={order}
+      />
+    );
+
+    const list = harness.container.querySelector<HTMLOListElement>(
+      ".relations-view-work-item-list"
+    )!;
+    const rows = list.querySelectorAll<HTMLElement>("[data-work-item-id]");
+    stubBounds(rows[0], 0, 30);
+    stubBounds(rows[1], 30, 30);
+    const handle = rows[0].querySelector<HTMLButtonElement>(
+      ".relations-view-drag-handle"
+    )!;
+    const dt = buildDataTransferStub();
+
+    act(() => {
+      fireDrag(handle, "dragstart", { dataTransfer: dt });
+      fireDrag(list, "dragover", { dataTransfer: dt, clientY: 100 });
+    });
+    expect(rows[1].getAttribute("data-drop-edge")).toBe("after");
+
+    act(() => {
+      // Native drop coordinates can differ from the last dragover coordinates.
+      fireDrag(list, "drop", { dataTransfer: dt, clientY: 0 });
+    });
+    expect(order.move).toHaveBeenCalledWith(2, 8, "after", [1, 2, 3, 4, 5, 6, 7, 8]);
+
+    harness.unmount();
+  });
+
+  it("keeps an after target on the lower half of a filtered visible row", () => {
+    const order: WorkItemOrderApi = {
+      sortByStoredOrder: (items) => items.slice(),
+      move: vi.fn()
+    };
+    const allWorkItems = Array.from({ length: 8 }, (_, index) =>
+      workItem({ id: index + 1, title: `Item ${index + 1}` })
+    );
+    const harness = render(
+      <WorkItemColumn
+        workItems={[allWorkItems[1], allWorkItems[7]]}
+        allWorkItems={allWorkItems}
+        unfilteredCount={8}
+        order={order}
+      />
+    );
+    const list = harness.container.querySelector<HTMLOListElement>(
+      ".relations-view-work-item-list"
+    )!;
+    const rows = list.querySelectorAll<HTMLElement>("[data-work-item-id]");
+    stubBounds(rows[0], 0, 30);
+    stubBounds(rows[1], 30, 30);
+    const handle = rows[1].querySelector<HTMLButtonElement>(".relations-view-drag-handle")!;
+    const dt = buildDataTransferStub();
+
+    act(() => {
+      fireDrag(handle, "dragstart", { dataTransfer: dt });
+      fireDrag(list, "dragover", { dataTransfer: dt, clientY: 25 });
+      fireDrag(list, "drop", { dataTransfer: dt, clientY: 25 });
+    });
+
+    expect(order.move).toHaveBeenCalledWith(8, 2, "after", [1, 2, 3, 4, 5, 6, 7, 8]);
+    harness.unmount();
+  });
+
+  it("invalidates a preview when filtering removes its target before drop", () => {
+    const order: WorkItemOrderApi = {
+      sortByStoredOrder: (items) => items.slice(),
+      move: vi.fn()
+    };
+    const initial = [workItem({ id: 1 }), workItem({ id: 2 }), workItem({ id: 3 })];
+    const harness = render(
+      <WorkItemColumn workItems={initial} allWorkItems={initial} unfilteredCount={3} order={order} />
+    );
+    const list = harness.container.querySelector<HTMLOListElement>(
+      ".relations-view-work-item-list"
+    )!;
+    const rows = list.querySelectorAll<HTMLElement>("[data-work-item-id]");
+    stubBounds(rows[0], 0, 30);
+    stubBounds(rows[1], 30, 30);
+    stubBounds(rows[2], 60, 30);
+    const dt = buildDataTransferStub();
+
+    act(() => {
+      fireDrag(rows[0].querySelector<HTMLElement>(".relations-view-drag-handle")!, "dragstart", {
+        dataTransfer: dt
+      });
+      fireDrag(list, "dragover", { dataTransfer: dt, clientY: 45 });
+    });
+    expect(rows[1].getAttribute("data-drop-edge")).toBe("after");
+
+    const filtered = [initial[0], initial[2]];
+    harness.rerender(
+      <WorkItemColumn
+        workItems={filtered}
+        allWorkItems={filtered}
+        unfilteredCount={2}
+        order={order}
+      />
+    );
+    const currentList = harness.container.querySelector<HTMLOListElement>(
+      ".relations-view-work-item-list"
+    )!;
+    act(() => {
+      fireDrag(currentList, "drop", { dataTransfer: dt });
+    });
+
+    expect(order.move).not.toHaveBeenCalled();
+    harness.unmount();
+  });
+
+  it("supports ArrowUp and ArrowDown on each reorder handle", () => {
+    const order: WorkItemOrderApi = {
+      sortByStoredOrder: (items) => items.slice(),
+      move: vi.fn()
+    };
+    const allWorkItems = Array.from({ length: 8 }, (_, index) => workItem({ id: index + 1 }));
+    const harness = render(
+      <WorkItemColumn
+        workItems={[allWorkItems[1], allWorkItems[7]]}
+        allWorkItems={allWorkItems}
+        unfilteredCount={8}
+        order={order}
+      />
+    );
+    const handle = harness.container.querySelector<HTMLButtonElement>(
+      '[data-work-item-id="8"] .relations-view-drag-handle'
+    )!;
+
+    handle.focus();
+    act(() => {
+      handle.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }));
+    });
+
+    expect(order.move).toHaveBeenCalledWith(8, 2, "before", [1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(handle.getAttribute("aria-keyshortcuts")).toBe("ArrowUp ArrowDown");
+    expect(handle.getAttribute("aria-describedby")).toBeTruthy();
+    expect(document.activeElement).toBe(handle);
+    expect(harness.container.querySelector('[role="status"]')?.textContent).toContain(
+      "Moved work item #8 before work item #2"
+    );
 
     harness.unmount();
   });

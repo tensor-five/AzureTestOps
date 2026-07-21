@@ -130,6 +130,83 @@ describe("http-server", () => {
     expect(body.preferences.themeMode).toBe("dark");
   });
 
+  it("preserves keyed-scope clear intents through the HTTP boundary", async () => {
+    const seed = await fetch(`${BASE_URL}/phase2/user-preferences`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-ado-csrf-token": csrfToken
+      },
+      body: JSON.stringify({
+        preferences: {
+          setLayouts: {
+            "clear-me": { workItemOrder: [1, 2] },
+            "keep-me": { workItemOrder: [3, 4] }
+          }
+        }
+      })
+    });
+    expect(seed.status).toBe(200);
+
+    const clear = await fetch(`${BASE_URL}/phase2/user-preferences`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-ado-csrf-token": csrfToken
+      },
+      body: JSON.stringify({ preferences: { setLayouts: { "clear-me": {} } } })
+    });
+    expect(clear.status).toBe(200);
+
+    const get = await fetch(`${BASE_URL}/phase2/user-preferences`);
+    const body = (await get.json()) as {
+      preferences: { setLayouts?: Record<string, unknown> };
+    };
+    expect(body.preferences.setLayouts).toEqual({
+      "keep-me": { workItemOrder: [3, 4] }
+    });
+  });
+
+  it("ignores invalid keyed preference updates without deleting current state", async () => {
+    const seed = await fetch(`${BASE_URL}/phase2/user-preferences`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-ado-csrf-token": csrfToken
+      },
+      body: JSON.stringify({
+        preferences: {
+          setFilters: { "invalid-test": { workItems: { states: ["Active"] } } }
+        }
+      })
+    });
+    expect(seed.status).toBe(200);
+
+    const invalid = await fetch(`${BASE_URL}/phase2/user-preferences`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-ado-csrf-token": csrfToken
+      },
+      body: JSON.stringify({
+        preferences: {
+          setFilters: {
+            "invalid-test": { version: 2, workItems: { states: "future" } }
+          }
+        }
+      })
+    });
+    expect(invalid.status).toBe(200);
+
+    const get = await fetch(`${BASE_URL}/phase2/user-preferences`);
+    const body = (await get.json()) as {
+      preferences: { setFilters?: Record<string, unknown> };
+    };
+    expect(body.preferences.setFilters).toMatchObject({
+      "invalid-test": { workItems: { states: ["Active"] } }
+    });
+  });
+
   it("returns null context before configuration and persists POSTed context", async () => {
     const initial = await fetch(`${BASE_URL}/phase2/ado-context`);
     expect(initial.status).toBe(200);

@@ -1,5 +1,10 @@
 import * as React from "react";
 
+import {
+  materializeItemOrder,
+  moveItemInOrder,
+  type ItemOrderEdge
+} from "./item-order.js";
 import { setLayoutPreferenceStore } from "./set-layout-preference-store.js";
 import type { SetLayoutPreference } from "../../shared/user-preferences/user-preferences.client.js";
 
@@ -17,14 +22,21 @@ export type TestCaseOrderApi = {
   /**
    * Move `draggedId` immediately before or after `targetId` within the given
    * suite. Reordering across suites is not allowed; the caller validates the
-   * source/target suite ids match before invoking `move`.
+   * source/target suite ids match and supplies every naturally ordered id in
+   * that suite before invoking `move`.
    */
   move(
     suiteId: number,
     draggedId: number,
     targetId: number,
-    edge: "before" | "after"
+    edge: ItemOrderEdge,
+    naturalIds: readonly number[]
   ): void;
+};
+
+export type TestCaseOrderState = TestCaseOrderApi & {
+  /** Monotonic signal for DOM consumers whose geometry changes after reorder. */
+  layoutRevision: number;
 };
 
 type OrderMap = Readonly<Record<string, readonly number[]>>;
@@ -35,11 +47,16 @@ type OrderMap = Readonly<Record<string, readonly number[]>>;
  * `useWorkItemOrder` so the three fields share one `setLayouts[setId]` record
  * without clobbering each other.
  */
-export function useTestCaseOrder(setId: string | null): TestCaseOrderApi {
+export function useTestCaseOrder(setId: string | null): TestCaseOrderState {
   const [order, setOrder] = React.useState<OrderMap>(() => seedFromPreferences(setId));
+  const [layoutRevision, bumpLayoutRevision] = React.useReducer(
+    (current: number) => current + 1,
+    0
+  );
 
   React.useEffect(() => {
     setOrder(seedFromPreferences(setId));
+    bumpLayoutRevision();
   }, [setId]);
 
   const persist = React.useCallback(
@@ -66,7 +83,8 @@ export function useTestCaseOrder(setId: string | null): TestCaseOrderApi {
       suiteId: number,
       draggedId: number,
       targetId: number,
-      edge: "before" | "after"
+      edge: ItemOrderEdge,
+      naturalIds: readonly number[]
     ) => {
       if (draggedId === targetId) {
         return;
@@ -74,22 +92,18 @@ export function useTestCaseOrder(setId: string | null): TestCaseOrderApi {
       setOrder((current) => {
         const key = String(suiteId);
         const currentForSuite = current[key] ?? [];
-        const next = currentForSuite.slice();
-        const draggedIndex = next.indexOf(draggedId);
-        if (draggedIndex !== -1) {
-          next.splice(draggedIndex, 1);
-        }
-        let targetIndex = next.indexOf(targetId);
-        if (targetIndex === -1) {
-          next.push(targetId);
-          targetIndex = next.length - 1;
-        }
-        const insertAt = edge === "after" ? targetIndex + 1 : targetIndex;
-        next.splice(insertAt, 0, draggedId);
+        const next = moveItemInOrder(
+          currentForSuite,
+          naturalIds,
+          draggedId,
+          targetId,
+          edge
+        );
         const merged: OrderMap = { ...current, [key]: next };
         persist(merged);
         return merged;
       });
+      bumpLayoutRevision();
     },
     [persist]
   );
@@ -100,31 +114,22 @@ export function useTestCaseOrder(setId: string | null): TestCaseOrderApi {
       items: readonly T[]
     ): T[] => {
       const stored = order[String(suiteId)];
-      if (!stored || stored.length === 0) {
-        return items.slice();
-      }
+      const completeOrder = materializeItemOrder(
+        stored ?? [],
+        items.map((item) => item.workItemId)
+      );
       const orderIndex = new Map<number, number>();
-      stored.forEach((id, idx) => orderIndex.set(id, idx));
-      const known: T[] = [];
-      const unknown: T[] = [];
-      for (const item of items) {
-        if (orderIndex.has(item.workItemId)) {
-          known.push(item);
-        } else {
-          unknown.push(item);
-        }
-      }
-      known.sort((a, b) => {
+      completeOrder.forEach((id, idx) => orderIndex.set(id, idx));
+      return items.slice().sort((a, b) => {
         const ai = orderIndex.get(a.workItemId) ?? 0;
         const bi = orderIndex.get(b.workItemId) ?? 0;
         return ai - bi;
       });
-      return [...known, ...unknown];
     },
     [order]
   );
 
-  return { sortByStoredOrder, move };
+  return { sortByStoredOrder, move, layoutRevision };
 }
 
 function seedFromPreferences(setId: string | null): OrderMap {

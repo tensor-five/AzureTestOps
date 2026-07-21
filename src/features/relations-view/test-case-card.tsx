@@ -1,6 +1,7 @@
 import * as React from "react";
 
 import type { TestCaseProjection } from "../../domain/test-management/test-case-projection.js";
+import { HighlightedText } from "../../shared/search/highlighted-text.js";
 import { testCaseItemKey } from "./item-key.js";
 
 export type TestCaseCardProps = {
@@ -8,6 +9,7 @@ export type TestCaseCardProps = {
   onLinePointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
   /** Resolves the Azure DevOps deep link for a work item id, or null if unavailable. */
   getWorkItemHref?: (workItemId: number) => string | null;
+  highlightQuery?: string;
 };
 
 type OutcomeDisplay = { slug: string; shortLabel: string };
@@ -77,7 +79,9 @@ export function TestCaseCard(props: TestCaseCardProps): React.ReactElement {
       >
         {display.shortLabel}
       </span>
-      <span className="relations-view-card-title">{projection.title}</span>
+      <span className="relations-view-card-title">
+        <HighlightedText text={projection.title} query={props.highlightQuery} />
+      </span>
       {handlePointerDown ? (
         <span
           className="relations-view-card-line-anchor relations-view-card-line-anchor-right"

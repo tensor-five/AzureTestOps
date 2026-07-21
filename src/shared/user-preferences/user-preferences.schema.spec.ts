@@ -96,6 +96,19 @@ describe("sanitizeUserPreferences", () => {
     });
   });
 
+  it("preserves the hide-empty suite explorer option only when boolean", () => {
+    expect(sanitizeUserPreferences({
+      setLayouts: {
+        s1: { hideEmptySuites: true },
+        s2: { hideEmptySuites: false },
+        s3: { hideEmptySuites: "yes" }
+      }
+    }).setLayouts).toEqual({
+      s1: { hideEmptySuites: true },
+      s2: { hideEmptySuites: false }
+    });
+  });
+
   it("preserves testCaseOrder per suite, dedupes ids, and drops empty suites/blank keys", () => {
     const input = {
       setLayouts: {
@@ -150,9 +163,29 @@ describe("sanitizeUserPreferences", () => {
     });
   });
 
-  it("preserves an explicitly empty setFilters map so a clear-all patch can overwrite", () => {
-    // Without this, the patch loses its `setFilters` key on the wire and the
-    // backend's `incoming ?? current` merge would silently keep stale filters.
+  it("sanitizes per-set quick filters without accepting unknown values", () => {
+    expect(sanitizeUserPreferences({
+      setFilters: {
+        s1: {
+          testCases: { relationVisibility: "linked" },
+          workItems: { relationVisibility: "unlinked", openBugsOnly: true }
+        },
+        s2: {
+          testCases: { relationVisibility: "future-mode" },
+          workItems: { openBugsOnly: "yes" }
+        }
+      }
+    }).setFilters).toEqual({
+      s1: {
+        testCases: { relationVisibility: "linked" },
+        workItems: { relationVisibility: "unlinked", openBugsOnly: true }
+      }
+    });
+  });
+
+  it("preserves an explicitly empty setFilters map at the schema boundary", () => {
+    // Transport sanitizing intentionally treats this as touching no set ids.
+    // Only `{ setFilters: { [setId]: {} } }` is a destructive tombstone.
     expect(sanitizeUserPreferences({ setFilters: {} }).setFilters).toEqual({});
   });
 

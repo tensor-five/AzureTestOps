@@ -102,10 +102,13 @@ describe("useTestCaseOrder", () => {
     });
 
     const harness = setupHookHarness(() => useTestCaseOrder("set-1"));
+    const revisionBeforeMove = harness.result.current.layoutRevision;
 
     act(() => {
-      harness.result.current.move(3, 203, 201, "before");
+      harness.result.current.move(3, 203, 201, "before", [201, 202, 203]);
     });
+
+    expect(harness.result.current.layoutRevision).toBeGreaterThan(revisionBeforeMove);
 
     expect(persistSpy).toHaveBeenCalledWith({
       setLayouts: {
@@ -126,7 +129,7 @@ describe("useTestCaseOrder", () => {
     const harness = setupHookHarness(() => useTestCaseOrder("set-1"));
 
     act(() => {
-      harness.result.current.move(3, 201, 203, "after");
+      harness.result.current.move(3, 201, 203, "after", [201, 202, 203]);
     });
 
     expect(persistSpy).toHaveBeenLastCalledWith({
@@ -151,7 +154,7 @@ describe("useTestCaseOrder", () => {
     const harness = setupHookHarness(() => useTestCaseOrder("set-1"));
 
     act(() => {
-      harness.result.current.move(3, 202, 201, "before");
+      harness.result.current.move(3, 202, 201, "before", [201, 202]);
     });
 
     expect(persistSpy).toHaveBeenCalledWith({
@@ -170,11 +173,11 @@ describe("useTestCaseOrder", () => {
     const harness = setupHookHarness(() => useTestCaseOrder("set-1"));
 
     act(() => {
-      harness.result.current.move(7, 401, 402, "before");
+      harness.result.current.move(7, 401, 402, "before", [401, 402, 403]);
     });
 
     expect(persistSpy).toHaveBeenCalledWith({
-      setLayouts: { "set-1": { testCaseOrder: { "7": [401, 402] } } }
+      setLayouts: { "set-1": { testCaseOrder: { "7": [401, 402, 403] } } }
     });
 
     harness.unmount();
@@ -188,7 +191,7 @@ describe("useTestCaseOrder", () => {
     const harness = setupHookHarness(() => useTestCaseOrder("set-1"));
 
     act(() => {
-      harness.result.current.move(3, 201, 201, "before");
+      harness.result.current.move(3, 201, 201, "before", [201]);
     });
 
     expect(persistSpy).not.toHaveBeenCalled();
@@ -200,11 +203,65 @@ describe("useTestCaseOrder", () => {
     const harness = setupHookHarness(() => useTestCaseOrder(null));
 
     act(() => {
-      harness.result.current.move(3, 201, 202, "after");
+      harness.result.current.move(3, 201, 202, "after", [201, 202]);
     });
 
     expect(persistSpy).not.toHaveBeenCalled();
 
     harness.unmount();
   });
+
+  it("persists a complete suite order for a long jump from position 2 to 8", () => {
+    const harness = setupHookHarness(() => useTestCaseOrder("set-1"));
+
+    act(() => {
+      harness.result.current.move(3, 2, 8, "after", [1, 2, 3, 4, 5, 6, 7, 8]);
+    });
+
+    expect(persistSpy).toHaveBeenCalledWith({
+      setLayouts: {
+        "set-1": { testCaseOrder: { "3": [1, 3, 4, 5, 6, 7, 8, 2] } }
+      }
+    });
+
+    harness.unmount();
+  });
+
+  it("persists a long jump from position 2 exactly before position 8", () => {
+    const harness = setupHookHarness(() => useTestCaseOrder("set-1"));
+
+    act(() => {
+      harness.result.current.move(3, 2, 8, "before", [1, 2, 3, 4, 5, 6, 7, 8]);
+    });
+
+    expect(persistSpy).toHaveBeenCalledWith({
+      setLayouts: {
+        "set-1": { testCaseOrder: { "3": [1, 3, 4, 5, 6, 7, 2, 8] } }
+      }
+    });
+
+    harness.unmount();
+  });
+
+  it.each([
+    ["before", [1, 8, 2, 3, 4, 5, 6, 7]],
+    ["after", [1, 2, 8, 3, 4, 5, 6, 7]]
+  ] as const)(
+    "persists a long backwards move from position 8 to position 2 using the %s edge",
+    (edge, expected) => {
+      const harness = setupHookHarness(() => useTestCaseOrder("set-1"));
+
+      act(() => {
+        harness.result.current.move(3, 8, 2, edge, [1, 2, 3, 4, 5, 6, 7, 8]);
+      });
+
+      expect(persistSpy).toHaveBeenCalledWith({
+        setLayouts: {
+          "set-1": { testCaseOrder: { "3": expected } }
+        }
+      });
+
+      harness.unmount();
+    }
+  );
 });

@@ -1,71 +1,75 @@
 import * as React from "react";
 
-import {
-  flattenSuiteTree,
-  type TestSuiteFlatEntry,
-  type TestSuiteNode
-} from "../../domain/test-management/test-suite-tree.js";
+import type { TestSuiteNode } from "../../domain/test-management/test-suite-tree.js";
 import type { TestCaseProjection } from "../../domain/test-management/test-case-projection.js";
+import { HighlightedText } from "../../shared/search/highlighted-text.js";
+import { resolveAdjacentItemMove } from "./item-order.js";
 import { TestCaseCard } from "./test-case-card.js";
 import type { SuiteCollapseApi } from "./use-suite-collapse.js";
+import { useItemDragging } from "./use-item-dragging.js";
 import type { TestCaseOrderApi } from "./use-test-case-order.js";
+import {
+  buildSuiteExplorerEntries,
+  selectVisibleSuiteEntries,
+  type SuiteExplorerEntry
+} from "./suite-explorer.js";
 
 const DRAG_DATA_TYPE = "application/x-azure-testops-test-case";
-const DRAG_DROP_EDGE_ATTR = "data-drop-edge";
 
 export type TestCaseColumnProps = {
   suiteTree: TestSuiteNode;
-  /**
-   * Already filtered by the active filter bar. The unfiltered total is
-   * passed separately so the empty-state copy can distinguish "no test cases
-   * in the set" from "no matches for the active filter".
-   */
   projections: readonly TestCaseProjection[];
+  allProjections?: readonly TestCaseProjection[];
   unfilteredCount: number;
   collapse: SuiteCollapseApi;
   filterBar?: React.ReactNode;
   onLinePointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
-  /** Persists the drag-and-drop ordering per (Set, Suite); absent → fixed title sort. */
   order?: TestCaseOrderApi;
-  /** Resolves the Azure DevOps deep link for a work item id, or null if unavailable. */
   getWorkItemHref?: (workItemId: number) => string | null;
-  /** Resolves the Azure DevOps results-page deep link for a suite id, or null if unavailable. */
   getSuiteHref?: (suiteId: number) => string | null;
-};
-
-type SuiteWithProjections = {
-  suite: TestSuiteFlatEntry;
-  projections: TestCaseProjection[];
+  searchQuery?: string;
+  hideEmptySuites?: boolean;
+  onHideEmptySuitesChange?(next: boolean): void;
+  focusedSuiteId?: number | null;
+  focusedSuiteIds?: ReadonlySet<number>;
+  onFocusSuite?(suiteId: number | null): void;
 };
 
 type DragSource = { workItemId: number; suiteId: number };
 
-/** Collapsing a parent suite hides every descendant suite, not just its row. */
 export function TestCaseColumn(props: TestCaseColumnProps): React.ReactElement {
-  const grouped = React.useMemo(
-    () => groupProjectionsBySuite(props.suiteTree, props.projections),
-    [props.suiteTree, props.projections]
+  const entries = React.useMemo(
+    () => buildSuiteExplorerEntries(
+      props.suiteTree,
+      props.projections,
+      props.allProjections ?? props.projections
+    ),
+    [props.suiteTree, props.projections, props.allProjections]
   );
-
   const visibleEntries = React.useMemo(
-    () => filterVisibleSuites(grouped, props.collapse),
-    [grouped, props.collapse]
+    () => selectVisibleSuiteEntries(entries, props.collapse, {
+      hideEmptySuites: props.hideEmptySuites ?? false,
+      searchQuery: props.searchQuery ?? ""
+    }),
+    [entries, props.collapse, props.hideEmptySuites, props.searchQuery]
+  );
+  const collapsibleSuiteIds = React.useMemo(
+    () => entries
+      .filter((entry) => entry.hasChildren || entry.totalProjectionCount > 0)
+      .map((entry) => entry.suite.id),
+    [entries]
   );
 
   const visibleProjectionCount = props.projections.length;
-  const unfilteredCount = props.unfilteredCount;
-  const order = props.order;
-
   const dragSourceRef = React.useRef<DragSource | null>(null);
   const [draggedKey, setDraggedKey] = React.useState<string | null>(null);
+  const [reorderAnnouncement, setReorderAnnouncement] = React.useState("");
+  const reorderInstructionId = React.useId();
+  const listRef = React.useRef<HTMLOListElement | null>(null);
 
   const beginDrag = React.useCallback(
-    (
-      workItemId: number,
-      suiteId: number,
-      event: React.DragEvent<HTMLElement>
-    ) => {
-      if (!order) {
+    (workItemId: number, suiteId: number, event: React.DragEvent<HTMLElement>) => {
+      if (!props.order) {
         return;
       }
       event.dataTransfer.setData(DRAG_DATA_TYPE, `${workItemId}:${suiteId}`);
@@ -79,36 +83,122 @@ export function TestCaseColumn(props: TestCaseColumnProps): React.ReactElement {
       dragSourceRef.current = { workItemId, suiteId };
       setDraggedKey(`${workItemId}::${suiteId}`);
     },
-    [order]
+    [props.order]
   );
 
   const endDrag = React.useCallback(() => {
     dragSourceRef.current = null;
     setDraggedKey(null);
-    document
-      .querySelectorAll(`[data-suite-cards] [${DRAG_DROP_EDGE_ATTR}]`)
-      .forEach((el) => el.removeAttribute(DRAG_DROP_EDGE_ATTR));
   }, []);
+
+  const handleTreeKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLOListElement>) => {
+      const target = (event.target as HTMLElement).closest<HTMLButtonElement>(
+        ".relations-view-suite-toggle"
+      );
+      const list = listRef.current;
+      if (!target || !list) {
+        return;
+      }
+      const buttons = Array.from(
+        list.querySelectorAll<HTMLButtonElement>(".relations-view-suite-toggle")
+      );
+      const index = buttons.indexOf(target);
+      if (index === -1) {
+        return;
+      }
+
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        const nextIndex = event.key === "ArrowDown"
+          ? Math.min(buttons.length - 1, index + 1)
+          : Math.max(0, index - 1);
+        buttons[nextIndex]?.focus();
+      } else if (event.key === "Home" || event.key === "End") {
+        event.preventDefault();
+        buttons[event.key === "Home" ? 0 : buttons.length - 1]?.focus();
+      } else if (
+        event.key === "ArrowRight" &&
+        target.getAttribute("aria-expanded") === "false"
+      ) {
+        event.preventDefault();
+        target.click();
+      } else if (event.key === "ArrowLeft") {
+        if (target.getAttribute("aria-expanded") === "true") {
+          event.preventDefault();
+          target.click();
+        } else if (target.dataset.parentSuiteId) {
+          event.preventDefault();
+          list.querySelector<HTMLButtonElement>(
+            `.relations-view-suite-toggle[data-suite-id="${target.dataset.parentSuiteId}"]`
+          )?.focus();
+        }
+      }
+    },
+    []
+  );
 
   return (
     <section className="relations-view-column relations-view-column-test-cases" aria-label="Test cases">
-      <header className="relations-view-column-header">
-        <h3>Test Cases</h3>
-        <span className="relations-view-column-count">
-          {visibleProjectionCount === unfilteredCount
-            ? unfilteredCount
-            : `${visibleProjectionCount} / ${unfilteredCount}`}
-        </span>
-      </header>
-      {props.filterBar}
-      {unfilteredCount === 0 ? (
+      <div className="relations-view-column-sticky">
+        <header className="relations-view-column-header">
+          <div>
+            <span className="relations-view-column-eyebrow">Test plan explorer</span>
+            <h3>Test Cases</h3>
+          </div>
+          <span className="relations-view-column-count">
+            {visibleProjectionCount === props.unfilteredCount
+              ? props.unfilteredCount
+              : `${visibleProjectionCount} / ${props.unfilteredCount}`}
+          </span>
+        </header>
+        {props.filterBar}
+        <div className="relations-view-suite-toolbar" aria-label="Suite tree controls">
+          <button type="button" onClick={props.collapse.expandAll}>Expand all</button>
+          <button type="button" onClick={() => props.collapse.collapseAll(collapsibleSuiteIds)}>
+            Collapse all
+          </button>
+          <label className="relations-view-suite-hide-empty">
+            <input
+              type="checkbox"
+              checked={props.hideEmptySuites ?? false}
+              onChange={(event) => props.onHideEmptySuitesChange?.(event.currentTarget.checked)}
+            />
+            <span>Hide empty suites</span>
+          </label>
+        </div>
+      </div>
+
+      {props.order ? (
+        <>
+          <span id={reorderInstructionId} className="u-visually-hidden">
+            Drag the reorder handle, or use Arrow Up and Arrow Down, to move the test case
+            within its suite relative to visible neighbours.
+          </span>
+          <span
+            className="u-visually-hidden"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {reorderAnnouncement}
+          </span>
+        </>
+      ) : null}
+
+      {props.unfilteredCount === 0 ? (
         <p className="relations-view-column-empty">No test cases in this set.</p>
       ) : visibleProjectionCount === 0 ? (
         <p className="relations-view-column-empty">No test cases match the active filter.</p>
       ) : visibleEntries.length === 0 ? (
-        <p className="relations-view-column-empty">All suites are collapsed.</p>
+        <p className="relations-view-column-empty">No suites match the active view.</p>
       ) : (
-        <ol className="relations-view-suite-list">
+        <ol
+          className="relations-view-suite-list"
+          aria-label="Test suite hierarchy"
+          ref={listRef}
+          onKeyDown={handleTreeKeyDown}
+        >
           {visibleEntries.map((entry) => (
             <SuiteGroup
               key={entry.suite.id}
@@ -116,12 +206,18 @@ export function TestCaseColumn(props: TestCaseColumnProps): React.ReactElement {
               collapse={props.collapse}
               onLinePointerDown={props.onLinePointerDown}
               getWorkItemHref={props.getWorkItemHref}
-              order={order}
+              order={props.order}
               dragSourceRef={dragSourceRef}
               draggedKey={draggedKey}
               onDragStart={beginDrag}
               onDragEnd={endDrag}
+              reorderInstructionId={reorderInstructionId}
+              onReorderAnnouncement={setReorderAnnouncement}
               getSuiteHref={props.getSuiteHref}
+              searchQuery={props.searchQuery ?? ""}
+              focusedSuiteId={props.focusedSuiteId ?? null}
+              focusedSuiteIds={props.focusedSuiteIds}
+              onFocusSuite={props.onFocusSuite}
             />
           ))}
         </ol>
@@ -131,155 +227,179 @@ export function TestCaseColumn(props: TestCaseColumnProps): React.ReactElement {
 }
 
 function SuiteGroup(props: {
-  entry: SuiteWithProjections;
+  entry: SuiteExplorerEntry;
   collapse: SuiteCollapseApi;
   onLinePointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
   getWorkItemHref?: (workItemId: number) => string | null;
   order?: TestCaseOrderApi;
   dragSourceRef: React.MutableRefObject<DragSource | null>;
   draggedKey: string | null;
-  onDragStart: (
-    workItemId: number,
-    suiteId: number,
-    event: React.DragEvent<HTMLElement>
-  ) => void;
-  onDragEnd: () => void;
+  onDragStart(workItemId: number, suiteId: number, event: React.DragEvent<HTMLElement>): void;
+  onDragEnd(): void;
+  reorderInstructionId: string;
+  onReorderAnnouncement(message: string): void;
   getSuiteHref?: (suiteId: number) => string | null;
+  searchQuery: string;
+  focusedSuiteId: number | null;
+  focusedSuiteIds?: ReadonlySet<number>;
+  onFocusSuite?: (suiteId: number | null) => void;
 }): React.ReactElement {
-  const { entry, collapse, order, dragSourceRef, onDragEnd, onDragStart, draggedKey } = props;
-  const isCollapsed = collapse.isCollapsed(entry.suite.id);
+  const { entry } = props;
+  const order = props.order;
+  const dragSourceRef = props.dragSourceRef;
+  const onDragEnd = props.onDragEnd;
+  const onReorderAnnouncement = props.onReorderAnnouncement;
+  const searchActive = props.searchQuery.trim().length > 0;
+  const isCollapsed = !searchActive && props.collapse.isCollapsed(entry.suite.id);
   const suiteHref = props.getSuiteHref?.(entry.suite.id) ?? null;
   const containerRef = React.useRef<HTMLDivElement | null>(null);
-
-  const ordered = React.useMemo(() => {
-    if (!order) {
-      return entry.projections;
-    }
-    return order.sortByStoredOrder(entry.suite.id, entry.projections);
-  }, [order, entry.projections, entry.suite.id]);
-
-  const resolveDropTarget = React.useCallback(
-    (clientY: number): { workItemId: number; edge: "before" | "after"; element: HTMLElement } | null => {
-      const container = containerRef.current;
-      if (!container) {
-        return null;
-      }
-      const rows = Array.from(
-        container.querySelectorAll<HTMLElement>(":scope > [data-test-case-id]")
-      );
-      if (rows.length === 0) {
-        return null;
-      }
-      for (const row of rows) {
-        const rect = row.getBoundingClientRect();
-        const midpoint = rect.top + rect.height / 2;
-        if (clientY < midpoint) {
-          const id = Number.parseInt(row.dataset.testCaseId ?? "", 10);
-          if (!Number.isFinite(id)) {
-            return null;
-          }
-          return { workItemId: id, edge: "before", element: row };
-        }
-      }
-      const last = rows[rows.length - 1];
-      const id = Number.parseInt(last.dataset.testCaseId ?? "", 10);
-      if (!Number.isFinite(id)) {
-        return null;
-      }
-      return { workItemId: id, edge: "after", element: last };
-    },
-    []
+  const itemDragging = useItemDragging({
+    containerRef,
+    rowSelector: ":scope > [data-test-case-id]",
+    readItem: readTestCaseId
+  });
+  const ordered = React.useMemo(
+    () => props.order
+      ? props.order.sortByStoredOrder(entry.suite.id, entry.projections)
+      : entry.projections,
+    [props.order, entry.projections, entry.suite.id]
   );
+  const naturalIdSet = React.useMemo(() => new Set(entry.naturalIds), [entry.naturalIds]);
 
-  const clearEdges = React.useCallback(() => {
-    containerRef.current
-      ?.querySelectorAll(`[${DRAG_DROP_EDGE_ATTR}]`)
-      .forEach((el) => el.removeAttribute(DRAG_DROP_EDGE_ATTR));
-  }, []);
+  React.useEffect(() => {
+    if (props.draggedKey === null) {
+      itemDragging.clearPreview();
+    }
+  }, [props.draggedKey, itemDragging]);
 
   const handleDragOver = React.useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
-      if (!order) {
-        return;
-      }
       const source = dragSourceRef.current;
-      if (!source || source.suiteId !== entry.suite.id) {
-        // Cross-suite drops are not supported — withhold preventDefault so
-        // the browser's "no drop" cursor signals the rejection.
+      if (!order || !source || source.suiteId !== entry.suite.id) {
         return;
       }
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
-      const target = resolveDropTarget(event.clientY);
-      if (!target) {
-        return;
-      }
-      const container = containerRef.current;
-      container?.querySelectorAll(`[${DRAG_DROP_EDGE_ATTR}]`).forEach((el) => {
-        if (el !== target.element) {
-          el.removeAttribute(DRAG_DROP_EDGE_ATTR);
-        }
-      });
-      if (target.element.getAttribute(DRAG_DROP_EDGE_ATTR) !== target.edge) {
-        target.element.setAttribute(DRAG_DROP_EDGE_ATTR, target.edge);
-      }
+      itemDragging.previewAt(event.clientY);
     },
-    [order, dragSourceRef, entry.suite.id, resolveDropTarget]
-  );
-
-  const handleDragLeave = React.useCallback(
-    (event: React.DragEvent<HTMLDivElement>) => {
-      const next = event.relatedTarget as Node | null;
-      if (next && event.currentTarget.contains(next)) {
-        return;
-      }
-      clearEdges();
-    },
-    [clearEdges]
+    [dragSourceRef, entry.suite.id, itemDragging, order]
   );
 
   const handleDrop = React.useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
-      if (!order) {
-        return;
-      }
       const source = dragSourceRef.current;
-      if (!source || source.suiteId !== entry.suite.id) {
+      if (!order || !source || source.suiteId !== entry.suite.id) {
         return;
       }
       event.preventDefault();
-      const target = resolveDropTarget(event.clientY);
-      if (!target || target.workItemId === source.workItemId) {
+      const target = itemDragging.getPreviewTarget();
+      if (
+        !target ||
+        target.item === source.workItemId ||
+        !naturalIdSet.has(source.workItemId) ||
+        !naturalIdSet.has(target.item)
+      ) {
         onDragEnd();
         return;
       }
-      order.move(entry.suite.id, source.workItemId, target.workItemId, target.edge);
+      order.move(
+        entry.suite.id,
+        source.workItemId,
+        target.item,
+        target.edge,
+        entry.naturalIds
+      );
       onDragEnd();
     },
-    [order, dragSourceRef, entry.suite.id, resolveDropTarget, onDragEnd]
+    [dragSourceRef, entry.suite.id, entry.naturalIds, itemDragging, naturalIdSet, onDragEnd, order]
   );
 
-  const reorderEnabled = order !== undefined;
+  const handleReorderKeyDown = React.useCallback(
+    (workItemId: number, event: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (!order || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      event.currentTarget.focus();
+      const direction = event.key === "ArrowUp" ? "up" : "down";
+      const adjacentMove = resolveAdjacentItemMove(
+        ordered.map((projection) => projection.workItemId),
+        workItemId,
+        direction
+      );
+      if (!adjacentMove || !naturalIdSet.has(workItemId) || !naturalIdSet.has(adjacentMove.targetId)) {
+        onReorderAnnouncement(
+          `Test case #${workItemId} is already the ${direction === "up" ? "first" : "last"} visible test case in this suite.`
+        );
+        return;
+      }
+      order.move(
+        entry.suite.id,
+        workItemId,
+        adjacentMove.targetId,
+        adjacentMove.edge,
+        entry.naturalIds
+      );
+      onReorderAnnouncement(
+        `Moved test case #${workItemId} ${adjacentMove.edge} test case #${adjacentMove.targetId} in this suite.`
+      );
+    },
+    [entry.naturalIds, entry.suite.id, naturalIdSet, onReorderAnnouncement, order, ordered]
+  );
+
+  const reorderEnabled = props.order !== undefined;
+  const isFocused = props.focusedSuiteId === entry.suite.id;
+  const isInFocusedBranch = props.focusedSuiteIds?.has(entry.suite.id) ?? isFocused;
+  const isDimmed = props.focusedSuiteId !== null && !isInFocusedBranch;
+  const canCollapse = entry.hasChildren || entry.totalProjectionCount > 0;
+  const countLabel = entry.visibleBranchProjectionCount === entry.branchProjectionCount
+    ? String(entry.branchProjectionCount)
+    : `${entry.visibleBranchProjectionCount} / ${entry.branchProjectionCount}`;
 
   return (
     <li
-      className={`relations-view-suite ${isCollapsed ? "relations-view-suite-collapsed" : ""}`}
+      className={[
+        "relations-view-suite",
+        isCollapsed ? "relations-view-suite-collapsed" : "",
+        isFocused ? "relations-view-suite-focused" : "",
+        isDimmed ? "relations-view-suite-dimmed" : "",
+        entry.branchProjectionCount === 0 ? "relations-view-suite-empty" : ""
+      ].filter(Boolean).join(" ")}
       style={{ "--suite-depth": entry.suite.depth } as React.CSSProperties}
+      data-suite-depth={entry.suite.depth}
     >
       <div className="relations-view-suite-header">
         <button
           type="button"
           className="relations-view-suite-toggle"
-          onClick={() => collapse.toggle(entry.suite.id)}
-          aria-expanded={!isCollapsed}
+          onClick={() => canCollapse && props.collapse.toggle(entry.suite.id)}
+          aria-expanded={canCollapse ? !isCollapsed : undefined}
+          data-suite-id={entry.suite.id}
+          data-parent-suite-id={entry.suite.parentSuiteId ?? undefined}
         >
-          <span className="relations-view-suite-toggle-icon" aria-hidden>
-            {isCollapsed ? "▸" : "▾"}
+          <span className="relations-view-suite-toggle-icon" aria-hidden="true">
+            {canCollapse ? (isCollapsed ? "›" : "⌄") : ""}
+          </span>
+          <span className="relations-view-suite-folder-icon" aria-hidden="true">
+            <FolderIcon open={!isCollapsed && entry.hasChildren} />
           </span>
           <span className="relations-view-suite-name" title={entry.suite.path}>
-            {entry.suite.name}
+            <HighlightedText text={entry.suite.name} query={props.searchQuery} />
           </span>
         </button>
+        {props.onFocusSuite && entry.branchProjectionCount > 0 ? (
+          <button
+            type="button"
+            className="relations-view-suite-focus"
+            aria-pressed={isFocused}
+            aria-label={`${isFocused ? "Clear focus from" : "Focus"} suite ${entry.suite.name}`}
+            title={isFocused ? "Clear suite focus" : "Focus related items"}
+            onClick={() => props.onFocusSuite?.(isFocused ? null : entry.suite.id)}
+          >
+            <FocusIcon />
+          </button>
+        ) : null}
         {suiteHref ? (
           <a
             className="relations-view-suite-link"
@@ -294,8 +414,9 @@ function SuiteGroup(props: {
             <span aria-hidden="true">↗</span>
           </a>
         ) : null}
-        <span className="relations-view-suite-count">{entry.projections.length}</span>
+        <span className="relations-view-suite-count">{countLabel}</span>
       </div>
+
       {!isCollapsed && ordered.length > 0 ? (
         <div
           className="relations-view-suite-cards"
@@ -303,19 +424,17 @@ function SuiteGroup(props: {
           data-suite-cards=""
           data-suite-id={entry.suite.id}
           onDragOver={reorderEnabled ? handleDragOver : undefined}
-          onDragLeave={reorderEnabled ? handleDragLeave : undefined}
+          onDragLeave={reorderEnabled ? itemDragging.handleDragLeave : undefined}
           onDrop={reorderEnabled ? handleDrop : undefined}
         >
           {ordered.map((projection) => {
             const rowKey = `${projection.workItemId}::${projection.suiteId}`;
-            const className =
-              draggedKey === rowKey
-                ? "relations-view-test-case-row relations-view-test-case-row-dragging"
-                : "relations-view-test-case-row";
             return (
               <div
                 key={rowKey}
-                className={className}
+                className={props.draggedKey === rowKey
+                  ? "relations-view-test-case-row relations-view-test-case-row-dragging"
+                  : "relations-view-test-case-row"}
                 data-test-case-id={projection.workItemId}
               >
                 {reorderEnabled ? (
@@ -323,14 +442,19 @@ function SuiteGroup(props: {
                     type="button"
                     className="relations-view-drag-handle"
                     draggable
-                    onDragStart={(event) =>
-                      onDragStart(projection.workItemId, projection.suiteId, event)
-                    }
-                    onDragEnd={onDragEnd}
+                    onDragStart={(event) => props.onDragStart(
+                      projection.workItemId,
+                      projection.suiteId,
+                      event
+                    )}
+                    onDragEnd={props.onDragEnd}
                     onPointerDown={(event) => event.stopPropagation()}
                     onClick={(event) => event.preventDefault()}
+                    onKeyDown={(event) => handleReorderKeyDown(projection.workItemId, event)}
                     aria-label={`Reorder test case #${projection.workItemId}`}
-                    title="Drag to reorder"
+                    aria-describedby={props.reorderInstructionId}
+                    aria-keyshortcuts="ArrowUp ArrowDown"
+                    title="Drag to reorder, or use Arrow Up and Arrow Down"
                   >
                     <span aria-hidden="true">⠿</span>
                   </button>
@@ -339,6 +463,7 @@ function SuiteGroup(props: {
                   projection={projection}
                   onLinePointerDown={props.onLinePointerDown}
                   getWorkItemHref={props.getWorkItemHref}
+                  highlightQuery={props.searchQuery}
                 />
               </div>
             );
@@ -349,57 +474,26 @@ function SuiteGroup(props: {
   );
 }
 
-function groupProjectionsBySuite(
-  tree: TestSuiteNode,
-  projections: readonly TestCaseProjection[]
-): SuiteWithProjections[] {
-  const flat = flattenSuiteTree(tree);
-  const bySuite = new Map<number, TestCaseProjection[]>();
-
-  for (const projection of projections) {
-    const list = bySuite.get(projection.suiteId);
-    if (list) {
-      list.push(projection);
-    } else {
-      bySuite.set(projection.suiteId, [projection]);
-    }
-  }
-
-  return flat.map((suite) => ({
-    suite,
-    projections: (bySuite.get(suite.id) ?? []).slice().sort(compareProjections)
-  }));
+function readTestCaseId(row: HTMLElement): number | null {
+  const id = Number.parseInt(row.dataset.testCaseId ?? "", 10);
+  return Number.isInteger(id) && id > 0 ? id : null;
 }
 
-function compareProjections(a: TestCaseProjection, b: TestCaseProjection): number {
-  if (a.title === b.title) {
-    return a.workItemId - b.workItemId;
-  }
-  return a.title.localeCompare(b.title);
+function FolderIcon(props: { open: boolean }): React.ReactElement {
+  return (
+    <svg viewBox="0 0 24 24" focusable="false">
+      <path d={props.open
+        ? "M3 7.5h7l2 2h9l-2.2 8.5H5.2L3 7.5Z"
+        : "M3 6.5h7l2 2h9v9.5H3V6.5Z"} />
+    </svg>
+  );
 }
 
-/**
- * If a suite is collapsed, its descendants in the flat list are skipped.
- * Walks `flat` once and tracks the depth of the deepest active collapse;
- * everything strictly deeper is filtered out until the depth recovers.
- */
-function filterVisibleSuites(
-  entries: SuiteWithProjections[],
-  collapse: SuiteCollapseApi
-): SuiteWithProjections[] {
-  const visible: SuiteWithProjections[] = [];
-  let collapseDepth: number | null = null;
-
-  for (const entry of entries) {
-    if (collapseDepth !== null && entry.suite.depth > collapseDepth) {
-      continue;
-    }
-    collapseDepth = null;
-    visible.push(entry);
-    if (collapse.isCollapsed(entry.suite.id)) {
-      collapseDepth = entry.suite.depth;
-    }
-  }
-
-  return visible;
+function FocusIcon(): React.ReactElement {
+  return (
+    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+    </svg>
+  );
 }

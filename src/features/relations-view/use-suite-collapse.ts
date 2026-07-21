@@ -7,6 +7,8 @@ export type SuiteCollapseApi = {
   collapsedSuiteIds: ReadonlySet<string>;
   isCollapsed(suiteId: number): boolean;
   toggle(suiteId: number): void;
+  collapseAll(suiteIds: readonly number[]): void;
+  expandAll(): void;
 };
 
 /**
@@ -59,10 +61,31 @@ export function useSuiteCollapse(setId: string | null): SuiteCollapseApi {
     [collapsed]
   );
 
+  const collapseAll = React.useCallback(
+    (suiteIds: readonly number[]) => {
+      const next = new Set(
+        suiteIds
+          .filter((suiteId) => Number.isInteger(suiteId) && suiteId > 0)
+          .map(String)
+      );
+      setCollapsed(next);
+      persist(next);
+    },
+    [persist]
+  );
+
+  const expandAll = React.useCallback(() => {
+    const next = new Set<string>();
+    setCollapsed(next);
+    persist(next);
+  }, [persist]);
+
   return {
     collapsedSuiteIds: collapsed,
     isCollapsed,
-    toggle
+    toggle,
+    collapseAll,
+    expandAll
   };
 }
 

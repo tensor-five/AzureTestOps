@@ -24,14 +24,14 @@ export function RefreshProgressBar(props: RefreshProgressBarProps): React.ReactE
     );
   }
 
-  if (!isLoading && !progress) {
+  if (!isLoading) {
     return null;
   }
 
   const percent = progress
     ? Math.max(0, Math.min(100, Math.round((progress.done / Math.max(1, progress.total)) * 100)))
     : 0;
-  const label = progress ? labelFor(progress) : "Loading…";
+  const label = progress && progress.stage !== "done" ? labelFor(progress) : "Loading…";
 
   return (
     <div className="refresh-progress" role="status" aria-live="polite">

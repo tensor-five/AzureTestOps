@@ -14,6 +14,8 @@ import {
   buildClientPortsStub
 } from "../../app/composition/test-client-ports.js";
 
+const refreshControl = <button type="button">Refresh</button>;
+
 function makeSnapshot(): ActiveSetSnapshot {
   return {
     set: {
@@ -69,7 +71,33 @@ function makeSnapshot(): ActiveSetSnapshot {
   };
 }
 
-function render(ui: React.ReactElement): { container: HTMLDivElement; unmount(): void } {
+function makeNestedSnapshot(): ActiveSetSnapshot {
+  const snapshot = makeSnapshot();
+  return {
+    ...snapshot,
+    suiteTree: {
+      ...snapshot.suiteTree,
+      children: [{
+        id: 2,
+        name: "Child",
+        parentSuiteId: 1,
+        path: "Root > Child",
+        children: []
+      }]
+    },
+    projections: snapshot.projections.map((projection) => ({
+      ...projection,
+      suiteId: 2,
+      suitePath: "Root > Child"
+    }))
+  };
+}
+
+function render(ui: React.ReactElement): {
+  container: HTMLDivElement;
+  rerender(next: React.ReactElement): void;
+  unmount(): void;
+} {
   clearSetLayoutPreferenceForTests();
   clearSetFilterPreferenceForTests();
   vi.spyOn(preferencesClient, "getCachedUserPreferences").mockReturnValue({});
@@ -95,6 +123,11 @@ function render(ui: React.ReactElement): { container: HTMLDivElement; unmount():
   });
   return {
     container,
+    rerender: (next) => {
+      act(() => {
+        root.render(<WithClientPorts ports={ports}>{next}</WithClientPorts>);
+      });
+    },
     unmount: () => {
       act(() => {
         root.unmount();
@@ -114,6 +147,7 @@ describe("RelationsPane", () => {
         isLoading={false}
         error={null}
         hasActiveSet={false}
+        refreshControl={refreshControl}
       />
     );
 
@@ -132,13 +166,75 @@ describe("RelationsPane", () => {
         isLoading={false}
         error={null}
         hasActiveSet={true}
+        refreshControl={refreshControl}
       />
     );
 
     expect(harness.container.querySelector(".relations-view")).not.toBeNull();
     expect(harness.container.querySelectorAll(".relations-view-column").length).toBe(2);
     expect(harness.container.querySelectorAll(".relations-view-card").length).toBe(2);
+    expect(harness.container.querySelector(".relations-workspace-summary")?.textContent)
+      .toContain("1 relations");
 
+    harness.unmount();
+  });
+
+  it("applies relation quick filters and suite focus without changing snapshot data", () => {
+    const harness = render(
+      <RelationsPane
+        setId="set-1"
+        snapshot={makeSnapshot()}
+        isLoading={false}
+        error={null}
+        hasActiveSet={true}
+        refreshControl={refreshControl}
+      />
+    );
+
+    const testCaseColumn = harness.container.querySelector<HTMLElement>(
+      ".relations-view-column-test-cases"
+    )!;
+    act(() => testCaseColumn.querySelector<HTMLButtonElement>(".filter-bar-toggle")?.click());
+    const unlinkedButton = [...testCaseColumn.querySelectorAll<HTMLButtonElement>(
+      ".filter-bar-quick-action"
+    )].find((button) => button.textContent === "Only unlinked")!;
+    act(() => unlinkedButton.click());
+    expect(testCaseColumn.querySelector(".relations-view-card-test-case")).toBeNull();
+
+    act(() => unlinkedButton.click());
+    const focusButton = testCaseColumn.querySelector<HTMLButtonElement>(
+      'button[aria-label="Focus suite Root"]'
+    )!;
+    act(() => focusButton.click());
+    expect(harness.container.querySelector(".relations-workspace-focus-chip")?.textContent)
+      .toContain("Root");
+    expect(harness.container.querySelector(".relations-view-item-focus-match")).not.toBeNull();
+
+    harness.unmount();
+  });
+
+  it("clears focus when a refreshed snapshot no longer contains the suite", () => {
+    const renderPane = (snapshot: ActiveSetSnapshot) => (
+      <RelationsPane
+        setId="set-1"
+        snapshot={snapshot}
+        isLoading={false}
+        error={null}
+        hasActiveSet={true}
+        refreshControl={refreshControl}
+      />
+    );
+    const harness = render(renderPane(makeNestedSnapshot()));
+
+    act(() => harness.container.querySelector<HTMLButtonElement>(
+      'button[aria-label="Focus suite Child"]'
+    )?.click());
+    expect(harness.container.querySelector(".relations-workspace-focus-chip")).not.toBeNull();
+
+    harness.rerender(renderPane(makeSnapshot()));
+
+    expect(harness.container.querySelector(".relations-workspace-focus-chip")).toBeNull();
+    expect(harness.container.querySelector(".relations-view-item-focus-dimmed")).toBeNull();
     harness.unmount();
   });
 
@@ -150,6 +246,7 @@ describe("RelationsPane", () => {
         isLoading={true}
         error={null}
         hasActiveSet={true}
+        refreshControl={refreshControl}
       />
     );
 
@@ -168,6 +265,7 @@ describe("RelationsPane", () => {
         isLoading={false}
         error="Set ghost not found."
         hasActiveSet={true}
+        refreshControl={refreshControl}
       />
     );
 

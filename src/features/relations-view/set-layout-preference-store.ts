@@ -1,7 +1,8 @@
 import { createUserPreferenceStore } from "../../shared/user-preferences/create-user-preference-store.js";
-import type {
-  SetLayoutPreference,
-  UserPreferences
+import {
+  sanitizeUserPreferences,
+  type SetLayoutPreference,
+  type UserPreferences
 } from "../../shared/user-preferences/user-preferences.schema.js";
 
 const SET_LAYOUT_STORAGE_KEY = "azure-testops.set-layouts.v1";
@@ -30,7 +31,12 @@ export const setLayoutPreferenceStore = createUserPreferenceStore<SetLayoutPrefe
     if (!scopeKey) {
       return {};
     }
-    return { setLayouts: { [scopeKey]: value } } satisfies Partial<UserPreferences>;
+    const sanitized = sanitizeUserPreferences({
+      setLayouts: { [scopeKey]: value }
+    }).setLayouts?.[scopeKey];
+    return {
+      setLayouts: { [scopeKey]: sanitized ?? {} }
+    } satisfies Partial<UserPreferences>;
   }
 });
 
@@ -70,6 +76,10 @@ function sanitizeSetLayoutInput(value: unknown): SetLayoutPreference | null {
       collapsed.push(trimmed);
     }
     next.collapsedSuites = collapsed;
+  }
+
+  if (typeof value.hideEmptySuites === "boolean") {
+    next.hideEmptySuites = value.hideEmptySuites;
   }
 
   if (Array.isArray(value.workItemOrder)) {

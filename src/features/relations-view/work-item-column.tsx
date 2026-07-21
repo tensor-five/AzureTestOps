@@ -1,15 +1,18 @@
 import * as React from "react";
 
 import type { WorkItem } from "../../domain/work-items/work-item.js";
+import { resolveAdjacentItemMove } from "./item-order.js";
+import { useItemDragging } from "./use-item-dragging.js";
 import { WorkItemCard } from "./work-item-card.js";
 import type { WorkItemOrderApi } from "./use-work-item-order.js";
 
 const DRAG_DATA_TYPE = "application/x-azure-testops-work-item-id";
-const DRAG_DROP_EDGE_ATTR = "data-drop-edge";
 
 export type WorkItemColumnProps = {
   /** Already filtered by the active filter bar. */
   workItems: readonly WorkItem[];
+  /** Complete snapshot used to keep filtered-out items in the persisted order. */
+  allWorkItems?: readonly WorkItem[];
   unfilteredCount: number;
   filterBar?: React.ReactNode;
   onLinePointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
@@ -17,9 +20,10 @@ export type WorkItemColumnProps = {
   order?: WorkItemOrderApi;
   /** Resolves the Azure DevOps deep link for a work item id, or null if unavailable. */
   getWorkItemHref?: (workItemId: number) => string | null;
+  highlightQuery?: string;
+  focusActive?: boolean;
+  focusedWorkItemIds?: ReadonlySet<number>;
 };
-
-type DropTarget = { workItemId: number; edge: "before" | "after"; element: HTMLElement };
 
 export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
   const baseSorted = React.useMemo(
@@ -34,17 +38,19 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
 
   const draggedIdRef = React.useRef<number | null>(null);
   const [draggedId, setDraggedId] = React.useState<number | null>(null);
+  const [reorderAnnouncement, setReorderAnnouncement] = React.useState("");
+  const reorderInstructionId = React.useId();
   const listRef = React.useRef<HTMLOListElement | null>(null);
-
-  const clearDropEdges = React.useCallback(() => {
-    const ol = listRef.current;
-    if (!ol) {
-      return;
-    }
-    ol.querySelectorAll(`[${DRAG_DROP_EDGE_ATTR}]`).forEach((el) =>
-      el.removeAttribute(DRAG_DROP_EDGE_ATTR)
-    );
-  }, []);
+  const itemDragging = useItemDragging({
+    containerRef: listRef,
+    rowSelector: ":scope > [data-work-item-id]",
+    readItem: readWorkItemId
+  });
+  const naturalIds = React.useMemo(
+    () => (props.allWorkItems ?? props.workItems).map((item) => item.id).sort((a, b) => a - b),
+    [props.allWorkItems, props.workItems]
+  );
+  const naturalIdSet = React.useMemo(() => new Set(naturalIds), [naturalIds]);
 
   const handleDragStart = React.useCallback(
     (workItemId: number, event: React.DragEvent<HTMLElement>) => {
@@ -68,41 +74,8 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
   const handleDragEnd = React.useCallback(() => {
     draggedIdRef.current = null;
     setDraggedId(null);
-    clearDropEdges();
-  }, [clearDropEdges]);
-
-  const resolveDropTarget = React.useCallback(
-    (clientY: number): DropTarget | null => {
-      const ol = listRef.current;
-      if (!ol) {
-        return null;
-      }
-      const rows = Array.from(
-        ol.querySelectorAll<HTMLElement>(":scope > [data-work-item-id]")
-      );
-      if (rows.length === 0) {
-        return null;
-      }
-      for (const row of rows) {
-        const rect = row.getBoundingClientRect();
-        const midpoint = rect.top + rect.height / 2;
-        if (clientY < midpoint) {
-          const id = Number.parseInt(row.dataset.workItemId ?? "", 10);
-          if (!Number.isFinite(id)) {
-            return null;
-          }
-          return { workItemId: id, edge: "before", element: row };
-        }
-      }
-      const last = rows[rows.length - 1];
-      const id = Number.parseInt(last.dataset.workItemId ?? "", 10);
-      if (!Number.isFinite(id)) {
-        return null;
-      }
-      return { workItemId: id, edge: "after", element: last };
-    },
-    []
-  );
+    itemDragging.clearPreview();
+  }, [itemDragging]);
 
   const handleListDragOver = React.useCallback(
     (event: React.DragEvent<HTMLOListElement>) => {
@@ -111,38 +84,9 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
       }
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
-      const target = resolveDropTarget(event.clientY);
-      if (!target) {
-        return;
-      }
-      const ol = listRef.current;
-      if (!ol) {
-        return;
-      }
-      ol.querySelectorAll(`[${DRAG_DROP_EDGE_ATTR}]`).forEach((el) => {
-        if (el !== target.element) {
-          el.removeAttribute(DRAG_DROP_EDGE_ATTR);
-        }
-      });
-      if (target.element.getAttribute(DRAG_DROP_EDGE_ATTR) !== target.edge) {
-        target.element.setAttribute(DRAG_DROP_EDGE_ATTR, target.edge);
-      }
+      itemDragging.previewAt(event.clientY);
     },
-    [props.order, resolveDropTarget]
-  );
-
-  const handleListDragLeave = React.useCallback(
-    (event: React.DragEvent<HTMLOListElement>) => {
-      // dragleave fires when the pointer moves from the OL into a descendant
-      // too. Only clear the edge marker when we truly leave the list, i.e.
-      // the relatedTarget is outside this OL.
-      const next = event.relatedTarget as Node | null;
-      if (next && event.currentTarget.contains(next)) {
-        return;
-      }
-      clearDropEdges();
-    },
-    [clearDropEdges]
+    [props.order, itemDragging]
   );
 
   const handleListDrop = React.useCallback(
@@ -157,30 +101,92 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
       const draggedId = Number.isFinite(draggedFromData) && draggedFromData > 0
         ? draggedFromData
         : draggedFromState;
-      const target = resolveDropTarget(event.clientY);
-      if (draggedId === null || !target || draggedId === target.workItemId) {
+      const target = itemDragging.getPreviewTarget();
+      if (
+        draggedId === null ||
+        !target ||
+        draggedId === target.item ||
+        !naturalIdSet.has(draggedId) ||
+        !naturalIdSet.has(target.item)
+      ) {
         handleDragEnd();
         return;
       }
-      props.order.move(draggedId, target.workItemId, target.edge);
+      props.order.move(draggedId, target.item, target.edge, naturalIds);
       handleDragEnd();
     },
-    [props.order, resolveDropTarget, handleDragEnd]
+    [props.order, itemDragging, naturalIds, naturalIdSet, handleDragEnd]
+  );
+
+  const handleReorderKeyDown = React.useCallback(
+    (workItemId: number, event: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (!props.order || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      event.currentTarget.focus();
+
+      const direction = event.key === "ArrowUp" ? "up" : "down";
+      const adjacentMove = resolveAdjacentItemMove(
+        sorted.map((item) => item.id),
+        workItemId,
+        direction
+      );
+      if (!adjacentMove || !naturalIdSet.has(workItemId) || !naturalIdSet.has(adjacentMove.targetId)) {
+        setReorderAnnouncement(
+          `Work item #${workItemId} is already the ${direction === "up" ? "first" : "last"} visible work item.`
+        );
+        return;
+      }
+
+      props.order.move(
+        workItemId,
+        adjacentMove.targetId,
+        adjacentMove.edge,
+        naturalIds
+      );
+      setReorderAnnouncement(
+        `Moved work item #${workItemId} ${adjacentMove.edge} work item #${adjacentMove.targetId}.`
+      );
+    },
+    [naturalIds, naturalIdSet, props.order, sorted]
   );
 
   const reorderEnabled = props.order !== undefined;
 
   return (
     <section className="relations-view-column relations-view-column-work-items" aria-label="Work items">
-      <header className="relations-view-column-header">
-        <h3>Work Items</h3>
-        <span className="relations-view-column-count">
-          {sorted.length === props.unfilteredCount
-            ? props.unfilteredCount
-            : `${sorted.length} / ${props.unfilteredCount}`}
-        </span>
-      </header>
-      {props.filterBar}
+      <div className="relations-view-column-sticky">
+        <header className="relations-view-column-header">
+          <div>
+            <span className="relations-view-column-eyebrow">Saved query results</span>
+            <h3>Work Items</h3>
+          </div>
+          <span className="relations-view-column-count">
+            {sorted.length === props.unfilteredCount
+              ? props.unfilteredCount
+              : `${sorted.length} / ${props.unfilteredCount}`}
+          </span>
+        </header>
+        {props.filterBar}
+      </div>
+      {reorderEnabled ? (
+        <>
+          <span id={reorderInstructionId} className="u-visually-hidden">
+            Drag the reorder handle, or use Arrow Up and Arrow Down, to move the work item
+            relative to visible neighbours.
+          </span>
+          <span
+            className="u-visually-hidden"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {reorderAnnouncement}
+          </span>
+        </>
+      ) : null}
       {props.unfilteredCount === 0 ? (
         <p className="relations-view-column-empty">No work items returned by the saved query.</p>
       ) : sorted.length === 0 ? (
@@ -190,23 +196,24 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
           ref={listRef}
           className="relations-view-work-item-list"
           onDragOver={reorderEnabled ? handleListDragOver : undefined}
-          onDragLeave={reorderEnabled ? handleListDragLeave : undefined}
+          onDragLeave={reorderEnabled ? itemDragging.handleDragLeave : undefined}
           onDrop={reorderEnabled ? handleListDrop : undefined}
         >
-          {sorted.map((workItem) => (
-            <li
-              key={workItem.id}
-              className={
-                draggedId === workItem.id
-                  ? "relations-view-work-item-list-item relations-view-work-item-list-item-dragging"
-                  : "relations-view-work-item-list-item"
-              }
-              data-work-item-id={workItem.id}
-            >
+          {sorted.map((workItem) => {
+            const isFocusMatch = props.focusedWorkItemIds?.has(workItem.id) ?? false;
+            const className = [
+              "relations-view-work-item-list-item",
+              draggedId === workItem.id ? "relations-view-work-item-list-item-dragging" : "",
+              props.focusActive && isFocusMatch ? "relations-view-item-focus-match" : "",
+              props.focusActive && !isFocusMatch ? "relations-view-item-focus-dimmed" : ""
+            ].filter(Boolean).join(" ");
+            return (
+            <li key={workItem.id} className={className} data-work-item-id={workItem.id}>
               <WorkItemCard
                 workItem={workItem}
                 onLinePointerDown={props.onLinePointerDown}
                 getWorkItemHref={props.getWorkItemHref}
+                highlightQuery={props.highlightQuery}
               />
               {reorderEnabled ? (
                 <button
@@ -217,16 +224,24 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
                   onDragEnd={handleDragEnd}
                   onPointerDown={(event) => event.stopPropagation()}
                   onClick={(event) => event.preventDefault()}
+                  onKeyDown={(event) => handleReorderKeyDown(workItem.id, event)}
                   aria-label={`Reorder work item #${workItem.id}`}
-                  title="Drag to reorder"
+                  aria-describedby={reorderInstructionId}
+                  aria-keyshortcuts="ArrowUp ArrowDown"
+                  title="Drag to reorder, or use Arrow Up and Arrow Down"
                 >
                   <span aria-hidden="true">⠿</span>
                 </button>
               ) : null}
             </li>
-          ))}
+          );})}
         </ol>
       )}
     </section>
   );
+}
+
+function readWorkItemId(row: HTMLElement): number | null {
+  const id = Number.parseInt(row.dataset.workItemId ?? "", 10);
+  return Number.isInteger(id) && id > 0 ? id : null;
 }

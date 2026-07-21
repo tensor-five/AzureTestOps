@@ -68,7 +68,7 @@ body::before {
     radial-gradient(circle at 20% 30%, var(--color-pattern-dot) 0 0.5px, transparent 0.6px),
     radial-gradient(circle at 70% 55%, var(--color-pattern-dot) 0 0.5px, transparent 0.6px),
     radial-gradient(circle at 40% 80%, var(--color-pattern-dot) 0 0.5px, transparent 0.6px);
-  background-size: 10px 10px, 12px 12px, 11px 11px;
+  background-size: var(--space-3) var(--space-3);
 }
 
 body::after {
@@ -92,4 +92,23 @@ input,
 button,
 select {
   font: inherit;
+}
+
+.u-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.ui-search-highlight {
+  border-radius: calc(var(--radius-sm) / 2);
+  background: color-mix(in srgb, var(--color-secondary) 55%, transparent);
+  color: inherit;
+  padding: 0 var(--space-0-5);
 }

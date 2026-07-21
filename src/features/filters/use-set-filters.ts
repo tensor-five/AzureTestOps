@@ -113,6 +113,12 @@ function isEmptyColumn(
       return false;
     }
   }
+  if (value.relationVisibility && value.relationVisibility !== "all") {
+    return false;
+  }
+  if ("openBugsOnly" in value && value.openBugsOnly === true) {
+    return false;
+  }
   return true;
 }
 
