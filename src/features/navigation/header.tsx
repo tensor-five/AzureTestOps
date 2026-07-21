@@ -30,24 +30,27 @@ export type AppHeaderProps = {
   themeMode: ThemeMode;
   onToggleTheme(): void;
   setSwitcher: React.ReactNode;
-  refreshControl: React.ReactNode;
 };
 
 /**
- * Top-of-shell header. Composes the AzureGanttOps look (preflight badge,
- * dropdowns, refresh, theme toggle) with no business logic — all
+ * Top-of-shell header. Composes the AzureGanttOps look (set picker,
+ * compact status, theme toggle) with no business logic — all
  * decisions are deferred to the orchestrator that owns state.
  */
 export function AppHeader(props: AppHeaderProps): React.ReactElement {
   return (
     <section className="ui-shell-header">
-      <div className="ui-shell-brand">
-        <h1>AzureTestOps</h1>
+      <div className="ui-shell-brand-row">
+        <div className="ui-shell-brand">
+          <h1>AzureTestOps</h1>
+        </div>
       </div>
       <div className="ui-shell-header-actions">
+        <div className="ui-shell-set-picker">
+          <span className="ui-shell-set-picker-label">Set</span>
+          {props.setSwitcher}
+        </div>
         <PreflightBadge status={props.preflightStatus} />
-        {props.setSwitcher}
-        {props.refreshControl}
         <button
           type="button"
           className="ui-shell-theme-toggle"
@@ -56,7 +59,7 @@ export function AppHeader(props: AppHeaderProps): React.ReactElement {
           onClick={props.onToggleTheme}
         >
           <span aria-hidden="true">{iconForThemeMode(props.themeMode)}</span>
-          <span>{labelForThemeMode(props.themeMode)}</span>
+          <span className="u-visually-hidden">{labelForThemeMode(props.themeMode)}</span>
         </button>
       </div>
     </section>
@@ -75,9 +78,25 @@ function PreflightBadge(props: { status: PreflightStatus }): React.ReactElement 
         : "ui-preflight-badge-warn");
 
   return (
-    <span className={className} role="status" aria-live="polite" title={PREFLIGHT_LABELS[props.status]}>
-      <span aria-hidden="true" className="ui-preflight-badge-dot" />
-      <span>{PREFLIGHT_LABELS[props.status]}</span>
-    </span>
+    <>
+      <span
+        className="u-visually-hidden ui-preflight-live-status"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {PREFLIGHT_LABELS[props.status]}
+      </span>
+      <details className={`ui-preflight-status ${className}`}>
+        <summary className="ui-preflight-status-trigger" title={PREFLIGHT_LABELS[props.status]}>
+          <span aria-hidden="true" className="ui-preflight-badge-dot" />
+          <span>{isReady ? "Status" : isChecking ? "Checking" : "Action needed"}</span>
+        </summary>
+        <div className="ui-preflight-status-panel">
+          <strong>Azure DevOps access</strong>
+          <span>{PREFLIGHT_LABELS[props.status]}</span>
+        </div>
+      </details>
+    </>
   );
 }

@@ -8,23 +8,27 @@ import { useLineSelection, type LineSelectionApi } from "./use-line-selection.js
 
 type Harness = {
   result: { current: LineSelectionApi };
-  rerender(props: { enabled: boolean }): void;
+  rerender(props: { enabled: boolean; visibleLineIds: ReadonlySet<string> }): void;
   unmount(): void;
 };
 
 function renderHook(
-  initial: { enabled: boolean },
+  initial: { enabled: boolean; visibleLineIds?: ReadonlySet<string> },
   onDeleteRequested: (lineId: string) => void
 ): Harness {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
   const result = { current: undefined as unknown as LineSelectionApi };
-  let currentProps = initial;
+  let currentProps = {
+    enabled: initial.enabled,
+    visibleLineIds: initial.visibleLineIds ?? new Set(["line-a", "line-b"])
+  };
 
   function Capture(): React.ReactElement {
     result.current = useLineSelection({
       enabled: currentProps.enabled,
+      visibleLineIds: currentProps.visibleLineIds,
       onDeleteRequested
     });
     return <div />;
@@ -163,12 +167,30 @@ describe("useLineSelection", () => {
       harness.result.current.selectLine("line-a");
     });
 
-    harness.rerender({ enabled: false });
+    harness.rerender({ enabled: false, visibleLineIds: new Set(["line-a"]) });
 
     act(() => {
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete" }));
     });
 
+    expect(onDelete).not.toHaveBeenCalled();
+    harness.unmount();
+  });
+
+  it("clears a selection that is no longer visible and cannot delete it", () => {
+    const onDelete = vi.fn();
+    const harness = renderHook(
+      { enabled: true, visibleLineIds: new Set(["line-a"]) },
+      onDelete
+    );
+
+    act(() => harness.result.current.selectLine("line-a"));
+    harness.rerender({ enabled: true, visibleLineIds: new Set() });
+    expect(harness.result.current.selectedLineId).toBeNull();
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete" }));
+    });
     expect(onDelete).not.toHaveBeenCalled();
     harness.unmount();
   });

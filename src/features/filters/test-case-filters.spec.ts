@@ -52,6 +52,20 @@ describe("filterTestCases", () => {
     expect(result).toEqual([a]);
   });
 
+  it("matches the suite path so one search covers suites and test-case titles", () => {
+    const release = projection({
+      workItemId: 1,
+      title: "Generic case",
+      suitePath: "Plan > Releases > Login"
+    });
+    const billing = projection({
+      workItemId: 2,
+      title: "Another case",
+      suitePath: "Plan > Billing"
+    });
+    expect(filterTestCases([release, billing], { titleQuery: "releases" })).toEqual([release]);
+  });
+
   it("ANDs facets together while ORing within a facet", () => {
     const a = projection({ workItemId: 1, lastOutcome: "Failed", state: "Active" });
     const b = projection({ workItemId: 2, lastOutcome: "Passed", state: "Active" });

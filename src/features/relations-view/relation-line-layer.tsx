@@ -30,8 +30,10 @@ export type RelationLineLayerProps = {
   draft: DraftLine | null;
   selectedLineId: string | null;
   onSelectLine: (lineId: string | null) => void;
+  /** Reports only lines whose two DOM endpoints are currently measurable. */
+  onVisibleLineIdsChange: (lineIds: ReadonlySet<string>) => void;
   /** Forces an extra recompute when the caller knows positions have moved. */
-  layoutVersion: number;
+  layoutVersion: number | string;
 };
 
 /**
@@ -49,16 +51,20 @@ export type RelationLineLayerProps = {
  */
 export function RelationLineLayer(props: RelationLineLayerProps): React.ReactElement {
   const [coords, setCoords] = React.useState<Map<string, LineCoords>>(() => new Map());
+  const layerRef = React.useRef<SVGSVGElement | null>(null);
 
   React.useLayoutEffect(() => {
     const container = props.container;
     if (!container) {
+      setCoords(new Map());
+      props.onVisibleLineIdsChange(new Set());
       return undefined;
     }
 
     const recompute = (): void => {
       const next = computeLineCoords(container, props.lines);
       setCoords(next);
+      props.onVisibleLineIdsChange(new Set(next.keys()));
     };
 
     recompute();
@@ -80,16 +86,47 @@ export function RelationLineLayer(props: RelationLineLayerProps): React.ReactEle
       }
     }
 
+    const mutationObserver = typeof MutationObserver === "function"
+      ? new MutationObserver((records) => {
+          const layer = layerRef.current;
+          const layoutChangedOutsideLayer = records.some(
+            (record) => !layer || !layer.contains(record.target)
+          );
+          if (layoutChangedOutsideLayer) {
+            recompute();
+          }
+        })
+      : null;
+    mutationObserver?.observe(container, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: [
+        "class",
+        "style",
+        "hidden",
+        "data-mobile-column",
+        "open",
+        "aria-expanded"
+      ]
+    });
+
     const onWindowChange = (): void => recompute();
     window.addEventListener("resize", onWindowChange);
     window.addEventListener("scroll", onWindowChange, true);
 
     return () => {
       resizeObserver?.disconnect();
+      mutationObserver?.disconnect();
       window.removeEventListener("resize", onWindowChange);
       window.removeEventListener("scroll", onWindowChange, true);
     };
-  }, [props.lines, props.layoutVersion, props.container]);
+  }, [
+    props.lines,
+    props.layoutVersion,
+    props.container,
+    props.onVisibleLineIdsChange
+  ]);
 
   const onWrapperPointerDown = (event: React.PointerEvent<SVGSVGElement>): void => {
     // Clicks on the SVG background (not on a line stroke) clear selection.
@@ -100,6 +137,7 @@ export function RelationLineLayer(props: RelationLineLayerProps): React.ReactEle
 
   return (
     <svg
+      ref={layerRef}
       className="relations-view-line-layer"
       aria-hidden
       onPointerDown={onWrapperPointerDown}
@@ -198,6 +236,9 @@ function readAnchorPoint(
     return null;
   }
   const rect = card.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) {
+    return null;
+  }
   const y = rect.top + rect.height / 2 - containerRect.top + container.scrollTop;
   const x =
     side === "left"

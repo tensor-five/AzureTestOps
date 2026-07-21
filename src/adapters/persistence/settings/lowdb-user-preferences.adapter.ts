@@ -9,6 +9,7 @@ import {
   sanitizeUserPreferences,
   type UserPreferences
 } from "../../../shared/user-preferences/user-preferences.schema.js";
+import { sanitizeKeyedPreferencePatch } from "../../../shared/user-preferences/keyed-preference-patch.js";
 
 export type { UserPreferences } from "../../../shared/user-preferences/user-preferences.schema.js";
 
@@ -48,10 +49,19 @@ export class LowdbUserPreferencesAdapter implements UserPreferencesPort {
     // let a single-set patch wipe out every other set's persisted entry. We
     // walk the raw patch to learn which setIds the caller intended to touch:
     //   - present in raw patch + survives sanitize → upsert
-    //   - present in raw patch + sanitized away    → delete (empty/clear intent)
+    //   - explicitly empty object                  → delete
+    //   - invalid / unknown non-empty value        → ignore
     //   - absent from raw patch                    → leave current entry untouched
-    const layoutTouched = collectKeyedScopeIds(patch, "setLayouts");
-    const filterTouched = collectKeyedScopeIds(patch, "setFilters");
+    const layoutPatch = sanitizeKeyedPreferencePatch(
+      patch,
+      "setLayouts",
+      incoming.setLayouts
+    );
+    const filterPatch = sanitizeKeyedPreferencePatch(
+      patch,
+      "setFilters",
+      incoming.setFilters
+    );
 
     await db.update((data) => {
       const current = sanitizeUserPreferences(data.users[this.userId] ?? {});
@@ -59,8 +69,16 @@ export class LowdbUserPreferencesAdapter implements UserPreferencesPort {
         ...current,
         ...incoming,
         sets: incoming.sets ?? current.sets,
-        setLayouts: mergeKeyedScope(current.setLayouts, incoming.setLayouts, layoutTouched),
-        setFilters: mergeKeyedScope(current.setFilters, incoming.setFilters, filterTouched),
+        setLayouts: mergeKeyedScope(
+          current.setLayouts,
+          incoming.setLayouts,
+          layoutPatch.touchedIds
+        ),
+        setFilters: mergeKeyedScope(
+          current.setFilters,
+          incoming.setFilters,
+          filterPatch.touchedIds
+        ),
         updatedAt: new Date().toISOString()
       };
     });
@@ -109,27 +127,6 @@ export class LowdbUserPreferencesAdapter implements UserPreferencesPort {
 
     return this.dbPromise;
   }
-}
-
-function collectKeyedScopeIds(
-  rawPatch: unknown,
-  field: "setLayouts" | "setFilters"
-): Set<string> | null {
-  if (!isPlainRecord(rawPatch)) {
-    return null;
-  }
-  const map = rawPatch[field];
-  if (!isPlainRecord(map)) {
-    return null;
-  }
-  const ids = new Set<string>();
-  for (const key of Object.keys(map)) {
-    const trimmed = key.trim();
-    if (trimmed.length > 0) {
-      ids.add(trimmed);
-    }
-  }
-  return ids;
 }
 
 function mergeKeyedScope<T>(

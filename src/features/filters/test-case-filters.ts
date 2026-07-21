@@ -77,7 +77,11 @@ export function filterTestCases(
   const workItemTypes = toMatcherSet(filter.workItemTypes);
 
   return projections.filter((projection) => {
-    if (titleNeedle.length > 0 && !projection.title.toLowerCase().includes(titleNeedle)) {
+    if (
+      titleNeedle.length > 0 &&
+      !projection.title.toLowerCase().includes(titleNeedle) &&
+      !projection.suitePath.toLowerCase().includes(titleNeedle)
+    ) {
       return false;
     }
     if (lastOutcomes && !lastOutcomes.has(projection.lastOutcome)) {

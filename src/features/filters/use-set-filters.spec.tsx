@@ -10,6 +10,7 @@ import * as preferencesClient from "../../shared/user-preferences/user-preferenc
 
 function setupHookHarness<T>(useHook: () => T): {
   result: { current: T };
+  rerender(): void;
   unmount(): void;
 } {
   const container = document.createElement("div");
@@ -28,6 +29,11 @@ function setupHookHarness<T>(useHook: () => T): {
 
   return {
     result,
+    rerender: () => {
+      act(() => {
+        root.render(<Capture />);
+      });
+    },
     unmount: () => {
       act(() => {
         root.unmount();
@@ -74,6 +80,33 @@ describe("useSetFilters", () => {
     harness.unmount();
   });
 
+  it("seeds persisted quick filters and reloads them when the active set changes", () => {
+    cacheSpy.mockReturnValue({
+      setFilters: {
+        "set-1": {
+          testCases: { relationVisibility: "linked" },
+          workItems: { openBugsOnly: true }
+        },
+        "set-2": {
+          testCases: { relationVisibility: "unlinked" },
+          workItems: { relationVisibility: "linked" }
+        }
+      }
+    });
+    let setId = "set-1";
+    const harness = setupHookHarness(() => useSetFilters(setId));
+
+    expect(harness.result.current.testCaseFilter.relationVisibility).toBe("linked");
+    expect(harness.result.current.workItemFilter.openBugsOnly).toBe(true);
+
+    setId = "set-2";
+    harness.rerender();
+
+    expect(harness.result.current.testCaseFilter.relationVisibility).toBe("unlinked");
+    expect(harness.result.current.workItemFilter).toEqual({ relationVisibility: "linked" });
+    harness.unmount();
+  });
+
   it("persists updates under setFilters[setId] split per column", () => {
     const harness = setupHookHarness(() => useSetFilters("set-1"));
 
@@ -98,6 +131,28 @@ describe("useSetFilters", () => {
       }
     });
 
+    harness.unmount();
+  });
+
+  it("persists relation visibility and open-bug quick filters with the other column state", () => {
+    const harness = setupHookHarness(() => useSetFilters("set-1"));
+
+    act(() => {
+      harness.result.current.setTestCaseFilter({ relationVisibility: "unlinked" });
+      harness.result.current.setWorkItemFilter({
+        relationVisibility: "linked",
+        openBugsOnly: true
+      });
+    });
+
+    expect(persistSpy).toHaveBeenLastCalledWith({
+      setFilters: {
+        "set-1": {
+          testCases: { relationVisibility: "unlinked" },
+          workItems: { relationVisibility: "linked", openBugsOnly: true }
+        }
+      }
+    });
     harness.unmount();
   });
 

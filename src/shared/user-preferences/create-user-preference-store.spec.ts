@@ -40,6 +40,7 @@ describe("createUserPreferenceStore", () => {
   beforeEach(() => {
     localStorage.clear();
     vi.spyOn(preferencesClient, "getCachedUserPreferences").mockReturnValue({});
+    vi.spyOn(preferencesClient, "isUserPreferencesCacheAuthoritative").mockReturnValue(false);
     vi.spyOn(preferencesClient, "persistUserPreferencesPatch").mockReturnValue();
   });
 
@@ -68,6 +69,35 @@ describe("createUserPreferenceStore", () => {
 
     const store = buildSampleStore();
     expect(store.load({ scopeKey: "scope-1" })).toEqual({ count: 9 });
+  });
+
+  it("does not revive a stale local value after authoritative lowdb hydration removed it", () => {
+    const authoritySpy = vi.mocked(preferencesClient.isUserPreferencesCacheAuthoritative);
+    const persistSpy = vi.mocked(preferencesClient.persistUserPreferencesPatch);
+    localStorage.setItem("test-store.v1::scope-1", JSON.stringify({ count: 9 }));
+    const store = buildSampleStore();
+
+    expect(store.load({ scopeKey: "scope-1" })).toEqual({ count: 9 });
+
+    authoritySpy.mockReturnValue(true);
+    expect(store.load({ scopeKey: "scope-1" })).toBeNull();
+    expect(localStorage.getItem("test-store.v1::scope-1")).toBeNull();
+
+    store.save({ count: 5 }, { scopeKey: "scope-1" });
+    expect(persistSpy).toHaveBeenCalledWith({ samples: { "scope-1": { count: 5 } } });
+    expect(localStorage.getItem("test-store.v1::scope-1")).toBe(JSON.stringify({ count: 5 }));
+  });
+
+  it("replaces a stale local value with the value from authoritative lowdb hydration", () => {
+    localStorage.setItem("test-store.v1::scope-1", JSON.stringify({ count: 9 }));
+    vi.mocked(preferencesClient.getCachedUserPreferences).mockReturnValue({
+      samples: { "scope-1": { count: 12 } }
+    } as UserPreferences);
+    vi.mocked(preferencesClient.isUserPreferencesCacheAuthoritative).mockReturnValue(true);
+    const store = buildSampleStore();
+
+    expect(store.load({ scopeKey: "scope-1" })).toEqual({ count: 12 });
+    expect(localStorage.getItem("test-store.v1::scope-1")).toBe(JSON.stringify({ count: 12 }));
   });
 
   it("save sanitizes input, calls persistUserPreferencesPatch with buildPatch, and mirrors to localStorage", () => {

@@ -17,13 +17,9 @@ function render(node: React.ReactElement): HTMLElement {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
-  act(() => {
-    root.render(node);
-  });
+  act(() => root.render(node));
   cleanup = () => {
-    act(() => {
-      root.unmount();
-    });
+    act(() => root.unmount());
     container.remove();
   };
   return container;
@@ -32,110 +28,127 @@ function render(node: React.ReactElement): HTMLElement {
 const STATE_FACET: FilterFacet = {
   kind: "states",
   label: "State",
-  options: ["Active", "Closed"],
+  options: [
+    { value: "Active", count: 4 },
+    { value: "Closed", count: 2 }
+  ],
   selected: []
 };
 
+function bar(overrides: Partial<React.ComponentProps<typeof FilterBar>> = {}): React.ReactElement {
+  return (
+    <FilterBar
+      ariaLabel="Test cases"
+      titleQuery=""
+      onTitleQueryChange={vi.fn()}
+      facets={[STATE_FACET]}
+      onToggleFacetValue={vi.fn()}
+      onReplaceFacetValues={vi.fn()}
+      onClear={vi.fn()}
+      {...overrides}
+    />
+  );
+}
+
 describe("FilterBar", () => {
-  it("forwards title query changes verbatim", () => {
+  it("forwards search changes and clears the query from the inline button", () => {
     const onTitleQueryChange = vi.fn();
-    const container = render(
-      <FilterBar
-        ariaLabel="Test cases"
-        titleQuery=""
-        onTitleQueryChange={onTitleQueryChange}
-        facets={[STATE_FACET]}
-        onToggleFacetValue={vi.fn()}
-        onClear={vi.fn()}
-      />
-    );
-    const input = container.querySelector<HTMLInputElement>(".filter-bar-title-input");
-    expect(input).not.toBeNull();
-    setReactInputValue(input!, "auth");
+    const container = render(bar({ titleQuery: "login", onTitleQueryChange }));
+    const input = container.querySelector<HTMLInputElement>(".filter-bar-title-input")!;
+    setReactInputValue(input, "auth");
     expect(onTitleQueryChange).toHaveBeenCalledWith("auth");
+
+    act(() => container.querySelector<HTMLButtonElement>(".filter-bar-search-clear")?.click());
+    expect(onTitleQueryChange).toHaveBeenCalledWith("");
   });
 
-  it("invokes onToggleFacetValue with kind + option when a checkbox is toggled", () => {
+  it("expands facets and forwards checkbox toggles", () => {
     const onToggle = vi.fn();
-    const container = render(
-      <FilterBar
-        ariaLabel="Test cases"
-        titleQuery=""
-        onTitleQueryChange={vi.fn()}
-        facets={[STATE_FACET]}
-        onToggleFacetValue={onToggle}
-        onClear={vi.fn()}
-      />
-    );
+    const container = render(bar({ onToggleFacetValue: onToggle }));
+    act(() => container.querySelector<HTMLButtonElement>(".filter-bar-toggle")?.click());
     const checkbox = container.querySelector<HTMLInputElement>(
       ".filter-bar-facet-option input"
-    );
-    expect(checkbox).not.toBeNull();
-    act(() => {
-      checkbox!.click();
-    });
+    )!;
+    act(() => checkbox.click());
     expect(onToggle).toHaveBeenCalledWith("states", "Active");
+    expect(container.querySelector(".filter-bar-facet-option-count")?.textContent).toBe("4");
   });
 
-  it("renders Clear (n) only when at least one filter is active", () => {
+  it("renders removable active chips and clears all filters", () => {
+    const onToggle = vi.fn();
     const onClear = vi.fn();
-    const container = render(
-      <FilterBar
-        ariaLabel="Test cases"
-        titleQuery="login"
-        onTitleQueryChange={vi.fn()}
-        facets={[{ ...STATE_FACET, selected: ["Active"] }]}
-        onToggleFacetValue={vi.fn()}
-        onClear={onClear}
-      />
-    );
-    const button = container.querySelector<HTMLButtonElement>(".filter-bar-clear");
-    expect(button?.textContent).toBe("Clear (2)");
-    act(() => {
-      button!.click();
-    });
+    const container = render(bar({
+      titleQuery: "login",
+      facets: [{ ...STATE_FACET, selected: ["Active"] }],
+      onToggleFacetValue: onToggle,
+      onClear
+    }));
+
+    const chip = container.querySelector<HTMLButtonElement>(".filter-bar-active-chip")!;
+    act(() => chip.click());
+    expect(onToggle).toHaveBeenCalledWith("states", "Active");
+
+    const clear = container.querySelector<HTMLButtonElement>(".filter-bar-clear")!;
+    expect(clear.textContent).toBe("Clear all");
+    act(() => clear.click());
     expect(onClear).toHaveBeenCalledTimes(1);
   });
 
-  it("hides the clear button when no filter is active", () => {
-    const container = render(
-      <FilterBar
-        ariaLabel="Test cases"
-        titleQuery=""
-        onTitleQueryChange={vi.fn()}
-        facets={[STATE_FACET]}
-        onToggleFacetValue={vi.fn()}
-        onClear={vi.fn()}
-      />
+  it("searches facet values and selects all visible matches", () => {
+    const onReplace = vi.fn();
+    const container = render(bar({ onReplaceFacetValues: onReplace }));
+    act(() => container.querySelector<HTMLButtonElement>(".filter-bar-toggle")?.click());
+    setReactInputValue(
+      container.querySelector<HTMLInputElement>(".filter-bar-facet-search")!,
+      "clo"
     );
-    expect(container.querySelector(".filter-bar-clear")).toBeNull();
+    act(() => container.querySelector<HTMLButtonElement>(".filter-bar-facet-bulk")?.click());
+    expect(onReplace).toHaveBeenCalledWith("states", ["Closed"]);
+  });
+
+  it("shows active quick filters both as controls and removable chips", () => {
+    const onToggle = vi.fn();
+    const container = render(bar({
+      quickActions: [{ id: "linked", label: "Only linked", pressed: true, onToggle }]
+    }));
+    expect(container.querySelector(".filter-bar-active-chip")?.textContent).toContain("Only linked");
+    act(() => container.querySelector<HTMLButtonElement>(".filter-bar-active-chip")?.click());
+    expect(onToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not duplicate a quick-action alias for an active facet", () => {
+    const container = render(bar({
+      facets: [{
+        kind: "lastOutcomes",
+        label: "Outcome",
+        options: [{ value: "Failed", count: 2 }],
+        selected: ["Failed"]
+      }],
+      quickActions: [{
+        id: "failed-tests",
+        label: "Failed tests",
+        pressed: true,
+        showActiveChip: false,
+        onToggle: vi.fn()
+      }]
+    }));
+
+    expect(container.querySelector(".filter-bar-toggle-count")?.textContent).toBe("1");
+    expect([...container.querySelectorAll(".filter-bar-active-chip")].map((chip) => chip.textContent))
+      .toEqual(["Failed×"]);
   });
 });
 
 function setReactInputValue(input: HTMLInputElement, value: string): void {
-  // React tracks the previous value on the DOM node; assigning via the
-  // prototype setter is the documented way to bypass that and have the
-  // synthetic onChange fire from a dispatched 'input' event.
-  const setter = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  )?.set;
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
   setter?.call(input, value);
-  act(() => {
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-  });
+  act(() => input.dispatchEvent(new Event("input", { bubbles: true })));
 }
 
 describe("toggleStringList", () => {
-  it("appends a value when missing", () => {
+  it("appends, removes and seeds values", () => {
     expect(toggleStringList(["A"], "B")).toEqual(["A", "B"]);
-  });
-
-  it("removes a value when present", () => {
     expect(toggleStringList(["A", "B"], "A")).toEqual(["B"]);
-  });
-
-  it("treats undefined as an empty list", () => {
     expect(toggleStringList(undefined, "A")).toEqual(["A"]);
   });
 });

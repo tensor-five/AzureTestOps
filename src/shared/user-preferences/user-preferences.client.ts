@@ -1,4 +1,7 @@
-import type { UserPreferencesClientPort } from "../../application/ports/client/user-preferences-client.port.js";
+import {
+  UserPreferencesClientError,
+  type UserPreferencesClientPort
+} from "../../application/ports/client/user-preferences-client.port.js";
 
 import type { UserPreferences } from "./user-preferences.schema.js";
 
@@ -28,21 +31,103 @@ export type {
  * where the cache simply started empty before hydration.
  */
 let installedPort: UserPreferencesClientPort = createNoopPort();
+let unsubscribeInstalledSaveStatus: (() => void) | null = null;
+let syncStatus: UserPreferencesSyncStatus = createIdleSyncStatus();
+let cacheHydrationState: "idle" | "authoritative" | "fallback" = "idle";
+let hydrationInFlight: Promise<UserPreferences> | null = null;
+const syncStatusListeners = new Set<() => void>();
+
+export type UserPreferencesSyncStatus = {
+  loadError: string | null;
+  saveError: string | null;
+};
 
 export function installUserPreferencesPort(port: UserPreferencesClientPort): void {
+  if (installedPort === port) {
+    return;
+  }
+  unsubscribeInstalledSaveStatus?.();
   installedPort = port;
+  cacheHydrationState = "idle";
+  hydrationInFlight = null;
+  unsubscribeInstalledSaveStatus = port.subscribeSaveStatus?.((error) => {
+    if (error) {
+      publishSaveError(error);
+    } else {
+      publishSyncStatus({ ...syncStatus, saveError: null });
+    }
+  }) ?? null;
 }
 
 export function getCachedUserPreferences(): UserPreferences {
   return installedPort.getCached();
 }
 
-export async function hydrateUserPreferences(): Promise<UserPreferences> {
-  return installedPort.hydrate();
+/**
+ * Reports whether the installed cache was populated by a successful lowdb
+ * hydration. Before hydration, or after a failed hydration, feature stores
+ * may still use their localStorage compatibility fallback.
+ */
+export function isUserPreferencesCacheAuthoritative(): boolean {
+  return cacheHydrationState === "authoritative";
+}
+
+export function hydrateUserPreferences(): Promise<UserPreferences> {
+  if (cacheHydrationState !== "idle") {
+    return Promise.resolve(installedPort.getCached());
+  }
+  if (hydrationInFlight) {
+    return hydrationInFlight;
+  }
+
+  const hydratingPort = installedPort;
+  hydrationInFlight = hydratingPort.hydrate()
+    .then((preferences) => {
+      if (installedPort === hydratingPort) {
+        cacheHydrationState = "authoritative";
+        publishSyncStatus({ ...syncStatus, loadError: null });
+      }
+      return preferences;
+    })
+    .catch((error: unknown) => {
+      if (installedPort === hydratingPort) {
+        cacheHydrationState = "fallback";
+        publishSyncStatus({
+          ...syncStatus,
+          loadError: toApplicationMessage(error, "load")
+        });
+      }
+      return hydratingPort.getCached();
+    })
+    .finally(() => {
+      if (installedPort === hydratingPort) {
+        hydrationInFlight = null;
+      }
+    });
+  return hydrationInFlight;
 }
 
 export function persistUserPreferencesPatch(patch: Partial<UserPreferences>): void {
-  installedPort.persistPatch(patch);
+  let persistence: Promise<void>;
+  try {
+    persistence = installedPort.persistPatch(patch);
+  } catch (error: unknown) {
+    publishSaveError(error);
+    return;
+  }
+
+  void persistence
+    .then(() => publishSyncStatus({ ...syncStatus, saveError: null }))
+    .catch(publishSaveError);
+}
+
+export function getUserPreferencesSyncStatus(): UserPreferencesSyncStatus {
+  return syncStatus;
+}
+
+export function subscribeUserPreferencesSyncStatus(listener: () => void): () => void {
+  syncStatusListeners.add(listener);
+  return () => syncStatusListeners.delete(listener);
 }
 
 /**
@@ -50,15 +135,46 @@ export function persistUserPreferencesPatch(patch: Partial<UserPreferences>): vo
  * does not carry cache state from a previous test.
  */
 export function resetUserPreferencesCacheForTests(): void {
+  unsubscribeInstalledSaveStatus?.();
+  unsubscribeInstalledSaveStatus = null;
   installedPort = createNoopPort();
+  cacheHydrationState = "idle";
+  hydrationInFlight = null;
+  publishSyncStatus(createIdleSyncStatus());
 }
 
 function createNoopPort(): UserPreferencesClientPort {
   return {
     getCached: () => ({}),
     hydrate: () => Promise.resolve({}),
-    persistPatch: () => {
-      // no-op until a real adapter is installed
-    }
+    persistPatch: () => Promise.resolve()
   };
+}
+
+function publishSyncStatus(next: UserPreferencesSyncStatus): void {
+  if (syncStatus.loadError === next.loadError && syncStatus.saveError === next.saveError) {
+    return;
+  }
+  syncStatus = next;
+  syncStatusListeners.forEach((listener) => listener());
+}
+
+function createIdleSyncStatus(): UserPreferencesSyncStatus {
+  return { loadError: null, saveError: null };
+}
+
+function publishSaveError(error: unknown): void {
+  publishSyncStatus({
+    ...syncStatus,
+    saveError: toApplicationMessage(error, "save")
+  });
+}
+
+function toApplicationMessage(error: unknown, operation: "load" | "save"): string {
+  if (error instanceof UserPreferencesClientError) {
+    return error.message;
+  }
+  return operation === "load"
+    ? "Settings could not be loaded. Local browser settings are being used."
+    : "Settings could not be saved permanently. Your changes remain available in this browser.";
 }

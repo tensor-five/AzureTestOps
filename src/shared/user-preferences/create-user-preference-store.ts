@@ -1,6 +1,7 @@
 import {
   getCachedUserPreferences,
   hydrateUserPreferences,
+  isUserPreferencesCacheAuthoritative,
   persistUserPreferencesPatch
 } from "./user-preferences.client.js";
 import type { UserPreferences } from "./user-preferences.schema.js";
@@ -104,6 +105,17 @@ export function createUserPreferenceStore<T>(
     }
   };
 
+  const removeFromLocalStorage = (scopeKey: string | null): void => {
+    if (!isLocalStorageAvailable()) {
+      return;
+    }
+    try {
+      globalThis.localStorage.removeItem(resolveStorageKey(scopeKey));
+    } catch {
+      // localStorage unavailable — skip cleanup
+    }
+  };
+
   const load = (scope?: UserPreferenceStoreScope): T | null => {
     const scopeKey = normalizeScopeKey(scope);
     const memoryScopeKey = toMemoryScopeKey(scopeKey);
@@ -115,6 +127,12 @@ export function createUserPreferenceStore<T>(
       memoryValues.set(memoryScopeKey, fromCache);
       writeToLocalStorage(fromCache, scopeKey);
       return fromCache;
+    }
+
+    if (isUserPreferencesCacheAuthoritative()) {
+      memoryValues.delete(memoryScopeKey);
+      removeFromLocalStorage(scopeKey);
+      return null;
     }
 
     const fromStorage = readFromLocalStorage(scopeKey);
@@ -154,6 +172,10 @@ export function createUserPreferenceStore<T>(
     void hydrateUserPreferences().then((preferences) => {
       const value = config.sanitize(config.readFromServerCache(preferences, scopeKey));
       if (value === null) {
+        if (isUserPreferencesCacheAuthoritative()) {
+          memoryValues.delete(memoryScopeKey);
+          removeFromLocalStorage(scopeKey);
+        }
         return;
       }
       memoryValues.set(memoryScopeKey, value);

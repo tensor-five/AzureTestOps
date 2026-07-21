@@ -14,6 +14,12 @@ const KEY_SEPARATOR = "::";
  */
 export type SnapshotRelationIndex = ReadonlySet<string>;
 
+export type RelationAdjacencyIndex = {
+  relationKeys: ReadonlySet<string>;
+  workItemIdsByTestCaseId: ReadonlyMap<number, ReadonlySet<number>>;
+  testCaseIdsByWorkItemId: ReadonlyMap<number, ReadonlySet<number>>;
+};
+
 export function buildSnapshotRelationIndex(
   projections: readonly TestCaseProjection[],
   workItems: readonly WorkItem[]
@@ -51,6 +57,69 @@ export function buildSnapshotRelationIndex(
 
 export function snapshotRelationKey(testCaseId: number, workItemId: number): string {
   return `${testCaseId}${KEY_SEPARATOR}${workItemId}`;
+}
+
+/**
+ * Materializes both directions of an already validated relation-key set.
+ * Consumers can then answer summary, filter and line-rendering queries in
+ * O(items + relations) instead of repeatedly scanning the Cartesian product
+ * of Test Cases and Work Items.
+ */
+export function buildRelationAdjacencyIndex(
+  relationKeys: ReadonlySet<string>
+): RelationAdjacencyIndex {
+  const normalizedKeys = new Set<string>();
+  const workItemIdsByTestCaseId = new Map<number, Set<number>>();
+  const testCaseIdsByWorkItemId = new Map<number, Set<number>>();
+
+  for (const key of relationKeys) {
+    const pair = parseSnapshotRelationKey(key);
+    if (!pair) {
+      continue;
+    }
+    const normalizedKey = snapshotRelationKey(pair.testCaseId, pair.workItemId);
+    normalizedKeys.add(normalizedKey);
+    addToIndex(workItemIdsByTestCaseId, pair.testCaseId, pair.workItemId);
+    addToIndex(testCaseIdsByWorkItemId, pair.workItemId, pair.testCaseId);
+  }
+
+  return {
+    relationKeys: normalizedKeys,
+    workItemIdsByTestCaseId,
+    testCaseIdsByWorkItemId
+  };
+}
+
+function parseSnapshotRelationKey(
+  key: string
+): { testCaseId: number; workItemId: number } | null {
+  const [rawTestCaseId, rawWorkItemId, ...rest] = key.split(KEY_SEPARATOR);
+  if (rest.length > 0) {
+    return null;
+  }
+  const testCaseId = Number(rawTestCaseId);
+  const workItemId = Number(rawWorkItemId);
+  if (!isPositiveInteger(testCaseId) || !isPositiveInteger(workItemId)) {
+    return null;
+  }
+  return { testCaseId, workItemId };
+}
+
+function addToIndex(
+  index: Map<number, Set<number>>,
+  sourceId: number,
+  targetId: number
+): void {
+  const current = index.get(sourceId);
+  if (current) {
+    current.add(targetId);
+    return;
+  }
+  index.set(sourceId, new Set([targetId]));
+}
+
+function isPositiveInteger(value: number): boolean {
+  return Number.isInteger(value) && value > 0;
 }
 
 /**

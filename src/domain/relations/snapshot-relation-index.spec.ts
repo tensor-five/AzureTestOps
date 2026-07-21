@@ -4,10 +4,30 @@ import type { TestCaseProjection } from "../test-management/test-case-projection
 import type { WorkItem } from "../work-items/work-item.js";
 
 import {
+  buildRelationAdjacencyIndex,
   buildSnapshotRelationIndex,
   isRelationLinkedInSnapshot,
   snapshotRelationKey
 } from "./snapshot-relation-index.js";
+
+describe("buildRelationAdjacencyIndex", () => {
+  it("indexes valid relation keys in both directions and ignores malformed keys", () => {
+    const index = buildRelationAdjacencyIndex(new Set([
+      snapshotRelationKey(1, 1000),
+      snapshotRelationKey(1, 1001),
+      snapshotRelationKey(2, 1000),
+      "invalid"
+    ]));
+
+    expect(index.relationKeys).toEqual(new Set([
+      snapshotRelationKey(1, 1000),
+      snapshotRelationKey(1, 1001),
+      snapshotRelationKey(2, 1000)
+    ]));
+    expect(index.workItemIdsByTestCaseId.get(1)).toEqual(new Set([1000, 1001]));
+    expect(index.testCaseIdsByWorkItemId.get(1000)).toEqual(new Set([1, 2]));
+  });
+});
 
 function makeProjection(
   overrides: Partial<TestCaseProjection> = {}

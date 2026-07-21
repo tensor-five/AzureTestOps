@@ -106,10 +106,13 @@ describe("useWorkItemOrder", () => {
     });
 
     const harness = setupHookHarness(() => useWorkItemOrder("set-1"));
+    const revisionBeforeMove = harness.result.current.layoutRevision;
 
     act(() => {
-      harness.result.current.move(503, 501, "before");
+      harness.result.current.move(503, 501, "before", [501, 502, 503]);
     });
+
+    expect(harness.result.current.layoutRevision).toBeGreaterThan(revisionBeforeMove);
 
     expect(persistSpy).toHaveBeenCalledWith({
       setLayouts: { "set-1": { workItemOrder: [503, 501, 502] } }
@@ -133,7 +136,7 @@ describe("useWorkItemOrder", () => {
     const harness = setupHookHarness(() => useWorkItemOrder("set-1"));
 
     act(() => {
-      harness.result.current.move(501, 503, "after");
+      harness.result.current.move(501, 503, "after", [501, 502, 503]);
     });
 
     expect(persistSpy).toHaveBeenLastCalledWith({
@@ -156,7 +159,7 @@ describe("useWorkItemOrder", () => {
     const harness = setupHookHarness(() => useWorkItemOrder("set-1"));
 
     act(() => {
-      harness.result.current.move(502, 501, "before");
+      harness.result.current.move(502, 501, "before", [501, 502]);
     });
 
     expect(persistSpy).toHaveBeenCalledWith({
@@ -175,11 +178,11 @@ describe("useWorkItemOrder", () => {
     const harness = setupHookHarness(() => useWorkItemOrder("set-1"));
 
     act(() => {
-      harness.result.current.move(503, 501, "before");
+      harness.result.current.move(503, 501, "before", [501, 502, 503]);
     });
 
     expect(persistSpy).toHaveBeenCalledWith({
-      setLayouts: { "set-1": { workItemOrder: [503, 501] } }
+      setLayouts: { "set-1": { workItemOrder: [503, 501, 502] } }
     });
 
     harness.unmount();
@@ -193,7 +196,7 @@ describe("useWorkItemOrder", () => {
     const harness = setupHookHarness(() => useWorkItemOrder("set-1"));
 
     act(() => {
-      harness.result.current.move(501, 501, "before");
+      harness.result.current.move(501, 501, "before", [501, 502]);
     });
 
     expect(persistSpy).not.toHaveBeenCalled();
@@ -205,11 +208,59 @@ describe("useWorkItemOrder", () => {
     const harness = setupHookHarness(() => useWorkItemOrder(null));
 
     act(() => {
-      harness.result.current.move(1, 2, "after");
+      harness.result.current.move(1, 2, "after", [1, 2]);
     });
 
     expect(persistSpy).not.toHaveBeenCalled();
 
     harness.unmount();
   });
+
+  it("persists the complete natural sequence for a long jump from position 2 to 8", () => {
+    const harness = setupHookHarness(() => useWorkItemOrder("set-1"));
+
+    act(() => {
+      harness.result.current.move(2, 8, "after", [1, 2, 3, 4, 5, 6, 7, 8]);
+    });
+
+    expect(persistSpy).toHaveBeenCalledWith({
+      setLayouts: { "set-1": { workItemOrder: [1, 3, 4, 5, 6, 7, 8, 2] } }
+    });
+
+    harness.unmount();
+  });
+
+  it("persists a long jump from position 2 exactly before position 8", () => {
+    const harness = setupHookHarness(() => useWorkItemOrder("set-1"));
+
+    act(() => {
+      harness.result.current.move(2, 8, "before", [1, 2, 3, 4, 5, 6, 7, 8]);
+    });
+
+    expect(persistSpy).toHaveBeenCalledWith({
+      setLayouts: { "set-1": { workItemOrder: [1, 3, 4, 5, 6, 7, 2, 8] } }
+    });
+
+    harness.unmount();
+  });
+
+  it.each([
+    ["before", [1, 8, 2, 3, 4, 5, 6, 7]],
+    ["after", [1, 2, 8, 3, 4, 5, 6, 7]]
+  ] as const)(
+    "persists a long backwards move from position 8 to position 2 using the %s edge",
+    (edge, expected) => {
+      const harness = setupHookHarness(() => useWorkItemOrder("set-1"));
+
+      act(() => {
+        harness.result.current.move(8, 2, edge, [1, 2, 3, 4, 5, 6, 7, 8]);
+      });
+
+      expect(persistSpy).toHaveBeenCalledWith({
+        setLayouts: { "set-1": { workItemOrder: expected } }
+      });
+
+      harness.unmount();
+    }
+  );
 });

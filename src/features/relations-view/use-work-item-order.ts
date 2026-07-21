@@ -1,5 +1,10 @@
 import * as React from "react";
 
+import {
+  materializeItemOrder,
+  moveItemInOrder,
+  type ItemOrderEdge
+} from "./item-order.js";
 import { setLayoutPreferenceStore } from "./set-layout-preference-store.js";
 import type { SetLayoutPreference } from "../../shared/user-preferences/user-preferences.client.js";
 
@@ -12,10 +17,20 @@ export type WorkItemOrderApi = {
   sortByStoredOrder<T extends { id: number }>(items: readonly T[]): T[];
   /**
    * Move `draggedId` immediately before or after `targetId` in the persisted
-   * order. Both ids are added to the order if they aren't yet tracked, so a
-   * drag onto a never-reordered item still produces a stable sequence.
+   * order. `naturalIds` contains the complete unfiltered snapshot order so
+   * the persisted result remains stable across filters and long jumps.
    */
-  move(draggedId: number, targetId: number, edge: "before" | "after"): void;
+  move(
+    draggedId: number,
+    targetId: number,
+    edge: ItemOrderEdge,
+    naturalIds: readonly number[]
+  ): void;
+};
+
+export type WorkItemOrderState = WorkItemOrderApi & {
+  /** Monotonic signal for DOM consumers whose geometry changes after reorder. */
+  layoutRevision: number;
 };
 
 /**
@@ -24,11 +39,16 @@ export type WorkItemOrderApi = {
  * fields share a single `setLayouts[setId]` record without clobbering each
  * other.
  */
-export function useWorkItemOrder(setId: string | null): WorkItemOrderApi {
+export function useWorkItemOrder(setId: string | null): WorkItemOrderState {
   const [order, setOrder] = React.useState<readonly number[]>(() => seedFromPreferences(setId));
+  const [layoutRevision, bumpLayoutRevision] = React.useReducer(
+    (current: number) => current + 1,
+    0
+  );
 
   React.useEffect(() => {
     setOrder(seedFromPreferences(setId));
+    bumpLayoutRevision();
   }, [setId]);
 
   const persist = React.useCallback(
@@ -47,57 +67,40 @@ export function useWorkItemOrder(setId: string | null): WorkItemOrderApi {
   );
 
   const move = React.useCallback(
-    (draggedId: number, targetId: number, edge: "before" | "after") => {
+    (
+      draggedId: number,
+      targetId: number,
+      edge: ItemOrderEdge,
+      naturalIds: readonly number[]
+    ) => {
       if (draggedId === targetId) {
         return;
       }
       setOrder((current) => {
-        const next = current.slice();
-        const draggedIndex = next.indexOf(draggedId);
-        if (draggedIndex !== -1) {
-          next.splice(draggedIndex, 1);
-        }
-        let targetIndex = next.indexOf(targetId);
-        if (targetIndex === -1) {
-          next.push(targetId);
-          targetIndex = next.length - 1;
-        }
-        const insertAt = edge === "after" ? targetIndex + 1 : targetIndex;
-        next.splice(insertAt, 0, draggedId);
+        const next = moveItemInOrder(current, naturalIds, draggedId, targetId, edge);
         persist(next);
         return next;
       });
+      bumpLayoutRevision();
     },
     [persist]
   );
 
   const sortByStoredOrder = React.useCallback(
     <T extends { id: number }>(items: readonly T[]): T[] => {
-      if (order.length === 0) {
-        return items.slice();
-      }
+      const completeOrder = materializeItemOrder(order, items.map((item) => item.id));
       const orderIndex = new Map<number, number>();
-      order.forEach((id, idx) => orderIndex.set(id, idx));
-      const known: T[] = [];
-      const unknown: T[] = [];
-      for (const item of items) {
-        if (orderIndex.has(item.id)) {
-          known.push(item);
-        } else {
-          unknown.push(item);
-        }
-      }
-      known.sort((a, b) => {
+      completeOrder.forEach((id, idx) => orderIndex.set(id, idx));
+      return items.slice().sort((a, b) => {
         const ai = orderIndex.get(a.id) ?? 0;
         const bi = orderIndex.get(b.id) ?? 0;
         return ai - bi;
       });
-      return [...known, ...unknown];
     },
     [order]
   );
 
-  return { sortByStoredOrder, move };
+  return { sortByStoredOrder, move, layoutRevision };
 }
 
 function seedFromPreferences(setId: string | null): readonly number[] {

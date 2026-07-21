@@ -60,7 +60,7 @@ export function buildClientPortsStub(overrides: Partial<ClientPorts> = {}): Clie
     userPreferences: {
       getCached: () => ({}),
       hydrate: () => Promise.resolve({}),
-      persistPatch: () => undefined,
+      persistPatch: () => Promise.resolve(),
       ...overrides.userPreferences
     },
     workItemDeepLink: {

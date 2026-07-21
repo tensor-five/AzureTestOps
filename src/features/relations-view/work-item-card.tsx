@@ -1,6 +1,7 @@
 import * as React from "react";
 
 import type { WorkItem } from "../../domain/work-items/work-item.js";
+import { HighlightedText } from "../../shared/search/highlighted-text.js";
 import { workItemItemKey } from "./item-key.js";
 
 export type WorkItemCardProps = {
@@ -8,6 +9,7 @@ export type WorkItemCardProps = {
   onLinePointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
   /** Resolves the Azure DevOps deep link for a work item id, or null if unavailable. */
   getWorkItemHref?: (workItemId: number) => string | null;
+  highlightQuery?: string;
 };
 
 export function WorkItemCard(props: WorkItemCardProps): React.ReactElement {
@@ -73,7 +75,9 @@ export function WorkItemCard(props: WorkItemCardProps): React.ReactElement {
       >
         {stateLabel || "—"}
       </span>
-      <span className="relations-view-card-title">{workItem.title}</span>
+      <span className="relations-view-card-title">
+        <HighlightedText text={workItem.title} query={props.highlightQuery} />
+      </span>
     </article>
   );
 }

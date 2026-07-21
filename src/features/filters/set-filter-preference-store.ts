@@ -1,9 +1,11 @@
 import { createUserPreferenceStore } from "../../shared/user-preferences/create-user-preference-store.js";
-import type {
-  SetFilterPreference,
-  TestCaseColumnFilterPreference,
-  UserPreferences,
-  WorkItemColumnFilterPreference
+import {
+  sanitizeUserPreferences,
+  type RelationVisibilityPreference,
+  type SetFilterPreference,
+  type TestCaseColumnFilterPreference,
+  type UserPreferences,
+  type WorkItemColumnFilterPreference
 } from "../../shared/user-preferences/user-preferences.schema.js";
 
 const SET_FILTER_STORAGE_KEY = "azure-testops.set-filters.v1";
@@ -32,7 +34,12 @@ export const setFilterPreferenceStore = createUserPreferenceStore<SetFilterPrefe
     if (!scopeKey) {
       return {};
     }
-    return { setFilters: { [scopeKey]: value } } satisfies Partial<UserPreferences>;
+    const sanitized = sanitizeUserPreferences({
+      setFilters: { [scopeKey]: value }
+    }).setFilters?.[scopeKey];
+    return {
+      setFilters: { [scopeKey]: sanitized ?? {} }
+    } satisfies Partial<UserPreferences>;
   }
 });
 
@@ -51,6 +58,10 @@ function sanitizeSetFilterInput(value: unknown): SetFilterPreference | null {
   return next;
 }
 
+function sanitizeRelationVisibility(value: unknown): RelationVisibilityPreference | null {
+  return value === "all" || value === "linked" || value === "unlinked" ? value : null;
+}
+
 function sanitizeTestCaseColumn(value: Record<string, unknown>): TestCaseColumnFilterPreference {
   const next: TestCaseColumnFilterPreference = {};
   applyTitleQuery(next, value.titleQuery);
@@ -59,6 +70,10 @@ function sanitizeTestCaseColumn(value: Record<string, unknown>): TestCaseColumnF
   applyStringList(next, "assignedTo", value.assignedTo);
   applyStringList(next, "tags", value.tags);
   applyStringList(next, "workItemTypes", value.workItemTypes);
+  const relationVisibility = sanitizeRelationVisibility(value.relationVisibility);
+  if (relationVisibility) {
+    next.relationVisibility = relationVisibility;
+  }
   return next;
 }
 
@@ -69,6 +84,13 @@ function sanitizeWorkItemColumn(value: Record<string, unknown>): WorkItemColumnF
   applyStringList(next, "assignedTo", value.assignedTo);
   applyStringList(next, "tags", value.tags);
   applyStringList(next, "workItemTypes", value.workItemTypes);
+  const relationVisibility = sanitizeRelationVisibility(value.relationVisibility);
+  if (relationVisibility) {
+    next.relationVisibility = relationVisibility;
+  }
+  if (typeof value.openBugsOnly === "boolean") {
+    next.openBugsOnly = value.openBugsOnly;
+  }
   return next;
 }
 

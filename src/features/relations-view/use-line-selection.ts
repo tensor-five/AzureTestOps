@@ -7,6 +7,8 @@ export type LineSelectionApi = {
 };
 
 export type UseLineSelectionDeps = {
+  /** Line ids currently rendered and therefore safe to select or delete. */
+  visibleLineIds: ReadonlySet<string>;
   /**
    * Invoked when the user presses Delete/Backspace while a line is selected.
    * Receives the currently selected line id; the consumer is responsible for
@@ -42,6 +44,15 @@ export function useLineSelection(deps: UseLineSelectionDeps): LineSelectionApi {
   const selectedLineIdRef = React.useRef(selectedLineId);
   selectedLineIdRef.current = selectedLineId;
 
+  const visibleLineIdsRef = React.useRef(deps.visibleLineIds);
+  visibleLineIdsRef.current = deps.visibleLineIds;
+
+  React.useEffect(() => {
+    setSelectedLineId((current) =>
+      current && !deps.visibleLineIds.has(current) ? null : current
+    );
+  }, [deps.visibleLineIds]);
+
   React.useEffect(() => {
     if (!deps.enabled) {
       return undefined;
@@ -65,6 +76,10 @@ export function useLineSelection(deps: UseLineSelectionDeps): LineSelectionApi {
       if (!id) {
         return;
       }
+      if (!visibleLineIdsRef.current.has(id)) {
+        setSelectedLineId(null);
+        return;
+      }
       event.preventDefault();
       onDeleteRequestedRef.current(id);
     };
@@ -74,8 +89,8 @@ export function useLineSelection(deps: UseLineSelectionDeps): LineSelectionApi {
   }, [deps.enabled]);
 
   const selectLine = React.useCallback((lineId: string | null) => {
-    setSelectedLineId(lineId);
-  }, []);
+    setSelectedLineId(lineId && deps.visibleLineIds.has(lineId) ? lineId : null);
+  }, [deps.visibleLineIds]);
 
   const clearSelection = React.useCallback(() => {
     setSelectedLineId(null);

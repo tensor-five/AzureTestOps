@@ -1,7 +1,8 @@
 import type { ActiveSetSnapshot } from "../../application/dto/active-set-snapshot.dto.js";
 import {
   buildSnapshotRelationIndex,
-  snapshotRelationKey
+  snapshotRelationKey,
+  type RelationAdjacencyIndex
 } from "../../domain/relations/snapshot-relation-index.js";
 import type { TestCaseProjection } from "../../domain/test-management/test-case-projection.js";
 import type { WorkItem } from "../../domain/work-items/work-item.js";
@@ -21,7 +22,7 @@ import type { LineSpec } from "./relation-line-layer.js";
 const LINE_ID_SEPARATOR = "->";
 
 export type RelationStatusReader = {
-  isRelated: (testCaseId: number, workItemId: number) => boolean;
+  relationIndex: RelationAdjacencyIndex;
   isPending: (testCaseId: number, workItemId: number) => boolean;
 };
 
@@ -54,14 +55,20 @@ export function buildLineSpecs(
   workItems: readonly WorkItem[],
   mutations: RelationStatusReader
 ): LineSpec[] {
-  const workItemIds = workItems.map((wi) => wi.id);
+  const visibleWorkItemIds = new Set(workItems.map((workItem) => workItem.id));
   const seenLineIds = new Set<string>();
   const out: LineSpec[] = [];
 
   for (const projection of projections) {
     const tcKey = testCaseItemKey(projection.workItemId, projection.suiteId);
-    for (const wiId of workItemIds) {
-      if (!mutations.isRelated(projection.workItemId, wiId)) {
+    const relatedWorkItemIds = mutations.relationIndex.workItemIdsByTestCaseId.get(
+      projection.workItemId
+    );
+    if (!relatedWorkItemIds) {
+      continue;
+    }
+    for (const wiId of relatedWorkItemIds) {
+      if (!visibleWorkItemIds.has(wiId)) {
         continue;
       }
       const wiKey = workItemItemKey(wiId);

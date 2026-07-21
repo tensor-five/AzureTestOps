@@ -85,7 +85,7 @@ describe("useSuiteCollapse", () => {
 
     expect(harness.result.current.isCollapsed(7)).toBe(false);
     expect(persistSpy).toHaveBeenLastCalledWith({
-      setLayouts: { "set-1": { collapsedSuites: [] } }
+      setLayouts: { "set-1": {} }
     });
 
     harness.unmount();
@@ -127,6 +127,24 @@ describe("useSuiteCollapse", () => {
     });
 
     expect(persistSpy).not.toHaveBeenCalled();
+
+    harness.unmount();
+  });
+
+  it("collapses a supplied suite set and expands all with one persisted update each", () => {
+    const harness = setupHookHarness(() => useSuiteCollapse("set-1"));
+
+    act(() => harness.result.current.collapseAll([7, 8, 8, -1]));
+    expect([...harness.result.current.collapsedSuiteIds]).toEqual(["7", "8"]);
+    expect(persistSpy).toHaveBeenLastCalledWith({
+      setLayouts: { "set-1": { collapsedSuites: ["7", "8"] } }
+    });
+
+    act(() => harness.result.current.expandAll());
+    expect(harness.result.current.collapsedSuiteIds.size).toBe(0);
+    expect(persistSpy).toHaveBeenLastCalledWith({
+      setLayouts: { "set-1": {} }
+    });
 
     harness.unmount();
   });

@@ -11,6 +11,7 @@ import {
   sanitizeUserPreferences,
   type UserPreferences
 } from "../../shared/user-preferences/user-preferences.schema.js";
+import { sanitizeKeyedPreferencePatch } from "../../shared/user-preferences/keyed-preference-patch.js";
 import type { AdoContextPort, AdoContext } from "../../application/ports/ado-context.port.js";
 import type {
   AuthPreflightPort,
@@ -334,7 +335,22 @@ function parseUserPreferencesPatch(payload: unknown): UserPreferences | null {
   if (!candidate.preferences || typeof candidate.preferences !== "object") {
     return null;
   }
-  return sanitizeUserPreferences(candidate.preferences);
+  const sanitized = sanitizeUserPreferences(candidate.preferences);
+  const layoutPatch = sanitizeKeyedPreferencePatch(
+    candidate.preferences,
+    "setLayouts",
+    sanitized.setLayouts
+  );
+  const filterPatch = sanitizeKeyedPreferencePatch(
+    candidate.preferences,
+    "setFilters",
+    sanitized.setFilters
+  );
+  return {
+    ...sanitized,
+    setLayouts: layoutPatch.values,
+    setFilters: filterPatch.values
+  };
 }
 
 async function readPreflightContextFromAdo(adoContext: AdoContextPort): Promise<PreflightContext> {

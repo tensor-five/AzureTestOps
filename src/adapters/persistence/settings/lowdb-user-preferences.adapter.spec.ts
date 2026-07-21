@@ -141,6 +141,25 @@ describe("LowdbUserPreferencesAdapter", () => {
     });
   });
 
+  it("does not delete keyed preferences for invalid or unknown non-empty values", async () => {
+    const adapter = new LowdbUserPreferencesAdapter(filePath, "alice");
+    await adapter.mergePreferences({
+      setLayouts: { "set-1": { workItemOrder: [1, 2] } },
+      setFilters: { "set-1": { workItems: { states: ["Active"] } } }
+    });
+
+    await adapter.mergePreferences({
+      setLayouts: { "set-1": { version: 2 } as never },
+      setFilters: { "set-1": { workItems: { states: "future" } } as never }
+    });
+
+    const current = await adapter.getPreferences();
+    expect(current.setLayouts).toEqual({ "set-1": { workItemOrder: [1, 2] } });
+    expect(current.setFilters).toEqual({
+      "set-1": { workItems: { states: ["Active"] } }
+    });
+  });
+
   it("treats a patch without setLayouts/setFilters as no-op for those scopes", async () => {
     const adapter = new LowdbUserPreferencesAdapter(filePath, "alice");
 

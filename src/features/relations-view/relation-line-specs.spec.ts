@@ -10,6 +10,7 @@ import {
 import type { ActiveSetSnapshot } from "../../application/dto/active-set-snapshot.dto.js";
 import type { TestCaseProjection } from "../../domain/test-management/test-case-projection.js";
 import type { WorkItem } from "../../domain/work-items/work-item.js";
+import { buildRelationAdjacencyIndex } from "../../domain/relations/snapshot-relation-index.js";
 
 function makeProjection(overrides: Partial<TestCaseProjection> = {}): TestCaseProjection {
   return {
@@ -87,7 +88,7 @@ describe("buildSnapshotRelationSet", () => {
 
 describe("buildLineSpecs", () => {
   const reader = (related: ReadonlySet<string>, pending: ReadonlySet<string> = new Set()): RelationStatusReader => ({
-    isRelated: (tcId, wiId) => related.has(`${tcId}::${wiId}`),
+    relationIndex: buildRelationAdjacencyIndex(related),
     isPending: (tcId, wiId) => pending.has(`${tcId}::${wiId}`)
   });
 

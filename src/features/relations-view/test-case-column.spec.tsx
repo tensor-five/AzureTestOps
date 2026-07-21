@@ -71,11 +71,17 @@ function makeCollapse(collapsedIds: number[]): SuiteCollapseApi {
   return {
     collapsedSuiteIds: set,
     isCollapsed: (id) => set.has(String(id)),
-    toggle: () => {}
+    toggle: () => {},
+    collapseAll: () => {},
+    expandAll: () => {}
   };
 }
 
-function render(ui: React.ReactElement): { container: HTMLDivElement; unmount(): void } {
+function render(ui: React.ReactElement): {
+  container: HTMLDivElement;
+  rerender(next: React.ReactElement): void;
+  unmount(): void;
+} {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -84,6 +90,11 @@ function render(ui: React.ReactElement): { container: HTMLDivElement; unmount():
   });
   return {
     container,
+    rerender: (next) => {
+      act(() => {
+        root.render(next);
+      });
+    },
     unmount: () => {
       act(() => {
         root.unmount();
@@ -143,6 +154,56 @@ describe("TestCaseColumn", () => {
     harness.unmount();
   });
 
+  it("allows a populated leaf suite to toggle its persisted collapsed state", () => {
+    const toggle = vi.fn();
+    const collapse: SuiteCollapseApi = {
+      ...makeCollapse([3]),
+      toggle
+    };
+    const harness = render(
+      <TestCaseColumn
+        suiteTree={tree()}
+        projections={[projection(101, 3, "Auth case")]}
+        unfilteredCount={1}
+        collapse={collapse}
+      />
+    );
+    const leafToggle = harness.container.querySelector<HTMLButtonElement>(
+      '.relations-view-suite-toggle[data-suite-id="3"]'
+    )!;
+
+    expect(leafToggle.getAttribute("aria-expanded")).toBe("false");
+    expect(harness.container.querySelector('[data-suite-cards][data-suite-id="3"]')).toBeNull();
+    act(() => leafToggle.click());
+    expect(toggle).toHaveBeenCalledWith(3);
+
+    harness.unmount();
+  });
+
+  it("collapses branches, root and populated leaves while skipping empty leaves", () => {
+    const collapseAll = vi.fn();
+    const collapse: SuiteCollapseApi = {
+      ...makeCollapse([]),
+      collapseAll
+    };
+    const harness = render(
+      <TestCaseColumn
+        suiteTree={tree()}
+        projections={[projection(101, 3, "Auth case")]}
+        unfilteredCount={1}
+        collapse={collapse}
+      />
+    );
+
+    const collapseButton = [...harness.container.querySelectorAll<HTMLButtonElement>(
+      ".relations-view-suite-toolbar button"
+    )].find((button) => button.textContent === "Collapse all")!;
+    act(() => collapseButton.click());
+
+    expect(collapseAll).toHaveBeenCalledWith([1, 2, 3]);
+    harness.unmount();
+  });
+
   it("renders an empty state when there are no projections", () => {
     const harness = render(
       <TestCaseColumn
@@ -180,6 +241,120 @@ describe("TestCaseColumn", () => {
     );
     expect(links[2].getAttribute("aria-label")).toContain("suite Auth");
 
+    harness.unmount();
+  });
+
+  it("hides empty branches while retaining the populated suite hierarchy", () => {
+    const authCase = projection(101, 3, "Auth case");
+    const harness = render(
+      <TestCaseColumn
+        suiteTree={tree()}
+        projections={[authCase]}
+        allProjections={[authCase]}
+        unfilteredCount={1}
+        collapse={makeCollapse([])}
+        hideEmptySuites
+      />
+    );
+
+    const suiteNames = [...harness.container.querySelectorAll(".relations-view-suite-name")]
+      .map((node) => node.textContent);
+    expect(suiteNames).toEqual(["Root", "API", "Auth"]);
+    harness.unmount();
+  });
+
+  it("reveals collapsed search matches, highlights them and supports suite focus", () => {
+    const onFocusSuite = vi.fn();
+    const harness = render(
+      <TestCaseColumn
+        suiteTree={tree()}
+        projections={[projection(101, 3, "Auth login") ]}
+        unfilteredCount={1}
+        collapse={makeCollapse([2])}
+        searchQuery="auth"
+        onFocusSuite={onFocusSuite}
+      />
+    );
+
+    expect(harness.container.querySelector("mark")?.textContent).toBe("Auth");
+    const focusButton = harness.container.querySelector<HTMLButtonElement>(
+      'button[aria-label="Focus suite Auth"]'
+    )!;
+    act(() => focusButton.click());
+    expect(onFocusSuite).toHaveBeenCalledWith(3);
+    expect(harness.container.querySelectorAll(".relations-view-card-test-case")).toHaveLength(1);
+    harness.unmount();
+  });
+
+  it("focuses a populated suite branch including descendant suites", () => {
+    const onFocusSuite = vi.fn();
+    const harness = render(
+      <TestCaseColumn
+        suiteTree={tree()}
+        projections={[projection(101, 3, "Auth case")]}
+        unfilteredCount={1}
+        collapse={makeCollapse([])}
+        focusedSuiteId={1}
+        focusedSuiteIds={new Set([1, 2, 3])}
+        onFocusSuite={onFocusSuite}
+      />
+    );
+
+    const rootFocus = harness.container.querySelector<HTMLButtonElement>(
+      'button[aria-label="Clear focus from suite Root"]'
+    )!;
+    expect(rootFocus).not.toBeNull();
+    expect(
+      harness.container.querySelector('.relations-view-suite[data-suite-depth="2"]')
+        ?.classList.contains("relations-view-suite-dimmed")
+    ).toBe(false);
+    act(() => rootFocus.click());
+    expect(onFocusSuite).toHaveBeenCalledWith(null);
+
+    harness.unmount();
+  });
+
+  it("invokes explorer controls and exposes keyboard tree navigation", () => {
+    const collapseAll = vi.fn();
+    const expandAll = vi.fn();
+    const onHideEmptySuitesChange = vi.fn();
+    const collapse = { ...makeCollapse([]), collapseAll, expandAll };
+    const harness = render(
+      <TestCaseColumn
+        suiteTree={tree()}
+        projections={[projection(101, 3, "Auth case")]}
+        unfilteredCount={1}
+        collapse={collapse}
+        onHideEmptySuitesChange={onHideEmptySuitesChange}
+      />
+    );
+
+    const buttons = [...harness.container.querySelectorAll<HTMLButtonElement>(
+      ".relations-view-suite-toolbar button"
+    )];
+    act(() => buttons[0].click());
+    act(() => buttons[1].click());
+    expect(expandAll).toHaveBeenCalledTimes(1);
+    expect(collapseAll).toHaveBeenCalledWith([1, 2, 3]);
+
+    const checkbox = harness.container.querySelector<HTMLInputElement>(
+      ".relations-view-suite-hide-empty input"
+    )!;
+    act(() => checkbox.click());
+    expect(onHideEmptySuitesChange).toHaveBeenCalledWith(true);
+
+    const treeButtons = harness.container.querySelectorAll<HTMLButtonElement>(
+      ".relations-view-suite-toggle"
+    );
+    expect(harness.container.querySelector('[role="tree"]')).toBeNull();
+    expect(harness.container.querySelector('[role="treeitem"]')).toBeNull();
+    expect(treeButtons[0].getAttribute("aria-expanded")).toBe("true");
+    treeButtons[0].focus();
+    act(() => treeButtons[0].dispatchEvent(new KeyboardEvent("keydown", {
+      key: "ArrowDown",
+      bubbles: true
+    })));
+    expect(document.activeElement).toBe(treeButtons[1]);
     harness.unmount();
   });
 });
@@ -284,7 +459,7 @@ describe("TestCaseColumn drag-and-drop reorder", () => {
     );
 
     const suiteContainer = harness.container.querySelector<HTMLDivElement>(
-      `[data-suite-id="3"]`
+      `[data-suite-cards][data-suite-id="3"]`
     )!;
     const rows = suiteContainer.querySelectorAll<HTMLElement>("[data-test-case-id]");
     expect(rows.length).toBe(3);
@@ -309,7 +484,7 @@ describe("TestCaseColumn drag-and-drop reorder", () => {
     act(() => {
       fireDrag(suiteContainer, "drop", { dataTransfer: dt, clientY: 5 });
     });
-    expect(move).toHaveBeenCalledWith(3, 103, 101, "before");
+    expect(move).toHaveBeenCalledWith(3, 103, 101, "before", [101, 102, 103]);
 
     harness.unmount();
   });
@@ -335,10 +510,10 @@ describe("TestCaseColumn drag-and-drop reorder", () => {
     );
 
     const suite3 = harness.container.querySelector<HTMLDivElement>(
-      `[data-suite-id="3"]`
+      `[data-suite-cards][data-suite-id="3"]`
     )!;
     const suite4 = harness.container.querySelector<HTMLDivElement>(
-      `[data-suite-id="4"]`
+      `[data-suite-cards][data-suite-id="4"]`
     )!;
     const rowSuite3 = suite3.querySelector<HTMLElement>("[data-test-case-id]")!;
     const rowSuite4 = suite4.querySelector<HTMLElement>("[data-test-case-id]")!;
@@ -358,6 +533,229 @@ describe("TestCaseColumn drag-and-drop reorder", () => {
     expect(dropEvent.defaultPrevented).toBe(false);
     expect(move).not.toHaveBeenCalled();
     expect(rowSuite4.getAttribute("data-drop-edge")).toBeNull();
+
+    harness.unmount();
+  });
+
+  it("uses the last preview target and retains filtered-out cases in the suite order", () => {
+    const move = vi.fn();
+    const order: TestCaseOrderApi = {
+      sortByStoredOrder: (_suiteId, items) => items.slice(),
+      move
+    };
+    const allProjections = Array.from({ length: 8 }, (_, index) =>
+      projection(index + 1, 3, `Case ${index + 1}`)
+    );
+
+    const harness = render(
+      <TestCaseColumn
+        suiteTree={tree()}
+        projections={[allProjections[1], allProjections[7]]}
+        allProjections={allProjections}
+        unfilteredCount={8}
+        collapse={makeCollapse([])}
+        order={order}
+      />
+    );
+
+    const suiteContainer = harness.container.querySelector<HTMLDivElement>(
+      `[data-suite-cards][data-suite-id="3"]`
+    )!;
+    const rows = suiteContainer.querySelectorAll<HTMLElement>("[data-test-case-id]");
+    stubBounds(rows[0], 0, 30);
+    stubBounds(rows[1], 30, 30);
+    const handle = rows[0].querySelector<HTMLButtonElement>(
+      ".relations-view-drag-handle"
+    )!;
+    const dt = buildDataTransferStub();
+
+    act(() => {
+      fireDrag(handle, "dragstart", { dataTransfer: dt });
+      fireDrag(suiteContainer, "dragover", { dataTransfer: dt, clientY: 100 });
+    });
+    expect(rows[1].getAttribute("data-drop-edge")).toBe("after");
+
+    act(() => {
+      fireDrag(suiteContainer, "drop", { dataTransfer: dt, clientY: 0 });
+    });
+    expect(move).toHaveBeenCalledWith(3, 2, 8, "after", [1, 2, 3, 4, 5, 6, 7, 8]);
+
+    harness.unmount();
+  });
+
+  it("keeps an after target on the lower half of a filtered visible test case", () => {
+    const move = vi.fn();
+    const order: TestCaseOrderApi = {
+      sortByStoredOrder: (_suiteId, items) => items.slice(),
+      move
+    };
+    const allProjections = Array.from({ length: 8 }, (_, index) =>
+      projection(index + 1, 3, `Case ${index + 1}`)
+    );
+    const harness = render(
+      <TestCaseColumn
+        suiteTree={tree()}
+        projections={[allProjections[1], allProjections[7]]}
+        allProjections={allProjections}
+        unfilteredCount={8}
+        collapse={makeCollapse([])}
+        order={order}
+      />
+    );
+    const suiteContainer = harness.container.querySelector<HTMLDivElement>(
+      '[data-suite-cards][data-suite-id="3"]'
+    )!;
+    const rows = suiteContainer.querySelectorAll<HTMLElement>("[data-test-case-id]");
+    stubBounds(rows[0], 0, 30);
+    stubBounds(rows[1], 30, 30);
+    const dt = buildDataTransferStub();
+
+    act(() => {
+      fireDrag(rows[1].querySelector<HTMLElement>(".relations-view-drag-handle")!, "dragstart", {
+        dataTransfer: dt
+      });
+      fireDrag(suiteContainer, "dragover", { dataTransfer: dt, clientY: 25 });
+      fireDrag(suiteContainer, "drop", { dataTransfer: dt, clientY: 25 });
+    });
+
+    expect(move).toHaveBeenCalledWith(3, 8, 2, "after", [1, 2, 3, 4, 5, 6, 7, 8]);
+    harness.unmount();
+  });
+
+  it("invalidates the preview when its suite is collapsed before drop", () => {
+    const move = vi.fn();
+    const order: TestCaseOrderApi = {
+      sortByStoredOrder: (_suiteId, items) => items.slice(),
+      move
+    };
+    const projections = [projection(1, 3, "Case 1"), projection(2, 3, "Case 2")];
+    const renderColumn = (collapsed: number[]) => (
+      <TestCaseColumn
+        suiteTree={tree()}
+        projections={projections}
+        allProjections={projections}
+        unfilteredCount={2}
+        collapse={makeCollapse(collapsed)}
+        order={order}
+      />
+    );
+    const harness = render(renderColumn([]));
+    const initialContainer = harness.container.querySelector<HTMLDivElement>(
+      '[data-suite-cards][data-suite-id="3"]'
+    )!;
+    const rows = initialContainer.querySelectorAll<HTMLElement>("[data-test-case-id]");
+    stubBounds(rows[0], 0, 30);
+    stubBounds(rows[1], 30, 30);
+    const dt = buildDataTransferStub();
+
+    act(() => {
+      fireDrag(rows[0].querySelector<HTMLElement>(".relations-view-drag-handle")!, "dragstart", {
+        dataTransfer: dt
+      });
+      fireDrag(initialContainer, "dragover", { dataTransfer: dt, clientY: 55 });
+    });
+    expect(rows[1].getAttribute("data-drop-edge")).toBe("after");
+
+    harness.rerender(renderColumn([3]));
+    harness.rerender(renderColumn([]));
+    const currentContainer = harness.container.querySelector<HTMLDivElement>(
+      '[data-suite-cards][data-suite-id="3"]'
+    )!;
+    act(() => {
+      fireDrag(currentContainer, "drop", { dataTransfer: dt });
+    });
+
+    expect(move).not.toHaveBeenCalled();
+    harness.unmount();
+  });
+
+  it("rejects a preview target removed from the latest suite snapshot", () => {
+    const move = vi.fn();
+    const order: TestCaseOrderApi = {
+      sortByStoredOrder: (_suiteId, items) => items.slice(),
+      move
+    };
+    const visible = [projection(1, 3, "Case 1"), projection(2, 3, "Case 2")];
+    const harness = render(
+      <TestCaseColumn
+        suiteTree={tree()}
+        projections={visible}
+        allProjections={visible}
+        unfilteredCount={2}
+        collapse={makeCollapse([])}
+        order={order}
+      />
+    );
+    const suiteContainer = harness.container.querySelector<HTMLDivElement>(
+      '[data-suite-cards][data-suite-id="3"]'
+    )!;
+    const rows = suiteContainer.querySelectorAll<HTMLElement>("[data-test-case-id]");
+    stubBounds(rows[0], 0, 30);
+    stubBounds(rows[1], 30, 30);
+    const dt = buildDataTransferStub();
+    act(() => {
+      fireDrag(rows[0].querySelector<HTMLElement>(".relations-view-drag-handle")!, "dragstart", {
+        dataTransfer: dt
+      });
+      fireDrag(suiteContainer, "dragover", { dataTransfer: dt, clientY: 55 });
+    });
+
+    harness.rerender(
+      <TestCaseColumn
+        suiteTree={tree()}
+        projections={visible}
+        allProjections={[visible[0]]}
+        unfilteredCount={1}
+        collapse={makeCollapse([])}
+        order={order}
+      />
+    );
+    const currentContainer = harness.container.querySelector<HTMLDivElement>(
+      '[data-suite-cards][data-suite-id="3"]'
+    )!;
+    act(() => {
+      fireDrag(currentContainer, "drop", { dataTransfer: dt });
+    });
+
+    expect(move).not.toHaveBeenCalled();
+    harness.unmount();
+  });
+
+  it("supports ArrowUp and ArrowDown within the current suite", () => {
+    const move = vi.fn();
+    const order: TestCaseOrderApi = {
+      sortByStoredOrder: (_suiteId, items) => items.slice(),
+      move
+    };
+    const allProjections = Array.from({ length: 8 }, (_, index) =>
+      projection(index + 1, 3, `Case ${index + 1}`)
+    );
+    const harness = render(
+      <TestCaseColumn
+        suiteTree={tree()}
+        projections={[allProjections[1], allProjections[7]]}
+        allProjections={allProjections}
+        unfilteredCount={8}
+        collapse={makeCollapse([])}
+        order={order}
+      />
+    );
+    const handle = harness.container.querySelector<HTMLButtonElement>(
+      '[data-test-case-id="8"] .relations-view-drag-handle'
+    )!;
+
+    handle.focus();
+    act(() => {
+      handle.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }));
+    });
+
+    expect(move).toHaveBeenCalledWith(3, 8, 2, "before", [1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(handle.getAttribute("aria-keyshortcuts")).toBe("ArrowUp ArrowDown");
+    expect(handle.getAttribute("aria-describedby")).toBeTruthy();
+    expect(document.activeElement).toBe(handle);
+    expect(harness.container.querySelector('[role="status"]')?.textContent).toContain(
+      "Moved test case #8 before test case #2"
+    );
 
     harness.unmount();
   });
