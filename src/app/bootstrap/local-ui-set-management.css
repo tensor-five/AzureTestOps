@@ -12,6 +12,15 @@
   white-space: nowrap;
 }
 
+.set-dropdown-trigger-caret {
+  display: inline-flex;
+  width: var(--space-4);
+  height: var(--space-4);
+  flex: 0 0 var(--space-4);
+  align-items: center;
+  justify-content: center;
+}
+
 .set-dropdown-panel {
   position: absolute;
   top: calc(100% + var(--space-2));

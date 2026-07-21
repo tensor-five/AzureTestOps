@@ -145,6 +145,23 @@ section[role="tabpanel"]:hover {
   color: var(--color-text-secondary);
 }
 
+.u-chevron-icon {
+  display: block;
+  width: var(--space-4);
+  height: var(--space-4);
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transform-origin: center;
+  transition: transform var(--transition-duration-fast) var(--transition-easing-standard);
+}
+
+.u-chevron-icon[data-direction="right"] { transform: rotate(-90deg); }
+.u-chevron-icon[data-direction="up"] { transform: rotate(180deg); }
+
 .set-editor-field input,
 .set-editor-field select {
   border: 1px solid var(--color-border-strong);

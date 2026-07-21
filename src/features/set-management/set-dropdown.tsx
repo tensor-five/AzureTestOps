@@ -1,6 +1,7 @@
 import * as React from "react";
 
 import type { Set } from "../../domain/sets/set.js";
+import { ChevronIcon } from "../../shared/ui/chevron-icon.js";
 
 export type SetDropdownProps = {
   sets: Set[];
@@ -64,7 +65,7 @@ export function SetDropdown(props: SetDropdownProps): React.ReactElement {
       >
         <span className="set-dropdown-trigger-label">{triggerLabel}</span>
         <span aria-hidden="true" className="set-dropdown-trigger-caret">
-          ▾
+          <ChevronIcon direction={open ? "up" : "down"} />
         </span>
       </button>
       {open ? (

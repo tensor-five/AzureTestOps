@@ -173,6 +173,7 @@ describe("TestCaseColumn", () => {
     )!;
 
     expect(leafToggle.getAttribute("aria-expanded")).toBe("false");
+    expect(leafToggle.querySelector(".u-chevron-icon")?.getAttribute("data-direction")).toBe("right");
     expect(harness.container.querySelector('[data-suite-cards][data-suite-id="3"]')).toBeNull();
     act(() => leafToggle.click());
     expect(toggle).toHaveBeenCalledWith(3);
@@ -349,6 +350,7 @@ describe("TestCaseColumn", () => {
     expect(harness.container.querySelector('[role="tree"]')).toBeNull();
     expect(harness.container.querySelector('[role="treeitem"]')).toBeNull();
     expect(treeButtons[0].getAttribute("aria-expanded")).toBe("true");
+    expect(treeButtons[0].querySelector(".u-chevron-icon")?.getAttribute("data-direction")).toBe("down");
     treeButtons[0].focus();
     act(() => treeButtons[0].dispatchEvent(new KeyboardEvent("keydown", {
       key: "ArrowDown",

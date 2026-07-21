@@ -299,11 +299,17 @@
 
 .relations-view-suite-toggle-icon {
   width: var(--space-3);
+  height: var(--space-3);
   flex: 0 0 var(--space-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: var(--color-primary);
-  font-size: var(--text-lg);
-  line-height: 1;
-  text-align: center;
+}
+
+.relations-view-suite-toggle-icon .u-chevron-icon {
+  width: 100%;
+  height: 100%;
 }
 
 .relations-view-suite-folder-icon {

@@ -3,6 +3,7 @@ import * as React from "react";
 import type { TestSuiteNode } from "../../domain/test-management/test-suite-tree.js";
 import type { TestCaseProjection } from "../../domain/test-management/test-case-projection.js";
 import { HighlightedText } from "../../shared/search/highlighted-text.js";
+import { ChevronIcon } from "../../shared/ui/chevron-icon.js";
 import { resolveAdjacentItemMove } from "./item-order.js";
 import { TestCaseCard } from "./test-case-card.js";
 import type { SuiteCollapseApi } from "./use-suite-collapse.js";
@@ -379,7 +380,7 @@ function SuiteGroup(props: {
           data-parent-suite-id={entry.suite.parentSuiteId ?? undefined}
         >
           <span className="relations-view-suite-toggle-icon" aria-hidden="true">
-            {canCollapse ? (isCollapsed ? "›" : "⌄") : ""}
+            {canCollapse ? <ChevronIcon direction={isCollapsed ? "right" : "down"} /> : null}
           </span>
           <span className="relations-view-suite-folder-icon" aria-hidden="true">
             <FolderIcon open={!isCollapsed && entry.hasChildren} />
