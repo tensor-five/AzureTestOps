@@ -1,0 +1,9 @@
+{
+  "contract": "magic-sort-header-placement.v1.html",
+  "files": [
+    {
+      "path": "src/features/relations-view/magic-sort-header-placement.contract.spec.tsx",
+      "sha256": "94f7376af85a8906c9618f0ebca4314ec57796174717da236360b49304c83596"
+    }
+  ]
+}
