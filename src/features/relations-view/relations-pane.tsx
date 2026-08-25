@@ -26,7 +26,8 @@ import { useRelationsViewControls } from "./use-relations-view-controls.js";
 import { useRelationsDerivedView } from "./use-relations-derived-view.js";
 import { useRelationsFilterBars } from "./use-relations-filter-bars.js";
 import { WorkspaceToolbar } from "./workspace-toolbar.js";
-import { useMagicSort } from "./use-magic-sort.js";
+import { useMagicSort, type MagicSortController } from "./use-magic-sort.js";
+import { MagicSortAction } from "./magic-sort-action.js";
 
 const NO_VISIBLE_LINES: ReadonlySet<string> = new Set();
 
@@ -39,6 +40,7 @@ export type RelationsPaneProps = {
   refreshControl: React.ReactNode;
   getWorkItemHref?: (workItemId: number) => string | null;
   getSuiteHref?: (suiteId: number) => string | null;
+  onMagicSortControlChange?(control: MagicSortController | null): void;
 };
 
 export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
@@ -160,6 +162,18 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
       });
     }
   });
+  const magicSortAvailable = props.hasActiveSet && props.snapshot !== null && props.error === null;
+
+  React.useEffect(() => {
+    props.onMagicSortControlChange?.(magicSortAvailable ? magicSort : null);
+  }, [
+    magicSort.isRunning,
+    magicSort.start,
+    magicSort.status,
+    magicSortAvailable,
+    props.onMagicSortControlChange
+  ]);
+  React.useEffect(() => () => props.onMagicSortControlChange?.(null), [props.onMagicSortControlChange]);
 
   const drawing = useLineDrawing({
     containerRef,
@@ -248,9 +262,13 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
         unlinkedWorkItemCount={derived.summary.unlinkedWorkItemCount}
         focusedSuiteLabel={focusedSuiteLabel}
         onClearFocus={() => viewControls.setFocusedSuiteId(null)}
-        onMagicSort={magicSort.start}
-        isMagicSorting={magicSort.isRunning}
-        magicSortStatus={magicSort.status}
+        magicSortAction={props.onMagicSortControlChange ? null : (
+          <MagicSortAction
+            onStart={magicSort.start}
+            isRunning={magicSort.isRunning}
+            status={magicSort.status}
+          />
+        )}
         mobileColumn={viewControls.mobileColumn}
         onMobileColumnChange={viewControls.setMobileColumn}
       />
