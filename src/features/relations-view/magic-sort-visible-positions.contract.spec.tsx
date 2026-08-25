@@ -88,6 +88,52 @@ describe("Magic Sort visible positions contract v1", () => {
     expect(workItemIds(harness.container)).toEqual([202, 201]);
     harness.unmount();
   });
+
+  it("MSV-01 ignores a filtered Bug and preserves its stored position", async () => {
+    vi.useFakeTimers();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const harness = renderPane({
+      setLayouts: {
+        "set-visible-positions": {
+          workItemOrder: [202, 201],
+          testCaseOrder: { "11": [101], "12": [102] }
+        }
+      }
+    });
+    const search = harness.container.querySelector<HTMLInputElement>(
+      '.relations-view-column-work-items input[type="search"]'
+    );
+    expect(search).not.toBeNull();
+
+    await user.type(search!, "Bug 202");
+    expect(workItemIds(harness.container)).toEqual([202]);
+    act(() => harness.container.querySelector<HTMLButtonElement>('button[aria-label="Magic Sort"]')?.click());
+    act(() => vi.runAllTimers());
+    await user.clear(search!);
+
+    expect(workItemIds(harness.container)).toEqual([202, 201]);
+    harness.unmount();
+  });
+
+  it("MSV-04 reduces crossings using the same visible positions that include suite headers", () => {
+    const input = {
+      ...visiblePositionInput([
+        { kind: "suite-header", suiteId: 11 },
+        { kind: "test-case", suiteId: 11, testCaseId: 101 },
+        { kind: "suite-header", suiteId: 12 },
+        { kind: "test-case", suiteId: 12, testCaseId: 102 }
+      ]),
+      workItems: [
+        { id: 202, relatedTestCaseIds: [102] },
+        { id: 201, relatedTestCaseIds: [101] }
+      ]
+    };
+    const before = visibleMetrics(input, input.workItemIds);
+    const after = visibleMetrics(input, planMagicSort(input as MagicSortInput).steps.at(-1)!.workItemIds);
+
+    expect(before.crossings).toBeGreaterThan(0);
+    expect(after.crossings).toBeLessThan(before.crossings);
+  });
 });
 
 function visiblePositionInput(visibleRows: readonly VisibleRow[]) {
@@ -125,6 +171,25 @@ function renderPane(preferences: UserPreferences): { container: HTMLDivElement; 
 
 function workItemIds(container: HTMLElement): number[] {
   return [...container.querySelectorAll<HTMLElement>("[data-work-item-id]")].map((item) => Number(item.dataset.workItemId));
+}
+
+function visibleMetrics(
+  input: ReturnType<typeof visiblePositionInput>,
+  workItemIds: readonly number[]
+): { crossings: number } {
+  const testCasePositions = new Map<number, number>();
+  input.visibleRows.forEach((row, position) => {
+    if (row.kind === "test-case") {
+      testCasePositions.set(row.testCaseId, position);
+    }
+  });
+  const workItemPositions = new Map(workItemIds.map((id, position) => [id, position]));
+  const edges = input.workItems.flatMap((workItem) => workItem.relatedTestCaseIds
+    .filter((testCaseId) => testCasePositions.has(testCaseId) && workItemPositions.has(workItem.id))
+    .map((testCaseId) => ({ left: testCasePositions.get(testCaseId)!, right: workItemPositions.get(workItem.id)! }))
+  );
+  return { crossings: edges.reduce((total, edge, index) => total + edges.slice(index + 1)
+    .filter((other) => (edge.left - other.left) * (edge.right - other.right) < 0).length, 0) };
 }
 
 function snapshot(): ActiveSetSnapshot {
