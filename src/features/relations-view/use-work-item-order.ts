@@ -3,6 +3,7 @@ import * as React from "react";
 import {
   materializeItemOrder,
   moveItemInOrder,
+  replaceVisibleItemsInOrder,
   type ItemOrderEdge
 } from "./item-order.js";
 import { setLayoutPreferenceStore } from "./set-layout-preference-store.js";
@@ -24,6 +25,11 @@ export type WorkItemOrderApi = {
     draggedId: number,
     targetId: number,
     edge: ItemOrderEdge,
+    naturalIds: readonly number[]
+  ): void;
+  applyVisibleOrder?(
+    visibleIds: readonly number[],
+    nextVisibleIds: readonly number[],
     naturalIds: readonly number[]
   ): void;
 };
@@ -100,7 +106,22 @@ export function useWorkItemOrder(setId: string | null): WorkItemOrderState {
     [order]
   );
 
-  return { sortByStoredOrder, move, layoutRevision };
+  const applyVisibleOrder = React.useCallback(
+    (visibleIds: readonly number[], nextVisibleIds: readonly number[], naturalIds: readonly number[]) => {
+      setOrder((current) => {
+        const next = replaceVisibleItemsInOrder(current, naturalIds, visibleIds, nextVisibleIds);
+        if (sameOrder(current, next)) {
+          return current;
+        }
+        persist(next);
+        return next;
+      });
+      bumpLayoutRevision();
+    },
+    [persist]
+  );
+
+  return { sortByStoredOrder, move, applyVisibleOrder, layoutRevision };
 }
 
 function seedFromPreferences(setId: string | null): readonly number[] {
@@ -113,4 +134,8 @@ function seedFromPreferences(setId: string | null): readonly number[] {
 
 function readLayoutForSet(setId: string): SetLayoutPreference | undefined {
   return setLayoutPreferenceStore.load({ scopeKey: setId }) ?? undefined;
+}
+
+function sameOrder(a: readonly number[], b: readonly number[]): boolean {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
 }

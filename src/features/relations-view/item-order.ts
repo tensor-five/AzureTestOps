@@ -55,6 +55,38 @@ export function moveItemInOrder(
   return materialized;
 }
 
+/**
+ * Replaces only the visible ids in a persisted order. Hidden ids retain both
+ * their positions relative to each other and their persisted order.
+ */
+export function replaceVisibleItemsInOrder(
+  persistedOrder: readonly number[],
+  naturalOrder: readonly number[],
+  visibleIds: readonly number[],
+  nextVisibleIds: readonly number[]
+): number[] {
+  const materialized = materializeItemOrder(persistedOrder, naturalOrder);
+  const visibleSet = new Set(visibleIds);
+  if (
+    visibleSet.size !== visibleIds.length ||
+    nextVisibleIds.length !== visibleIds.length ||
+    new Set(nextVisibleIds).size !== nextVisibleIds.length ||
+    nextVisibleIds.some((id) => !visibleSet.has(id))
+  ) {
+    return materialized;
+  }
+  const slots = materialized
+    .map((id, index) => visibleSet.has(id) ? index : -1)
+    .filter((index) => index >= 0);
+  if (slots.length !== visibleIds.length) {
+    return materialized;
+  }
+  slots.forEach((slot, index) => {
+    materialized[slot] = nextVisibleIds[index]!;
+  });
+  return materialized;
+}
+
 /** Resolves an ArrowUp/ArrowDown move against the currently visible order. */
 export function resolveAdjacentItemMove(
   visibleOrder: readonly number[],

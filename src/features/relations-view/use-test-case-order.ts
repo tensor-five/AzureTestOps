@@ -3,6 +3,7 @@ import * as React from "react";
 import {
   materializeItemOrder,
   moveItemInOrder,
+  replaceVisibleItemsInOrder,
   type ItemOrderEdge
 } from "./item-order.js";
 import { setLayoutPreferenceStore } from "./set-layout-preference-store.js";
@@ -30,6 +31,12 @@ export type TestCaseOrderApi = {
     draggedId: number,
     targetId: number,
     edge: ItemOrderEdge,
+    naturalIds: readonly number[]
+  ): void;
+  applyVisibleOrder?(
+    suiteId: number,
+    visibleIds: readonly number[],
+    nextVisibleIds: readonly number[],
     naturalIds: readonly number[]
   ): void;
 };
@@ -129,7 +136,31 @@ export function useTestCaseOrder(setId: string | null): TestCaseOrderState {
     [order]
   );
 
-  return { sortByStoredOrder, move, layoutRevision };
+  const applyVisibleOrder = React.useCallback(
+    (
+      suiteId: number,
+      visibleIds: readonly number[],
+      nextVisibleIds: readonly number[],
+      naturalIds: readonly number[]
+    ) => {
+      setOrder((current) => {
+        const key = String(suiteId);
+        const nextForSuite = replaceVisibleItemsInOrder(
+          current[key] ?? [], naturalIds, visibleIds, nextVisibleIds
+        );
+        if (sameOrder(current[key] ?? [], nextForSuite)) {
+          return current;
+        }
+        const next = { ...current, [key]: nextForSuite };
+        persist(next);
+        return next;
+      });
+      bumpLayoutRevision();
+    },
+    [persist]
+  );
+
+  return { sortByStoredOrder, move, applyVisibleOrder, layoutRevision };
 }
 
 function seedFromPreferences(setId: string | null): OrderMap {
@@ -142,4 +173,8 @@ function seedFromPreferences(setId: string | null): OrderMap {
 
 function readLayoutForSet(setId: string): SetLayoutPreference | undefined {
   return setLayoutPreferenceStore.load({ scopeKey: setId }) ?? undefined;
+}
+
+function sameOrder(a: readonly number[], b: readonly number[]): boolean {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
 }
