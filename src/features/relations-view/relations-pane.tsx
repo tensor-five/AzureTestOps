@@ -26,6 +26,7 @@ import { useRelationsViewControls } from "./use-relations-view-controls.js";
 import { useRelationsDerivedView } from "./use-relations-derived-view.js";
 import { useRelationsFilterBars } from "./use-relations-filter-bars.js";
 import { WorkspaceToolbar } from "./workspace-toolbar.js";
+import { useMagicSort } from "./use-magic-sort.js";
 
 const NO_VISIBLE_LINES: ReadonlySet<string> = new Set();
 
@@ -104,6 +105,60 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
     workItemFacets: derived.workItemFacets,
     visibleTestCaseCount: derived.filteredProjections.length,
     visibleWorkItemCount: derived.filteredWorkItems.length,
+  });
+  const magicSortSuites = React.useMemo(() => {
+    const bySuite = new Map<number, typeof derived.filteredProjections>();
+    derived.filteredProjections.forEach((projection) => {
+      const current = bySuite.get(projection.suiteId) ?? [];
+      bySuite.set(projection.suiteId, [...current, projection]);
+    });
+    return [...bySuite.entries()].map(([suiteId, suiteProjections]) => ({
+      suiteId,
+      testCaseIds: testCaseOrder
+        .sortByStoredOrder(suiteId, suiteProjections)
+        .map((projection) => projection.workItemId),
+      naturalIds: projections
+        .filter((projection) => projection.suiteId === suiteId)
+        .map((projection) => projection.workItemId)
+    }));
+  }, [derived.filteredProjections, projections, testCaseOrder]);
+  const magicSortWorkItems = React.useMemo(
+    () => workItemOrder.sortByStoredOrder(derived.filteredWorkItems),
+    [derived.filteredWorkItems, workItemOrder]
+  );
+  const magicSortVisibleTestCaseIds = React.useMemo(
+    () => new Set(magicSortSuites.flatMap((suite) => suite.testCaseIds)),
+    [magicSortSuites]
+  );
+  const magicSort = useMagicSort({
+    input: {
+      suites: magicSortSuites.map(({ suiteId, testCaseIds }) => ({ suiteId, testCaseIds })),
+      workItemIds: magicSortWorkItems.map((workItem) => workItem.id),
+      workItems: magicSortWorkItems.map((workItem) => ({
+        id: workItem.id,
+        relatedTestCaseIds: [...(mutations.relationIndex.testCaseIdsByWorkItemId.get(workItem.id) ?? [])]
+          .filter((testCaseId) => magicSortVisibleTestCaseIds.has(testCaseId))
+      }))
+    },
+    applyLayout: (layout) => {
+      workItemOrder.applyVisibleOrder?.(
+        magicSortWorkItems.map((workItem) => workItem.id),
+        layout.workItemIds,
+        workItems.map((workItem) => workItem.id).sort((a, b) => a - b)
+      );
+      layout.suites.forEach((suite) => {
+        const current = magicSortSuites.find((candidate) => candidate.suiteId === suite.suiteId);
+        if (!current) {
+          return;
+        }
+        testCaseOrder.applyVisibleOrder?.(
+          suite.suiteId,
+          current.testCaseIds,
+          suite.testCaseIds,
+          current.naturalIds
+        );
+      });
+    }
   });
 
   const drawing = useLineDrawing({
@@ -193,6 +248,9 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
         unlinkedWorkItemCount={derived.summary.unlinkedWorkItemCount}
         focusedSuiteLabel={focusedSuiteLabel}
         onClearFocus={() => viewControls.setFocusedSuiteId(null)}
+        onMagicSort={magicSort.start}
+        isMagicSorting={magicSort.isRunning}
+        magicSortStatus={magicSort.status}
         mobileColumn={viewControls.mobileColumn}
         onMobileColumnChange={viewControls.setMobileColumn}
       />

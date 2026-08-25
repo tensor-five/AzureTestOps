@@ -55,6 +55,41 @@
   white-space: nowrap;
 }
 
+.relations-workspace-magic-sort {
+  min-height: var(--space-7);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 65%, var(--color-border));
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--color-primary-dark), var(--color-primary));
+  color: var(--color-on-primary);
+  padding: 0 var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
+  cursor: pointer;
+}
+
+.relations-workspace-magic-sort:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.relations-workspace-magic-sort:disabled {
+  cursor: wait;
+  opacity: .72;
+}
+
+.relations-workspace-magic-sort svg {
+  width: var(--space-4);
+  height: var(--space-4);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+
+.relations-workspace-magic-sort svg path:last-child { fill: currentColor; stroke: none; }
+
 .relations-workspace-summary {
   gap: var(--space-2);
   margin-left: auto;
