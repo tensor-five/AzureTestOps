@@ -1,0 +1,9 @@
+{
+  "contract": "magic-sort-visible-positions.v1.html",
+  "files": [
+    {
+      "path": "src/features/relations-view/magic-sort-visible-positions.contract.spec.tsx",
+      "sha256": "1aa458308805b02cb9ff35f34555a8384de9442ccd643847ea77b4c2febe906c"
+    }
+  ]
+}

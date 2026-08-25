@@ -39,7 +39,11 @@ export function useMagicSort(options: {
     const plan = planMagicSort(inputRef.current);
     const finalLayout = plan.steps.at(-1)!;
     const reduceMotion = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-    if (reduceMotion || plan.steps.length === 1) {
+    if (plan.steps.length === 1) {
+      setStatus("Magic Sort completed the layout optimization.");
+      return;
+    }
+    if (reduceMotion) {
       applyLayoutRef.current(finalLayout);
       setStatus("Magic Sort completed the layout optimization.");
       return;

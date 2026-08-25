@@ -8,6 +8,7 @@ on:
       - scripts/check-frozen-tests.mjs
       - src/features/relations-view/magic-sort.contract.spec.tsx
       - src/features/relations-view/magic-sort-header-placement.contract.spec.tsx
+      - src/features/relations-view/magic-sort-visible-positions.contract.spec.tsx
       - .github/workflows/contract-integrity.yml
   push:
     branches:
@@ -37,4 +38,4 @@ jobs:
           node scripts/check-contract-integrity.mjs
           node scripts/check-frozen-tests.mjs
           npm ci
-          npm test -- src/features/relations-view/magic-sort.contract.spec.tsx src/features/relations-view/magic-sort-header-placement.contract.spec.tsx
+          npm test -- src/features/relations-view/magic-sort.contract.spec.tsx src/features/relations-view/magic-sort-header-placement.contract.spec.tsx src/features/relations-view/magic-sort-visible-positions.contract.spec.tsx
