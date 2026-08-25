@@ -204,7 +204,7 @@ function snapshot(includeThirdBug = false): ActiveSetSnapshot {
     ] },
     projections: [projection(101, 11, "Hidden test"), projection(102, 12, "Visible test")],
     workItemsFromQuery: [
-      workItem(201, [101], "Hidden bug 201"),
+      workItem(201, includeThirdBug ? [102] : [101], "Hidden bug 201"),
       workItem(202, [102], "Visible bug 202"),
       ...(includeThirdBug ? [workItem(203, [101], "Visible bug 203")] : [])
     ],
