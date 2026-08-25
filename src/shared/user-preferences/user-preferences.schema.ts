@@ -20,6 +20,10 @@ export type SetLayoutPreference = {
   collapsedSuites?: string[];
   hideEmptySuites?: boolean;
   workItemOrder?: number[];
+  /** Enables free vertical Bug slots for Magic Sort in this set. */
+  magicSortAddSpacer?: boolean;
+  /** Persisted vertical slot per Bug when free Magic Sort slots are enabled. */
+  workItemSpacerPositions?: Record<string, number>;
   testCaseOrder?: Record<string, number[]>;
 };
 
@@ -374,6 +378,15 @@ function sanitizeSetLayoutPreference(value: unknown): SetLayoutPreference | null
     }
   }
 
+  if (typeof value.magicSortAddSpacer === "boolean") {
+    next.magicSortAddSpacer = value.magicSortAddSpacer;
+  }
+
+  const spacerPositions = sanitizeWorkItemSpacerPositions(value.workItemSpacerPositions);
+  if (spacerPositions) {
+    next.workItemSpacerPositions = spacerPositions;
+  }
+
   if (isPlainRecord(value.testCaseOrder)) {
     const sanitized: Record<string, number[]> = {};
     Object.entries(value.testCaseOrder).forEach(([rawSuiteId, rawIds]) => {
@@ -415,6 +428,23 @@ function readPositiveInteger(value: unknown): number | null {
     return null;
   }
   return value;
+}
+
+function sanitizeWorkItemSpacerPositions(value: unknown): Record<string, number> | undefined {
+  if (!isPlainRecord(value)) {
+    return undefined;
+  }
+  const next: Record<string, number> = {};
+  Object.entries(value).forEach(([rawId, rawPosition]) => {
+    const id = rawId.trim();
+    const position = typeof rawPosition === "number" && Number.isInteger(rawPosition) && rawPosition >= 0
+      ? rawPosition
+      : null;
+    if (id.length > 0 && position !== null) {
+      next[id] = position;
+    }
+  });
+  return Object.keys(next).length > 0 ? next : undefined;
 }
 
 function readNonEmptyString(value: unknown): string | undefined {

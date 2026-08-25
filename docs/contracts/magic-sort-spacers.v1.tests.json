@@ -1,0 +1,9 @@
+{
+  "contract": "magic-sort-spacers.v1.html",
+  "files": [
+    {
+      "path": "src/features/relations-view/magic-sort-spacers.contract.spec.tsx",
+      "sha256": "7bfea938fb8498383b874fdbb1db0d090cf23d8bd1430b40447d87ec9e4d694b"
+    }
+  ]
+}

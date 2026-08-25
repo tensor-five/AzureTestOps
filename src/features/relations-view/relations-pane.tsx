@@ -29,6 +29,7 @@ import { WorkspaceToolbar } from "./workspace-toolbar.js";
 import { useMagicSort, type MagicSortController } from "./use-magic-sort.js";
 import { MagicSortAction } from "./magic-sort-action.js";
 import { buildSuiteExplorerEntries, selectVisibleSuiteEntries } from "./suite-explorer.js";
+import { useMagicSortSpacerOption } from "./use-magic-sort-spacer-option.js";
 
 const NO_VISIBLE_LINES: ReadonlySet<string> = new Set();
 
@@ -48,6 +49,7 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
   const collapse = useSuiteCollapse(props.setId);
   const suiteDisplay = useSuiteDisplayOptions(props.setId);
   const workItemOrder = useWorkItemOrder(props.setId);
+  const spacerOption = useMagicSortSpacerOption(props.setId);
   const testCaseOrder = useTestCaseOrder(props.setId);
   const filters = useSetFilters(props.setId);
   const viewControls = useRelationsViewControls(props.setId);
@@ -183,6 +185,11 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
       suites: magicSortSuites.map(({ suiteId, testCaseIds }) => ({ suiteId, testCaseIds })),
       visibleRows: magicSortVisibleRows,
       workItemIds: magicSortWorkItems.map((workItem) => workItem.id),
+      addSpacer: spacerOption.addSpacer,
+      workItemPositions: Object.fromEntries(magicSortWorkItems.flatMap((workItem) => {
+        const position = spacerOption.workItemPositions[workItem.id];
+        return position === undefined ? [] : [[workItem.id, position]];
+      })),
       workItems: magicSortWorkItems.map((workItem) => ({
         id: workItem.id,
         relatedTestCaseIds: [...(mutations.relationIndex.testCaseIdsByWorkItemId.get(workItem.id) ?? [])]
@@ -195,6 +202,9 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
         layout.workItemIds,
         workItems.map((workItem) => workItem.id).sort((a, b) => a - b)
       );
+      if (layout.workItemPositions) {
+        spacerOption.applyVisiblePositions(magicSortWorkItems.map((workItem) => workItem.id), layout.workItemPositions);
+      }
       layout.suites.forEach((suite) => {
         const current = magicSortSuites.find((candidate) => candidate.suiteId === suite.suiteId);
         if (!current) {
@@ -209,14 +219,17 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
       });
     }
   });
+  const magicSortControl = React.useMemo<MagicSortController>(() => ({
+    ...magicSort,
+    addSpacer: spacerOption.addSpacer,
+    setAddSpacer: spacerOption.setAddSpacer
+  }), [magicSort, spacerOption.addSpacer, spacerOption.setAddSpacer]);
   const magicSortAvailable = props.hasActiveSet && props.snapshot !== null && props.error === null;
 
   React.useEffect(() => {
-    props.onMagicSortControlChange?.(magicSortAvailable ? magicSort : null);
+    props.onMagicSortControlChange?.(magicSortAvailable ? magicSortControl : null);
   }, [
-    magicSort.isRunning,
-    magicSort.start,
-    magicSort.status,
+    magicSortControl,
     magicSortAvailable,
     props.onMagicSortControlChange
   ]);
@@ -311,9 +324,11 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
         onClearFocus={() => viewControls.setFocusedSuiteId(null)}
         magicSortAction={props.onMagicSortControlChange ? null : (
           <MagicSortAction
-            onStart={magicSort.start}
-            isRunning={magicSort.isRunning}
-            status={magicSort.status}
+            onStart={magicSortControl.start}
+            isRunning={magicSortControl.isRunning}
+            status={magicSortControl.status}
+            addSpacer={magicSortControl.addSpacer}
+            onAddSpacerChange={magicSortControl.setAddSpacer}
           />
         )}
         mobileColumn={viewControls.mobileColumn}
@@ -349,6 +364,8 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
           filterBar={filterBars.workItemFilterBar}
           onLinePointerDown={drawing.startFromCard}
           order={workItemOrder}
+          addSpacer={spacerOption.addSpacer}
+          workItemPositions={spacerOption.workItemPositions}
           getWorkItemHref={props.getWorkItemHref}
           highlightQuery={filters.workItemFilter.titleQuery ?? ""}
           focusActive={focusedSuite !== null}

@@ -54,6 +54,30 @@
   display: contents;
 }
 
+.ui-shell-magic-sort-spacer-option {
+  min-height: calc(var(--space-8) + var(--space-1));
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  white-space: nowrap;
+}
+
+.ui-shell-magic-sort-spacer-option input {
+  width: var(--space-3);
+  height: var(--space-3);
+  margin: 0;
+  accent-color: var(--color-primary);
+}
+
+.ui-shell-magic-sort-spacer-option:has(input:disabled) {
+  cursor: wait;
+  opacity: .7;
+}
+
 .ui-shell-magic-sort {
   min-height: calc(var(--space-8) + var(--space-1));
   display: inline-flex;

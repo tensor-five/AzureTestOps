@@ -98,6 +98,24 @@ function sanitizeSetLayoutInput(value: unknown): SetLayoutPreference | null {
     next.workItemOrder = ordered;
   }
 
+  if (typeof value.magicSortAddSpacer === "boolean") {
+    next.magicSortAddSpacer = value.magicSortAddSpacer;
+  }
+
+  if (isPlainRecord(value.workItemSpacerPositions)) {
+    const positions: Record<string, number> = {};
+    Object.entries(value.workItemSpacerPositions).forEach(([rawId, rawPosition]) => {
+      const id = rawId.trim();
+      if (id.length === 0 || typeof rawPosition !== "number" || !Number.isInteger(rawPosition) || rawPosition < 0) {
+        return;
+      }
+      positions[id] = rawPosition;
+    });
+    if (Object.keys(positions).length > 0) {
+      next.workItemSpacerPositions = positions;
+    }
+  }
+
   if (isPlainRecord(value.testCaseOrder)) {
     const perSuite: Record<string, number[]> = {};
     Object.entries(value.testCaseOrder).forEach(([rawSuiteId, rawIds]) => {
