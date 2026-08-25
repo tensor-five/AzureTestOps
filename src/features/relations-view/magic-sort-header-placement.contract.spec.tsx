@@ -7,8 +7,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AppHeader } from "../navigation/header.js";
-import { WorkspaceToolbar, type WorkspaceToolbarProps } from "./workspace-toolbar.js";
+import { AppHeader, type AppHeaderProps } from "../navigation/header.js";
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 const navigationCss = await readFile(
@@ -19,7 +18,7 @@ const navigationCss = await readFile(
 type HeaderHarness = {
   host: HTMLDivElement;
   root: Root;
-  renderToolbar(props: Partial<WorkspaceToolbarProps>): void;
+  renderToolbar(props: Partial<MagicSortActionProps>): void;
   unmount(): void;
 };
 
@@ -85,18 +84,20 @@ describe("Magic Sort header placement contract v1", () => {
 
     expect(magicSort?.getAttribute("aria-label")).toBe("Magic Sort");
     expect(magicSort?.querySelector(".ui-shell-magic-sort-label")).not.toBeNull();
-    expect(navigationCss).toMatch(/\.ui-shell-magic-sort-label\s*\{[^}]*display:\s*none/s);
+    expect(navigationCss).toMatch(
+      /@media\s*\([^)]*max-width[^)]*\)[\s\S]*?\.ui-shell-magic-sort-label\s*\{[^}]*display:\s*none/s
+    );
 
     harness.unmount();
   });
 });
 
-function renderHeaderWithToolbar(overrides: Partial<WorkspaceToolbarProps> = {}): HeaderHarness {
+function renderHeaderWithToolbar(overrides: Partial<MagicSortActionProps> = {}): HeaderHarness {
   const host = document.createElement("div");
   document.body.append(host);
   const root = createRoot(host);
-  const renderToolbar = (nextOverrides: Partial<WorkspaceToolbarProps>) => {
-    act(() => root.render(<HeaderAndToolbar toolbar={toolbarProps(nextOverrides)} />));
+  const renderToolbar = (nextOverrides: Partial<MagicSortActionProps>) => {
+    act(() => root.render(<HeaderAndToolbar magicSort={magicSortActionProps(nextOverrides)} />));
   };
   renderToolbar(overrides);
   return {
@@ -112,32 +113,39 @@ function renderHeaderWithToolbar(overrides: Partial<WorkspaceToolbarProps> = {})
   };
 }
 
-function HeaderAndToolbar(props: { toolbar: WorkspaceToolbarProps }): React.ReactElement {
+type HeaderWithMagicSortProps = AppHeaderProps & { magicSortAction?: React.ReactNode };
+const HeaderWithMagicSort = AppHeader as React.ComponentType<HeaderWithMagicSortProps>;
+
+type MagicSortActionProps = {
+  onMagicSort(): void;
+  isMagicSorting: boolean;
+  magicSortStatus: string;
+};
+
+function HeaderAndToolbar(props: { magicSort: MagicSortActionProps }): React.ReactElement {
   return (
-    <>
-      <AppHeader
-        preflightStatus="READY"
-        themeMode="system"
-        onToggleTheme={() => undefined}
-        setSwitcher={<button type="button">Release 2.0</button>}
-      />
-      <WorkspaceToolbar {...props.toolbar} />
-    </>
+    <HeaderWithMagicSort
+      preflightStatus="READY"
+      themeMode="system"
+      onToggleTheme={() => undefined}
+      setSwitcher={<button type="button">Release 2.0</button>}
+      magicSortAction={<MagicSortAction {...props.magicSort} />}
+    />
   );
 }
 
-function toolbarProps(overrides: Partial<WorkspaceToolbarProps>): WorkspaceToolbarProps {
+function MagicSortAction(props: MagicSortActionProps): React.ReactElement {
+  return <><button type="button" aria-label="Magic Sort" onClick={props.onMagicSort} disabled={props.isMagicSorting}>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 11-11 3 3L7 23H4v-3Z" /></svg>
+    <span className="ui-shell-magic-sort-label">Magic Sort</span>
+  </button><span className="u-visually-hidden" role="status" aria-live="polite">{props.magicSortStatus}</span></>;
+}
+
+function magicSortActionProps(overrides: Partial<MagicSortActionProps>): MagicSortActionProps {
   return {
-    refreshControl: <button type="button">Refresh</button>,
-    loadedAt: "2026-08-25T12:00:00.000Z",
-    testCaseCount: 4,
-    workItemCount: 4,
-    relationCount: 4,
-    unlinkedTestCaseCount: 0,
-    unlinkedWorkItemCount: 0,
-    mobileColumn: "test-cases",
-    onMobileColumnChange: () => undefined,
     onMagicSort: () => undefined,
+    isMagicSorting: false,
+    magicSortStatus: "",
     ...overrides
   };
 }
