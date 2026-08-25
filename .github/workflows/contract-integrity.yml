@@ -9,6 +9,7 @@ on:
       - src/features/relations-view/magic-sort.contract.spec.tsx
       - src/features/relations-view/magic-sort-header-placement.contract.spec.tsx
       - src/features/relations-view/magic-sort-visible-positions.contract.spec.tsx
+      - src/features/relations-view/magic-sort-spacers.contract.spec.tsx
       - .github/workflows/contract-integrity.yml
   push:
     branches:
@@ -18,6 +19,7 @@ on:
       - docs/contracts/**
       - scripts/check-contract-integrity.mjs
       - scripts/check-frozen-tests.mjs
+      - src/features/relations-view/magic-sort-spacers.contract.spec.tsx
       - src/features/relations-view/magic-sort.contract.spec.tsx
       - .github/workflows/contract-integrity.yml
   workflow_dispatch:
@@ -38,4 +40,4 @@ jobs:
           node scripts/check-contract-integrity.mjs
           node scripts/check-frozen-tests.mjs
           npm ci
-          npm test -- src/features/relations-view/magic-sort.contract.spec.tsx src/features/relations-view/magic-sort-header-placement.contract.spec.tsx src/features/relations-view/magic-sort-visible-positions.contract.spec.tsx
+          npm test -- src/features/relations-view/magic-sort.contract.spec.tsx src/features/relations-view/magic-sort-header-placement.contract.spec.tsx src/features/relations-view/magic-sort-visible-positions.contract.spec.tsx src/features/relations-view/magic-sort-spacers.contract.spec.tsx
