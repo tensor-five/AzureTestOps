@@ -28,6 +28,7 @@ import { useRelationsFilterBars } from "./use-relations-filter-bars.js";
 import { WorkspaceToolbar } from "./workspace-toolbar.js";
 import { useMagicSort, type MagicSortController } from "./use-magic-sort.js";
 import { MagicSortAction } from "./magic-sort-action.js";
+import { buildSuiteExplorerEntries, selectVisibleSuiteEntries } from "./suite-explorer.js";
 
 const NO_VISIBLE_LINES: ReadonlySet<string> = new Set();
 
@@ -108,22 +109,67 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
     visibleTestCaseCount: derived.filteredProjections.length,
     visibleWorkItemCount: derived.filteredWorkItems.length,
   });
-  const magicSortSuites = React.useMemo(() => {
-    const bySuite = new Map<number, typeof derived.filteredProjections>();
-    derived.filteredProjections.forEach((projection) => {
-      const current = bySuite.get(projection.suiteId) ?? [];
-      bySuite.set(projection.suiteId, [...current, projection]);
+  const magicSortVisibleRows = React.useMemo(() => {
+    if (!props.snapshot) {
+      return [];
+    }
+    const searchQuery = filters.testCaseFilter.titleQuery ?? "";
+    const searchActive = searchQuery.trim().length > 0;
+    const entries = buildSuiteExplorerEntries(
+      props.snapshot.suiteTree,
+      derived.filteredProjections,
+      projections
+    );
+    return selectVisibleSuiteEntries(entries, collapse, {
+      hideEmptySuites: suiteDisplay.hideEmptySuites,
+      searchQuery
+    }).flatMap((entry) => {
+      const header = { kind: "suite-header" as const, suiteId: entry.suite.id };
+      if (!searchActive && collapse.isCollapsed(entry.suite.id)) {
+        return [header];
+      }
+      return [
+        header,
+        ...testCaseOrder.sortByStoredOrder(entry.suite.id, entry.projections).map((projection) => ({
+          kind: "test-case" as const,
+          suiteId: entry.suite.id,
+          testCaseId: projection.workItemId
+        }))
+      ];
     });
-    return [...bySuite.entries()].map(([suiteId, suiteProjections]) => ({
-      suiteId,
-      testCaseIds: testCaseOrder
-        .sortByStoredOrder(suiteId, suiteProjections)
-        .map((projection) => projection.workItemId),
-      naturalIds: projections
-        .filter((projection) => projection.suiteId === suiteId)
-        .map((projection) => projection.workItemId)
-    }));
-  }, [derived.filteredProjections, projections, testCaseOrder]);
+  }, [
+    collapse,
+    derived.filteredProjections,
+    filters.testCaseFilter.titleQuery,
+    projections,
+    props.snapshot,
+    suiteDisplay.hideEmptySuites,
+    testCaseOrder
+  ]);
+  const magicSortSuites = React.useMemo(() => {
+    const visibleIdsBySuite = new Map<number, Set<number>>();
+    magicSortVisibleRows.forEach((row) => {
+      if (row.kind === "test-case") {
+        const ids = visibleIdsBySuite.get(row.suiteId) ?? new Set<number>();
+        ids.add(row.testCaseId);
+        visibleIdsBySuite.set(row.suiteId, ids);
+      }
+    });
+    return [...visibleIdsBySuite.entries()].map(([suiteId, visibleIds]) => {
+      const suiteProjections = derived.filteredProjections.filter((projection) =>
+        projection.suiteId === suiteId && visibleIds.has(projection.workItemId)
+      );
+      return {
+        suiteId,
+        testCaseIds: testCaseOrder
+          .sortByStoredOrder(suiteId, suiteProjections)
+          .map((projection) => projection.workItemId),
+        naturalIds: projections
+          .filter((projection) => projection.suiteId === suiteId)
+          .map((projection) => projection.workItemId)
+      };
+    });
+  }, [derived.filteredProjections, magicSortVisibleRows, projections, testCaseOrder]);
   const magicSortWorkItems = React.useMemo(
     () => workItemOrder.sortByStoredOrder(derived.filteredWorkItems),
     [derived.filteredWorkItems, workItemOrder]
@@ -135,6 +181,7 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
   const magicSort = useMagicSort({
     input: {
       suites: magicSortSuites.map(({ suiteId, testCaseIds }) => ({ suiteId, testCaseIds })),
+      visibleRows: magicSortVisibleRows,
       workItemIds: magicSortWorkItems.map((workItem) => workItem.id),
       workItems: magicSortWorkItems.map((workItem) => ({
         id: workItem.id,

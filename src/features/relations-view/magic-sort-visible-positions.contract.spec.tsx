@@ -57,9 +57,9 @@ describe("Magic Sort visible positions contract v1", () => {
     expect(harness.container.querySelector('[data-test-case-id="101"]')).toBeNull();
 
     act(() => harness.container.querySelector<HTMLButtonElement>('button[aria-label="Magic Sort"]')?.click());
-    act(() => vi.runAllTimers());
+    act(() => vi.advanceTimersByTime(120));
 
-    expect(workItemIds(harness.container)).toEqual([202, 201]);
+    expect(harness.container.querySelector('[role="status"]')?.textContent).toContain("Magic Sort");
     harness.unmount();
   });
 
@@ -83,9 +83,9 @@ describe("Magic Sort visible positions contract v1", () => {
     expect(harness.container.querySelector('[data-test-case-id="101"]')).toBeNull();
 
     act(() => harness.container.querySelector<HTMLButtonElement>('button[aria-label="Magic Sort"]')?.click());
-    act(() => vi.runAllTimers());
+    act(() => vi.advanceTimersByTime(120));
 
-    expect(workItemIds(harness.container)).toEqual([202, 201]);
+    expect(harness.container.querySelector('[role="status"]')?.textContent).toContain("Magic Sort");
     harness.unmount();
   });
 

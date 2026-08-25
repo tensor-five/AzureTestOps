@@ -8,8 +8,13 @@ export type MagicSortWorkItem = {
   relatedTestCaseIds: readonly number[];
 };
 
+export type MagicSortVisibleRow =
+  | { kind: "suite-header"; suiteId: number }
+  | { kind: "test-case"; suiteId: number; testCaseId: number };
+
 export type MagicSortInput = {
   suites: readonly MagicSortSuite[];
+  visibleRows?: readonly MagicSortVisibleRow[];
   workItemIds: readonly number[];
   workItems: readonly MagicSortWorkItem[];
 };
@@ -38,7 +43,7 @@ export function planMagicSort(input: MagicSortInput): MagicSortPlan {
   const steps: MagicSortLayout[] = [current];
 
   for (let iteration = 0; iteration < 48; iteration += 1) {
-    const next = findBestImprovement(current, workItems);
+    const next = findBestImprovement(current, workItems, input.visibleRows);
     if (!next) {
       break;
     }
@@ -50,14 +55,15 @@ export function planMagicSort(input: MagicSortInput): MagicSortPlan {
 
 function findBestImprovement(
   current: MagicSortLayout,
-  workItems: ReadonlyMap<number, MagicSortWorkItem>
+  workItems: ReadonlyMap<number, MagicSortWorkItem>,
+  visibleRows: readonly MagicSortVisibleRow[] | undefined
 ): MagicSortLayout | null {
-  const currentMetrics = measure(current, workItems);
+  const currentMetrics = measure(current, workItems, visibleRows);
   let best: MagicSortLayout | null = null;
   let bestMetrics: Metrics | null = null;
 
   const consider = (candidate: MagicSortLayout) => {
-    const metrics = measure(candidate, workItems);
+    const metrics = measure(candidate, workItems, visibleRows);
     if (!dominates(metrics, currentMetrics)) {
       return;
     }
@@ -89,9 +95,14 @@ function findBestImprovement(
   return best;
 }
 
-function measure(layout: MagicSortLayout, workItems: ReadonlyMap<number, MagicSortWorkItem>): Metrics {
-  const testCasePosition = new Map<number, number>();
-  layout.suites.flatMap((suite) => suite.testCaseIds).forEach((id, index) => testCasePosition.set(id, index));
+function measure(
+  layout: MagicSortLayout,
+  workItems: ReadonlyMap<number, MagicSortWorkItem>,
+  visibleRows: readonly MagicSortVisibleRow[] | undefined
+): Metrics {
+  const testCasePosition = visibleRows
+    ? positionsFromVisibleRows(layout, visibleRows)
+    : positionsFromFlatSuites(layout);
   const workItemPosition = new Map<number, number>();
   layout.workItemIds.forEach((id, index) => workItemPosition.set(id, index));
   const edges = layout.workItemIds.flatMap((workItemId) => (workItems.get(workItemId)?.relatedTestCaseIds ?? [])
@@ -105,6 +116,32 @@ function measure(layout: MagicSortLayout, workItems: ReadonlyMap<number, MagicSo
     .filter((other) => (edge.left - other.left) * (edge.right - other.right) < 0).length, 0);
   const length = edges.reduce((total, edge) => total + Math.abs(edge.left - edge.right), 0);
   return { crossings, length };
+}
+
+function positionsFromFlatSuites(layout: MagicSortLayout): Map<number, number> {
+  const positions = new Map<number, number>();
+  layout.suites.flatMap((suite) => suite.testCaseIds).forEach((id, index) => positions.set(id, index));
+  return positions;
+}
+
+function positionsFromVisibleRows(
+  layout: MagicSortLayout,
+  visibleRows: readonly MagicSortVisibleRow[]
+): Map<number, number> {
+  const remainingIdsBySuite = new Map(
+    layout.suites.map((suite) => [suite.suiteId, [...suite.testCaseIds]])
+  );
+  const positions = new Map<number, number>();
+  visibleRows.forEach((row, position) => {
+    if (row.kind !== "test-case") {
+      return;
+    }
+    const nextId = remainingIdsBySuite.get(row.suiteId)?.shift();
+    if (nextId !== undefined) {
+      positions.set(nextId, position);
+    }
+  });
+  return positions;
 }
 
 function dominates(candidate: Metrics, current: Metrics): boolean {
