@@ -17,11 +17,14 @@ export type MagicSortInput = {
   visibleRows?: readonly MagicSortVisibleRow[];
   workItemIds: readonly number[];
   workItems: readonly MagicSortWorkItem[];
+  addSpacer?: boolean;
+  workItemPositions?: Readonly<Record<number, number>>;
 };
 
 export type MagicSortLayout = {
   suites: readonly MagicSortSuite[];
   workItemIds: readonly number[];
+  workItemPositions?: Readonly<Record<number, number>>;
 };
 
 export type MagicSortPlan = {
@@ -35,9 +38,15 @@ type Metrics = { crossings: number; length: number };
  * ever swapped inside the suite that already contains them.
  */
 export function planMagicSort(input: MagicSortInput): MagicSortPlan {
+  const workItemPositions = input.addSpacer
+    ? initialWorkItemPositions(input.workItemIds, input.workItemPositions)
+    : undefined;
   let current: MagicSortLayout = {
     suites: input.suites.map((suite) => ({ ...suite, testCaseIds: [...suite.testCaseIds] })),
-    workItemIds: [...input.workItemIds]
+    workItemIds: workItemPositions
+      ? orderWorkItemsByPosition(input.workItemIds, workItemPositions)
+      : [...input.workItemIds],
+    ...(workItemPositions ? { workItemPositions } : {})
   };
   const workItems = new Map(input.workItems.map((workItem) => [workItem.id, workItem]));
   const steps: MagicSortLayout[] = [current];
@@ -73,17 +82,22 @@ function findBestImprovement(
     }
   };
 
-  for (let index = 0; index < current.workItemIds.length - 1; index += 1) {
-    consider({
-      suites: current.suites,
-      workItemIds: swapAt(current.workItemIds, index)
-    });
+  if (!current.workItemPositions) {
+    for (let index = 0; index < current.workItemIds.length - 1; index += 1) {
+      consider({
+        suites: current.suites,
+        workItemIds: swapAt(current.workItemIds, index)
+      });
+    }
+  } else {
+    considerFreeWorkItemSlots(current, visibleRows, consider);
   }
   for (let suiteIndex = 0; suiteIndex < current.suites.length; suiteIndex += 1) {
     const suite = current.suites[suiteIndex]!;
     for (let index = 0; index < suite.testCaseIds.length - 1; index += 1) {
       consider({
         workItemIds: current.workItemIds,
+        ...(current.workItemPositions ? { workItemPositions: current.workItemPositions } : {}),
         suites: current.suites.map((candidateSuite, candidateSuiteIndex) =>
           candidateSuiteIndex === suiteIndex
             ? { ...candidateSuite, testCaseIds: swapAt(candidateSuite.testCaseIds, index) }
@@ -103,8 +117,9 @@ function measure(
   const testCasePosition = visibleRows
     ? positionsFromVisibleRows(layout, visibleRows)
     : positionsFromFlatSuites(layout);
-  const workItemPosition = new Map<number, number>();
-  layout.workItemIds.forEach((id, index) => workItemPosition.set(id, index));
+  const workItemPosition = layout.workItemPositions
+    ? new Map(Object.entries(layout.workItemPositions).map(([id, position]) => [Number(id), position]))
+    : new Map(layout.workItemIds.map((id, index) => [id, index]));
   const edges = layout.workItemIds.flatMap((workItemId) => (workItems.get(workItemId)?.relatedTestCaseIds ?? [])
     .filter((testCaseId) => testCasePosition.has(testCaseId))
     .map((testCaseId) => ({
@@ -116,6 +131,76 @@ function measure(
     .filter((other) => (edge.left - other.left) * (edge.right - other.right) < 0).length, 0);
   const length = edges.reduce((total, edge) => total + Math.abs(edge.left - edge.right), 0);
   return { crossings, length };
+}
+
+function considerFreeWorkItemSlots(
+  current: MagicSortLayout,
+  visibleRows: readonly MagicSortVisibleRow[] | undefined,
+  consider: (candidate: MagicSortLayout) => void
+): void {
+  const positions = current.workItemPositions!;
+  const maximumPosition = Math.max(
+    (visibleRows?.length ?? 0) - 1,
+    ...Object.values(positions),
+    current.workItemIds.length - 1
+  );
+  current.workItemIds.forEach((workItemId) => {
+    for (let position = 0; position <= maximumPosition; position += 1) {
+      if (positions[workItemId] === position) {
+        continue;
+      }
+      const occupiedId = Object.entries(positions).find(([candidateId, candidatePosition]) =>
+        Number(candidateId) !== workItemId && candidatePosition === position
+      )?.[0];
+      const nextPositions = { ...positions, [workItemId]: position };
+      if (occupiedId) {
+        nextPositions[Number(occupiedId)] = positions[workItemId]!;
+      }
+      consider({
+        suites: current.suites,
+        workItemIds: orderWorkItemsByPosition(current.workItemIds, nextPositions),
+        workItemPositions: nextPositions
+      });
+    }
+  });
+}
+
+function initialWorkItemPositions(
+  workItemIds: readonly number[],
+  storedPositions: Readonly<Record<number, number>> | undefined
+): Record<number, number> {
+  const occupied = new Set<number>();
+  const next: Record<number, number> = {};
+  workItemIds.forEach((id, index) => {
+    const stored = storedPositions?.[id];
+    const position = isSlotPosition(stored) && !occupied.has(stored)
+      ? stored
+      : nextFreePosition(occupied, index);
+    next[id] = position;
+    occupied.add(position);
+  });
+  return next;
+}
+
+function isSlotPosition(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
+}
+
+function nextFreePosition(occupied: ReadonlySet<number>, preferred: number): number {
+  let position = preferred;
+  while (occupied.has(position)) {
+    position += 1;
+  }
+  return position;
+}
+
+function orderWorkItemsByPosition(
+  ids: readonly number[],
+  positions: Readonly<Record<number, number>>
+): number[] {
+  const indexById = new Map(ids.map((id, index) => [id, index]));
+  return ids.slice().sort((left, right) => (positions[left] ?? 0) - (positions[right] ?? 0)
+    || (indexById.get(left) ?? 0) - (indexById.get(right) ?? 0));
 }
 
 function positionsFromFlatSuites(layout: MagicSortLayout): Map<number, number> {

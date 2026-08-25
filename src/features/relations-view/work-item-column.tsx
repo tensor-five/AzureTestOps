@@ -18,6 +18,10 @@ export type WorkItemColumnProps = {
   onLinePointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
   /** Persists the drag-and-drop ordering per Set; absent → fixed id sort. */
   order?: WorkItemOrderApi;
+  /** Enables free vertical spacer slots between visible Bugs. */
+  addSpacer?: boolean;
+  /** Vertical positions in the visible Bug layout when Add Spacer is enabled. */
+  workItemPositions?: Readonly<Record<number, number>>;
   /** Resolves the Azure DevOps deep link for a work item id, or null if unavailable. */
   getWorkItemHref?: (workItemId: number) => string | null;
   highlightQuery?: string;
@@ -32,8 +36,17 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
   );
 
   const sorted = React.useMemo(
-    () => (props.order ? props.order.sortByStoredOrder(baseSorted) : baseSorted),
-    [baseSorted, props.order]
+    () => {
+      const ordered = props.order ? props.order.sortByStoredOrder(baseSorted) : baseSorted;
+      if (!props.addSpacer || !props.workItemPositions) {
+        return ordered;
+      }
+      const orderIndex = new Map(ordered.map((item, index) => [item.id, index]));
+      return ordered.slice().sort((left, right) => (props.workItemPositions![left.id] ?? 0)
+        - (props.workItemPositions![right.id] ?? 0)
+        || (orderIndex.get(left.id) ?? 0) - (orderIndex.get(right.id) ?? 0));
+    },
+    [baseSorted, props.addSpacer, props.order, props.workItemPositions]
   );
 
   const draggedIdRef = React.useRef<number | null>(null);
@@ -199,7 +212,7 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
           onDragLeave={reorderEnabled ? itemDragging.handleDragLeave : undefined}
           onDrop={reorderEnabled ? handleListDrop : undefined}
         >
-          {sorted.map((workItem) => {
+          {sorted.flatMap((workItem, index) => {
             const isFocusMatch = props.focusedWorkItemIds?.has(workItem.id) ?? false;
             const className = [
               "relations-view-work-item-list-item",
@@ -207,8 +220,23 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
               props.focusActive && isFocusMatch ? "relations-view-item-focus-match" : "",
               props.focusActive && !isFocusMatch ? "relations-view-item-focus-dimmed" : ""
             ].filter(Boolean).join(" ");
-            return (
-            <li key={workItem.id} className={className} data-work-item-id={workItem.id}>
+            const previous = sorted[index - 1];
+            const spacerCount = props.addSpacer && props.workItemPositions
+              ? previous
+                ? Math.max(0, (props.workItemPositions[workItem.id] ?? index)
+                  - (props.workItemPositions[previous.id] ?? index - 1) - 1)
+                : Math.max(0, props.workItemPositions[workItem.id] ?? 0)
+              : 0;
+            return [
+              ...Array.from({ length: spacerCount }, (_, spacerIndex) => (
+                <li
+                  key={`spacer-${previous?.id ?? "start"}-${workItem.id}-${spacerIndex}`}
+                  className="relations-view-work-item-spacer"
+                  {...(previous ? { "data-work-item-spacer": "" } : { "data-work-item-leading-spacer": "" })}
+                  aria-hidden="true"
+                />
+              )),
+              <li key={workItem.id} className={className} data-work-item-id={workItem.id}>
               <WorkItemCard
                 workItem={workItem}
                 onLinePointerDown={props.onLinePointerDown}
@@ -233,8 +261,9 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
                   <span aria-hidden="true">⠿</span>
                 </button>
               ) : null}
-            </li>
-          );})}
+              </li>
+            ];
+          })}
         </ol>
       )}
     </section>

@@ -4,6 +4,8 @@ export type MagicSortActionProps = {
   onStart(): void;
   isRunning: boolean;
   status: string;
+  addSpacer?: boolean;
+  onAddSpacerChange?(next: boolean): void;
 };
 
 /**
@@ -13,6 +15,17 @@ export type MagicSortActionProps = {
 export function MagicSortAction(props: MagicSortActionProps): React.ReactElement {
   return (
     <>
+      {props.onAddSpacerChange ? (
+        <label className="ui-shell-magic-sort-spacer-option">
+          <input
+            type="checkbox"
+            checked={props.addSpacer ?? false}
+            onChange={(event) => props.onAddSpacerChange?.(event.target.checked)}
+            disabled={props.isRunning}
+          />
+          <span>Add Spacer</span>
+        </label>
+      ) : null}
       <button
         type="button"
         className="ui-shell-magic-sort"

@@ -121,7 +121,9 @@ function HydratedAppShell(props: {
     const actionProps: MagicSortActionProps = {
       onStart: magicSortControl.start,
       isRunning: magicSortControl.isRunning,
-      status: magicSortControl.status
+      status: magicSortControl.status,
+      addSpacer: magicSortControl.addSpacer,
+      onAddSpacerChange: magicSortControl.setAddSpacer
     };
     return <MagicSortAction {...actionProps} />;
   }, [magicSortControl]);
@@ -213,5 +215,7 @@ function sameMagicSortControl(
 ): boolean {
   return left?.start === right?.start
     && left?.isRunning === right?.isRunning
-    && left?.status === right?.status;
+    && left?.status === right?.status
+    && left?.addSpacer === right?.addSpacer
+    && left?.setAddSpacer === right?.setAddSpacer;
 }

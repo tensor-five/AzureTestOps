@@ -12,6 +12,8 @@ export type MagicSortController = {
   isRunning: boolean;
   status: string;
   start(): void;
+  addSpacer?: boolean;
+  setAddSpacer?(next: boolean): void;
 };
 
 export function useMagicSort(options: {
