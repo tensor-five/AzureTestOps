@@ -179,6 +179,28 @@ describe("RelationsPane", () => {
     harness.unmount();
   });
 
+  it("provides Magic Sort to the application header instead of rendering a local action", () => {
+    const onMagicSortControlChange = vi.fn();
+    const harness = render(
+      <RelationsPane
+        setId="set-1"
+        snapshot={makeSnapshot()}
+        isLoading={false}
+        error={null}
+        hasActiveSet={true}
+        refreshControl={refreshControl}
+        onMagicSortControlChange={onMagicSortControlChange}
+      />
+    );
+
+    const control = onMagicSortControlChange.mock.calls.at(-1)?.[0];
+    expect(control?.start).toEqual(expect.any(Function));
+    expect(harness.container.querySelector('button[aria-label="Magic Sort"]')).toBeNull();
+
+    harness.unmount();
+    expect(onMagicSortControlChange.mock.calls.at(-1)?.[0]).toBeNull();
+  });
+
   it("applies relation quick filters and suite focus without changing snapshot data", () => {
     const harness = render(
       <RelationsPane

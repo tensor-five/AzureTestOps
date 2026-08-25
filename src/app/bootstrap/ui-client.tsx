@@ -23,6 +23,11 @@ import { useAdoContext } from "../../features/ado-context/use-ado-context.js";
 import { useActiveSetSnapshot } from "../../features/relations-view/use-active-set-snapshot.js";
 import { RefreshProgressBar } from "../../features/relations-view/refresh-progress-bar.js";
 import { RelationsPane } from "../../features/relations-view/relations-pane.js";
+import {
+  MagicSortAction,
+  type MagicSortActionProps
+} from "../../features/relations-view/magic-sort-action.js";
+import type { MagicSortController } from "../../features/relations-view/use-magic-sort.js";
 import { ClientPortsProvider, useClientPorts } from "../composition/client-ports-context.js";
 import { buildBrowserClientPorts } from "../composition/browser-runtime.js";
 import type { ClientPorts } from "../../application/ports/client/client-ports.js";
@@ -80,6 +85,7 @@ function HydratedAppShell(props: {
     )
   );
   const [isSetManagerOpen, setSetManagerOpen] = React.useState(false);
+  const [magicSortControl, setMagicSortControl] = React.useState<MagicSortController | null>(null);
 
   React.useEffect(() => {
     applyThemeMode(themeMode);
@@ -105,6 +111,20 @@ function HydratedAppShell(props: {
     },
     [setManagement]
   );
+  const handleMagicSortControlChange = React.useCallback((next: MagicSortController | null) => {
+    setMagicSortControl((current) => sameMagicSortControl(current, next) ? current : next);
+  }, []);
+  const magicSortAction = React.useMemo<React.ReactNode>(() => {
+    if (!magicSortControl) {
+      return null;
+    }
+    const actionProps: MagicSortActionProps = {
+      onStart: magicSortControl.start,
+      isRunning: magicSortControl.isRunning,
+      status: magicSortControl.status
+    };
+    return <MagicSortAction {...actionProps} />;
+  }, [magicSortControl]);
 
   const getWorkItemHref = React.useMemo<((workItemId: number) => string | null) | undefined>(() => {
     const context = adoContextState.context;
@@ -127,6 +147,7 @@ function HydratedAppShell(props: {
         preflightStatus={preflightStatus}
         themeMode={themeMode}
         onToggleTheme={handleThemeToggle}
+        magicSortAction={magicSortAction}
         setSwitcher={
           <SetDropdown
             sets={setManagement.sets}
@@ -147,6 +168,7 @@ function HydratedAppShell(props: {
           hasActiveSet={Boolean(setManagement.activeSetId)}
           getWorkItemHref={getWorkItemHref}
           getSuiteHref={getSuiteHref}
+          onMagicSortControlChange={handleMagicSortControlChange}
           refreshControl={
             <div className="relations-workspace-refresh">
               <button
@@ -183,4 +205,13 @@ function HydratedAppShell(props: {
       />
     </main>
   );
+}
+
+function sameMagicSortControl(
+  left: MagicSortController | null,
+  right: MagicSortController | null
+): boolean {
+  return left?.start === right?.start
+    && left?.isRunning === right?.isRunning
+    && left?.status === right?.status;
 }

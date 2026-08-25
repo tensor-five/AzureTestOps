@@ -21,6 +21,10 @@ export function useMagicSort(options: {
   const [isRunning, setIsRunning] = React.useState(false);
   const [status, setStatus] = React.useState("");
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputRef = React.useRef(options.input);
+  const applyLayoutRef = React.useRef(options.applyLayout);
+  inputRef.current = options.input;
+  applyLayoutRef.current = options.applyLayout;
 
   React.useEffect(() => () => {
     if (timerRef.current !== null) {
@@ -32,11 +36,11 @@ export function useMagicSort(options: {
     if (isRunning) {
       return;
     }
-    const plan = planMagicSort(options.input);
+    const plan = planMagicSort(inputRef.current);
     const finalLayout = plan.steps.at(-1)!;
     const reduceMotion = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     if (reduceMotion || plan.steps.length === 1) {
-      options.applyLayout(finalLayout);
+      applyLayoutRef.current(finalLayout);
       setStatus("Magic Sort completed the layout optimization.");
       return;
     }
@@ -51,7 +55,7 @@ export function useMagicSort(options: {
         setStatus("Magic Sort completed the layout optimization.");
         return;
       }
-      options.applyLayout(step);
+      applyLayoutRef.current(step);
       const isLastLayout = stepIndex === plan.steps.length - 1;
       stepIndex += 1;
       setStatus(isLastLayout
@@ -60,7 +64,7 @@ export function useMagicSort(options: {
       timerRef.current = setTimeout(applyNext, STEP_DELAY_MS);
     };
     timerRef.current = setTimeout(applyNext, STEP_DELAY_MS);
-  }, [isRunning, options]);
+  }, [isRunning]);
 
   return { isRunning, status, start };
 }
