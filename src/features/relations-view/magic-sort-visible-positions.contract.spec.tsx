@@ -89,29 +89,29 @@ describe("Magic Sort visible positions contract v1", () => {
     harness.unmount();
   });
 
-  it("MSV-01 ignores a filtered Bug and preserves its stored position", async () => {
+  it("MSV-01 excludes a connected filtered Bug while optimizing two visible Bugs", async () => {
     vi.useFakeTimers();
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const harness = renderPane({
       setLayouts: {
         "set-visible-positions": {
-          workItemOrder: [202, 201],
+          workItemOrder: [201, 202, 203],
           testCaseOrder: { "11": [101], "12": [102] }
         }
       }
-    });
+    }, snapshot(true));
     const search = harness.container.querySelector<HTMLInputElement>(
       '.relations-view-column-work-items input[type="search"]'
     );
     expect(search).not.toBeNull();
 
-    await user.type(search!, "Bug 202");
-    expect(workItemIds(harness.container)).toEqual([202]);
+    await user.type(search!, "Visible bug");
+    expect(workItemIds(harness.container)).toEqual([202, 203]);
     act(() => harness.container.querySelector<HTMLButtonElement>('button[aria-label="Magic Sort"]')?.click());
     act(() => vi.runAllTimers());
     await user.clear(search!);
 
-    expect(workItemIds(harness.container)).toEqual([202, 201]);
+    expect(workItemIds(harness.container)).toEqual([201, 203, 202]);
     harness.unmount();
   });
 
@@ -151,7 +151,10 @@ function visiblePositionInput(visibleRows: readonly VisibleRow[]) {
   };
 }
 
-function renderPane(preferences: UserPreferences): { container: HTMLDivElement; unmount(): void } {
+function renderPane(
+  preferences: UserPreferences,
+  activeSnapshot = snapshot()
+): { container: HTMLDivElement; unmount(): void } {
   clearSetLayoutPreferenceForTests();
   clearSetFilterPreferenceForTests();
   vi.spyOn(preferencesClient, "getCachedUserPreferences").mockReturnValue(preferences);
@@ -165,7 +168,7 @@ function renderPane(preferences: UserPreferences): { container: HTMLDivElement; 
     adoContext: { getContext: async () => null, setContext: async (context) => context, getCliDefaults: async () => ({ organization: "", project: "" }) },
     relationMutations: { add: async () => undefined, remove: async () => undefined }
   });
-  act(() => root.render(<WithClientPorts ports={ports}><RelationsPane setId="set-visible-positions" snapshot={snapshot()} isLoading={false} error={null} hasActiveSet refreshControl={<button type="button">Refresh</button>} /></WithClientPorts>));
+  act(() => root.render(<WithClientPorts ports={ports}><RelationsPane setId="set-visible-positions" snapshot={activeSnapshot} isLoading={false} error={null} hasActiveSet refreshControl={<button type="button">Refresh</button>} /></WithClientPorts>));
   return { container, unmount: () => { act(() => root.unmount()); container.remove(); } };
 }
 
@@ -192,7 +195,7 @@ function visibleMetrics(
     .filter((other) => (edge.left - other.left) * (edge.right - other.right) < 0).length, 0) };
 }
 
-function snapshot(): ActiveSetSnapshot {
+function snapshot(includeThirdBug = false): ActiveSetSnapshot {
   return {
     set: { id: "set-visible-positions", name: "Visible positions", planId: "9", rootSuiteId: "10", queryId: "Q-1" },
     suiteTree: { id: 10, name: "Root", parentSuiteId: null, path: "Root", children: [
@@ -200,7 +203,11 @@ function snapshot(): ActiveSetSnapshot {
       { id: 12, name: "Visible suite", parentSuiteId: 10, path: "Root > Visible", children: [] }
     ] },
     projections: [projection(101, 11, "Hidden test"), projection(102, 12, "Visible test")],
-    workItemsFromQuery: [workItem(201, [101]), workItem(202, [])],
+    workItemsFromQuery: [
+      workItem(201, [101], "Hidden bug 201"),
+      workItem(202, [102], "Visible bug 202"),
+      ...(includeThirdBug ? [workItem(203, [101], "Visible bug 203")] : [])
+    ],
     loadedAt: "2026-08-25T12:00:00.000Z"
   };
 }
@@ -209,6 +216,6 @@ function projection(workItemId: number, suiteId: number, title: string) {
   return { workItemId, suiteId, suitePath: "Root", title, state: "Design", workItemType: "Test Case", assignedTo: null, tags: [], areaPath: null, priority: null, relatedIds: [], testPointId: null, configurationId: null, configurationName: null, lastOutcome: "Passed", lastResultId: null, lastResultCompletedDate: null, lastRunId: null };
 }
 
-function workItem(id: number, relatedIds: number[]) {
-  return { id, title: `Bug ${id}`, workItemType: "Bug", state: "Active", assignedTo: null, tags: [], areaPath: null, priority: null, relatedIds };
+function workItem(id: number, relatedIds: number[], title = `Bug ${id}`) {
+  return { id, title, workItemType: "Bug", state: "Active", assignedTo: null, tags: [], areaPath: null, priority: null, relatedIds };
 }

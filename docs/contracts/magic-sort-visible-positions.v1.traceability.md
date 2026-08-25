@@ -2,7 +2,7 @@
 
 | Vertragsanforderung | Eingefrorener Test |
 | --- | --- |
-| MSV-01 | `MSV-01 and MSV-02 exclude Test Cases inside a collapsed suite from the layout cost`; `MSV-01 ignores a filtered Test Case and preserves the remaining visible layout`; `MSV-01 ignores a filtered Bug and preserves its stored position` |
+| MSV-01 | `MSV-01 and MSV-02 exclude Test Cases inside a collapsed suite from the layout cost`; `MSV-01 ignores a filtered Test Case and preserves the remaining visible layout`; `MSV-01 excludes a connected filtered Bug while optimizing two visible Bugs` |
 | MSV-02 | `MSV-02 through MSV-05 count suite headers as rows and keep an equally good layout unchanged`; `MSV-01 and MSV-02 exclude Test Cases inside a collapsed suite from the layout cost` |
 | MSV-03 | `MSV-02 through MSV-05 count suite headers as rows and keep an equally good layout unchanged` |
 | MSV-04 | `MSV-02 through MSV-05 count suite headers as rows and keep an equally good layout unchanged`; `MSV-04 reduces crossings using the same visible positions that include suite headers` |
