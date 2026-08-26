@@ -1,0 +1,13 @@
+{
+  "contract": "relation-card-focus.v2.html",
+  "files": [
+    {
+      "path": "src/features/relations-view/relation-card-focus.contract.spec.tsx",
+      "sha256": "fed42e2b45aca0643a554492755eaeba38f288a71d84277f11a8e5b6194f378b"
+    },
+    {
+      "path": "src/features/relations-view/relation-card-focus-conflict-color.contract.spec.tsx",
+      "sha256": "de334a5465a2b4e5ae87ecc039477d091eaf97edbf3761a5c3293bcc8fac7802"
+    }
+  ]
+}

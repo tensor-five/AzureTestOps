@@ -629,6 +629,7 @@
 }
 .relations-view-line-pending .relations-view-line-stroke { opacity: 0.7; stroke-dasharray: 6 4; }
 .relations-view-line-focus-match .relations-view-line-stroke { stroke: var(--color-primary); stroke-width: 3; }
+.relations-view-line-focus-conflict .relations-view-line-stroke { stroke: var(--color-danger); stroke-width: 3; }
 .relations-view-line-focus-dimmed { opacity: 0.32; }
 .relations-view-line-draft {
   stroke: var(--color-primary);

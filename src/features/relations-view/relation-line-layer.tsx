@@ -159,7 +159,9 @@ export function RelationLineLayer(props: RelationLineLayerProps): React.ReactEle
         const relationKey = `${line.testCaseWorkItemId}::${line.workItemWorkItemId}`;
         const focusClass = props.focusActive
           ? props.focusedRelationKeys?.has(relationKey)
-            ? "relations-view-line-focus-match"
+            ? line.conflict
+              ? "relations-view-line-focus-match relations-view-line-focus-conflict"
+              : "relations-view-line-focus-match"
             : "relations-view-line-focus-dimmed"
           : "";
         const className = [
