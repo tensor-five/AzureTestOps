@@ -9,7 +9,7 @@ import {
 const STEP_DELAY_MS = 120;
 const FEEDBACK_COMPLETE_MS = 650;
 
-export type MagicSortFeedbackState = "idle" | "running" | "complete";
+export type MagicSortFeedbackState = "idle" | "running" | "complete" | "confirmed";
 
 export type MagicSortController = {
   isRunning: boolean;
@@ -66,6 +66,13 @@ export function useMagicSort(options: {
         applyLayoutRef.current(initialLayout);
       }
       setStatus("Magic Sort completed the layout optimization.");
+      if (!reduceMotion) {
+        setFeedbackState("confirmed");
+        feedbackTimerRef.current = setTimeout(() => {
+          setProgress(0);
+          setFeedbackState("idle");
+        }, FEEDBACK_COMPLETE_MS);
+      }
       return;
     }
     if (reduceMotion) {

@@ -38,7 +38,8 @@ export function MagicSortAction(props: MagicSortActionProps): React.ReactElement
         className={[
           "ui-shell-magic-sort",
           feedbackState === "running" ? "is-magic-running" : "",
-          feedbackState === "complete" ? "is-magic-complete" : ""
+          feedbackState === "complete" ? "is-magic-complete" : "",
+          feedbackState === "confirmed" ? "is-magic-confirmed" : ""
         ].filter(Boolean).join(" ")}
         aria-label="Magic Sort"
         onClick={props.onStart}
