@@ -40,8 +40,9 @@ type Metrics = { crossings: number; length: number };
  * ever swapped inside the suite that already contains them.
  */
 export function planMagicSort(input: MagicSortInput): MagicSortPlan {
+  const workItems = new Map(input.workItems.map((workItem) => [workItem.id, workItem]));
   const workItemPositions = input.addSpacer
-    ? initialWorkItemPositions(input.workItemIds, input.workItemPositions)
+    ? initialWorkItemPositions(input.workItemIds, input.workItemPositions, workItems)
     : undefined;
   let current: MagicSortLayout = {
     suites: input.suites.map((suite) => ({ ...suite, testCaseIds: [...suite.testCaseIds] })),
@@ -50,7 +51,6 @@ export function planMagicSort(input: MagicSortInput): MagicSortPlan {
       : [...input.workItemIds],
     ...(workItemPositions ? { workItemPositions } : {})
   };
-  const workItems = new Map(input.workItems.map((workItem) => [workItem.id, workItem]));
   const steps: MagicSortLayout[] = [current];
 
   for (let iteration = 0; iteration < 48; iteration += 1) {
@@ -94,7 +94,7 @@ function findBestImprovement(
       });
     }
   } else {
-    considerFreeWorkItemSlots(current, visibleRows, consider);
+    considerFreeWorkItemSlots(current, visibleRows, workItems, consider);
   }
   for (let suiteIndex = 0; suiteIndex < current.suites.length; suiteIndex += 1) {
     const suite = current.suites[suiteIndex]!;
@@ -143,6 +143,7 @@ function measure(
 function considerFreeWorkItemSlots(
   current: MagicSortLayout,
   visibleRows: readonly MagicSortVisibleRow[] | undefined,
+  workItems: ReadonlyMap<number, MagicSortWorkItem>,
   consider: (candidate: MagicSortLayout) => void
 ): void {
   const positions = current.workItemPositions!;
@@ -151,7 +152,7 @@ function considerFreeWorkItemSlots(
     ...Object.values(positions),
     current.workItemIds.length - 1
   );
-  current.workItemIds.forEach((workItemId) => {
+  current.workItemIds.filter((workItemId) => hasVisibleRelation(workItems.get(workItemId))).forEach((workItemId) => {
     for (let position = 0; position <= maximumPosition; position += 1) {
       if (positions[workItemId] === position) {
         continue;
@@ -161,12 +162,20 @@ function considerFreeWorkItemSlots(
       )?.[0];
       const nextPositions = { ...positions, [workItemId]: position };
       if (occupiedId) {
-        nextPositions[Number(occupiedId)] = positions[workItemId]!;
+        const occupiedWorkItemId = Number(occupiedId);
+        if (hasVisibleRelation(workItems.get(occupiedWorkItemId))) {
+          nextPositions[occupiedWorkItemId] = positions[workItemId]!;
+        }
       }
+      const compactedPositions = compactUnlinkedWorkItemPositions(
+        current.workItemIds,
+        nextPositions,
+        workItems
+      );
       consider({
         suites: current.suites,
-        workItemIds: orderWorkItemsByPosition(current.workItemIds, nextPositions),
-        workItemPositions: nextPositions
+        workItemIds: orderWorkItemsByPosition(current.workItemIds, compactedPositions),
+        workItemPositions: compactedPositions
       });
     }
   });
@@ -174,11 +183,12 @@ function considerFreeWorkItemSlots(
 
 function initialWorkItemPositions(
   workItemIds: readonly number[],
-  storedPositions: Readonly<Record<number, number>> | undefined
+  storedPositions: Readonly<Record<number, number>> | undefined,
+  workItems: ReadonlyMap<number, MagicSortWorkItem>
 ): Record<number, number> {
   const occupied = new Set<number>();
   const next: Record<number, number> = {};
-  workItemIds.forEach((id, index) => {
+  workItemIds.filter((id) => hasVisibleRelation(workItems.get(id))).forEach((id, index) => {
     const stored = storedPositions?.[id];
     const position = isSlotPosition(stored) && !occupied.has(stored)
       ? stored
@@ -186,7 +196,33 @@ function initialWorkItemPositions(
     next[id] = position;
     occupied.add(position);
   });
+  return compactUnlinkedWorkItemPositions(workItemIds, next, workItems);
+}
+
+function compactUnlinkedWorkItemPositions(
+  workItemIds: readonly number[],
+  positions: Readonly<Record<number, number>>,
+  workItems: ReadonlyMap<number, MagicSortWorkItem>
+): Record<number, number> {
+  const next = { ...positions };
+  const occupied = new Set(
+    workItemIds
+      .filter((id) => hasVisibleRelation(workItems.get(id)))
+      .map((id) => next[id])
+      .filter(isSlotPosition)
+  );
+  let preferredPosition = 0;
+  workItemIds.filter((id) => !hasVisibleRelation(workItems.get(id))).forEach((id) => {
+    const position = nextFreePosition(occupied, preferredPosition);
+    next[id] = position;
+    occupied.add(position);
+    preferredPosition = position + 1;
+  });
   return next;
+}
+
+function hasVisibleRelation(workItem: MagicSortWorkItem | undefined): boolean {
+  return (workItem?.relatedTestCaseIds.length ?? 0) > 0;
 }
 
 function isSlotPosition(value: unknown): value is number {

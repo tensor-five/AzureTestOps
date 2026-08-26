@@ -1,0 +1,9 @@
+{
+  "contract": "magic-sort-compact-unlinked-bugs.v1.html",
+  "files": [
+    {
+      "path": "src/features/relations-view/magic-sort-compact-unlinked-bugs.contract.spec.ts",
+      "sha256": "b267509d91d5b4da8b85f2885e690f8126232c0698bbf736a551d65503d104df"
+    }
+  ]
+}
