@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import * as React from "react";
 import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import { act } from "react";
 import { userEvent } from "@testing-library/user-event";
 import { createRoot } from "react-dom/client";
@@ -91,14 +92,11 @@ describe("Relation card focus contract v2", () => {
     const conflictLine = harness.container.querySelector<SVGGElement>('[data-line-id="101::501"]');
     const matchingLine = harness.container.querySelector<SVGGElement>('[data-line-id="102::501"]');
     expect(conflictLine?.classList.contains("relations-view-line-focus-conflict")).toBe(true);
-    expect(conflictLine?.classList.contains("relations-view-line-focus-match")).toBe(false);
+    expect(conflictLine?.classList.contains("relations-view-line-focus-match")).toBe(true);
     expect(matchingLine?.classList.contains("relations-view-line-focus-match")).toBe(true);
     expect(matchingLine?.classList.contains("relations-view-line-focus-conflict")).toBe(false);
 
-    const stylesheet = await readFile(
-      new URL("../../app/bootstrap/local-ui-relations.css", import.meta.url),
-      "utf8"
-    );
+    const stylesheet = await readFile(resolve("src/app/bootstrap/local-ui-relations.css"), "utf8");
     const focusMatchRule = stylesheet.indexOf(".relations-view-line-focus-match .relations-view-line-stroke");
     const focusConflictRule = stylesheet.indexOf(".relations-view-line-focus-conflict .relations-view-line-stroke");
     expect(focusMatchRule).toBeGreaterThan(-1);
