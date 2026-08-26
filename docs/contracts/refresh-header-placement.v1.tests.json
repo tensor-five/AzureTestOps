@@ -1,0 +1,9 @@
+{
+  "contract": "refresh-header-placement.v1.html",
+  "files": [
+    {
+      "path": "src/features/relations-view/refresh-header-placement.contract.spec.tsx",
+      "sha256": "d12963ce80b891b33d159b3552f79ea807c909cec957a40b8f6146b11933804c"
+    }
+  ]
+}
