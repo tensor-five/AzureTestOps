@@ -1,0 +1,17 @@
+{
+  "contract": "bug-test-case-status-conflicts.v2.html",
+  "files": [
+    {
+      "path": "src/features/relations-view/bug-test-case-status-conflicts.contract.spec.tsx",
+      "sha256": "40214176bf33c27441f6ba0a9294e4d9e52cffd41235533a5344869017e7ac19"
+    },
+    {
+      "path": "tests/e2e/bug-test-case-status-conflicts.contract.spec.ts",
+      "sha256": "7158b093ccb0cb322c5f44295998b26c0852161f45ed1e5be7270c8867e1239d"
+    },
+    {
+      "path": "tests/e2e/bug-test-case-status-conflicts-harness.tsx",
+      "sha256": "25c39a80468c1df6f806d791c24a99749b89aafdd86db194e2c6b54e41528503"
+    }
+  ]
+}

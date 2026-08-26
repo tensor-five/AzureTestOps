@@ -20,6 +20,15 @@ import type { LineSpec } from "./relation-line-layer.js";
  */
 
 const LINE_ID_SEPARATOR = "->";
+const STATUS_CONFLICT_SEPARATOR = "::";
+const STATUS_CONFLICTS = new Set([
+  "New::Passed",
+  "Active::Passed",
+  "Resolved::Failed",
+  "Closed::Failed",
+  "Resolved::Blocked",
+  "Closed::Blocked"
+]);
 
 export type RelationStatusReader = {
   relationIndex: RelationAdjacencyIndex;
@@ -55,7 +64,7 @@ export function buildLineSpecs(
   workItems: readonly WorkItem[],
   mutations: RelationStatusReader
 ): LineSpec[] {
-  const visibleWorkItemIds = new Set(workItems.map((workItem) => workItem.id));
+  const visibleWorkItemsById = new Map(workItems.map((workItem) => [workItem.id, workItem]));
   const seenLineIds = new Set<string>();
   const out: LineSpec[] = [];
 
@@ -68,7 +77,8 @@ export function buildLineSpecs(
       continue;
     }
     for (const wiId of relatedWorkItemIds) {
-      if (!visibleWorkItemIds.has(wiId)) {
+      const workItem = visibleWorkItemsById.get(wiId);
+      if (!workItem) {
         continue;
       }
       const wiKey = workItemItemKey(wiId);
@@ -83,12 +93,17 @@ export function buildLineSpecs(
         workItemItemKey: wiKey,
         testCaseWorkItemId: projection.workItemId,
         workItemWorkItemId: wiId,
-        pending: mutations.isPending(projection.workItemId, wiId)
+        pending: mutations.isPending(projection.workItemId, wiId),
+        conflict: isStatusConflict(workItem.state, projection.lastOutcome)
       });
     }
   }
 
   return out;
+}
+
+function isStatusConflict(workItemState: string, testCaseOutcome: string): boolean {
+  return STATUS_CONFLICTS.has(`${workItemState}${STATUS_CONFLICT_SEPARATOR}${testCaseOutcome}`);
 }
 
 /**

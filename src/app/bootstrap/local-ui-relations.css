@@ -599,6 +599,11 @@
 }
 .relations-view-line:hover .relations-view-line-stroke,
 .relations-view-line-selected .relations-view-line-stroke { stroke: var(--color-primary); stroke-width: 3; }
+.relations-view-line-conflict .relations-view-line-stroke,
+.relations-view-line-conflict:hover .relations-view-line-stroke,
+.relations-view-line-conflict.relations-view-line-selected .relations-view-line-stroke {
+  stroke: var(--color-danger);
+}
 .relations-view-line-pending .relations-view-line-stroke { opacity: 0.7; stroke-dasharray: 6 4; }
 .relations-view-line-draft {
   stroke: var(--color-primary);

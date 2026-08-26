@@ -9,6 +9,7 @@ export type LineSpec = {
   testCaseWorkItemId: number;
   workItemWorkItemId: number;
   pending: boolean;
+  conflict: boolean;
 };
 
 export type LineCoords = {
@@ -151,7 +152,8 @@ export function RelationLineLayer(props: RelationLineLayerProps): React.ReactEle
         const className = [
           "relations-view-line",
           selected ? "relations-view-line-selected" : "",
-          line.pending ? "relations-view-line-pending" : ""
+          line.pending ? "relations-view-line-pending" : "",
+          line.conflict ? "relations-view-line-conflict" : ""
         ]
           .filter(Boolean)
           .join(" ");
