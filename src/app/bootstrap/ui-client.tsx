@@ -144,6 +144,25 @@ function HydratedAppShell(props: {
       ? (suiteId: number) => ports.testSuiteDeepLink.buildHref(context, set.planId, suiteId)
       : undefined;
   }, [adoContextState.context, ports.testSuiteDeepLink, snapshotState.snapshot?.set]);
+  const refreshControl = (
+    <div className="relations-workspace-refresh">
+      <button
+        type="button"
+        className="relations-workspace-refresh-button"
+        onClick={refreshSnapshot}
+        disabled={!setManagement.activeSetId || snapshotState.isLoading}
+        aria-label="Refresh active set"
+      >
+        <span aria-hidden="true">↻</span>
+        <span>Refresh</span>
+      </button>
+      <RefreshProgressBar
+        progress={snapshotState.progress}
+        isLoading={snapshotState.isLoading}
+        error={snapshotState.error}
+      />
+    </div>
+  );
 
   return (
     <main data-ui-shell="phase-6-runtime" className="ui-shell">
@@ -151,6 +170,7 @@ function HydratedAppShell(props: {
         preflightStatus={preflightStatus}
         themeMode={themeMode}
         onToggleTheme={handleThemeToggle}
+        refreshControl={refreshControl}
         magicSortAction={magicSortAction}
         setSwitcher={
           <SetDropdown
@@ -173,25 +193,6 @@ function HydratedAppShell(props: {
           getWorkItemHref={getWorkItemHref}
           getSuiteHref={getSuiteHref}
           onMagicSortControlChange={handleMagicSortControlChange}
-          refreshControl={
-            <div className="relations-workspace-refresh">
-              <button
-                type="button"
-                className="relations-workspace-refresh-button"
-                onClick={refreshSnapshot}
-                disabled={!setManagement.activeSetId || snapshotState.isLoading}
-                aria-label="Refresh active set"
-              >
-                <span aria-hidden="true">↻</span>
-                <span>Refresh</span>
-              </button>
-              <RefreshProgressBar
-                progress={snapshotState.progress}
-                isLoading={snapshotState.isLoading}
-                error={snapshotState.error}
-              />
-            </div>
-          }
         />
       </div>
       <AppFooter />

@@ -41,7 +41,7 @@ export type RelationsPaneProps = {
   isLoading: boolean;
   error: string | null;
   hasActiveSet: boolean;
-  refreshControl: React.ReactNode;
+  refreshControl?: React.ReactNode;
   getWorkItemHref?: (workItemId: number) => string | null;
   getSuiteHref?: (suiteId: number) => string | null;
   onMagicSortControlChange?(control: MagicSortController | null): void;
@@ -311,7 +311,7 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
   }
   if (props.error) {
     return (
-      <RelationsPaneNotice title="Snapshot failed" action={props.refreshControl}>
+      <RelationsPaneNotice title="Snapshot failed">
         <span>{props.error}</span>
         <span>Retry once the Azure DevOps issue is resolved.</span>
       </RelationsPaneNotice>
@@ -319,14 +319,14 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
   }
   if (props.isLoading && !props.snapshot) {
     return (
-      <RelationsPaneNotice title="Loading active set…" action={props.refreshControl}>
+      <RelationsPaneNotice title="Loading active set…">
         Test plans, suites, runs, results and the saved query are streaming in.
       </RelationsPaneNotice>
     );
   }
   if (!props.snapshot) {
     return (
-      <RelationsPaneNotice title="No snapshot loaded" action={props.refreshControl}>
+      <RelationsPaneNotice title="No snapshot loaded">
         Refresh the active set to load test cases and work items.
       </RelationsPaneNotice>
     );
@@ -337,7 +337,6 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
   return (
     <div className="relations-workspace">
       <WorkspaceToolbar
-        refreshControl={props.refreshControl}
         loadedAt={props.snapshot.loadedAt}
         testCaseCount={props.snapshot.projections.length}
         workItemCount={props.snapshot.workItemsFromQuery.length}

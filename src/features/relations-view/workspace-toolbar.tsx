@@ -1,7 +1,7 @@
 import * as React from "react";
 
 export type WorkspaceToolbarProps = {
-  refreshControl: React.ReactNode;
+  refreshControl?: React.ReactNode;
   loadedAt: string;
   testCaseCount: number;
   workItemCount: number;
@@ -40,7 +40,6 @@ export function WorkspaceToolbar(props: WorkspaceToolbarProps): React.ReactEleme
   return (
     <section className="relations-workspace-toolbar" aria-label="Relations workspace controls">
       <div className="relations-workspace-toolbar-primary">
-        {props.refreshControl}
         <span className="relations-workspace-updated" title={formatFullTimestamp(props.loadedAt)}>
           Updated {formatRelativeTimestamp(props.loadedAt)}
         </span>

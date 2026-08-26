@@ -30,6 +30,7 @@ export type AppHeaderProps = {
   themeMode: ThemeMode;
   onToggleTheme(): void;
   setSwitcher: React.ReactNode;
+  refreshControl?: React.ReactNode;
   magicSortAction?: React.ReactNode;
 };
 
@@ -47,12 +48,15 @@ export function AppHeader(props: AppHeaderProps): React.ReactElement {
         </div>
       </div>
       <div className="ui-shell-header-actions">
-        <div className="ui-shell-magic-sort-slot" data-magic-sort-slot="">
-          {props.magicSortAction}
-        </div>
         <div className="ui-shell-set-picker">
           <span className="ui-shell-set-picker-label">Set</span>
           {props.setSwitcher}
+        </div>
+        <div className="ui-shell-refresh-slot" data-refresh-slot="">
+          {props.refreshControl}
+        </div>
+        <div className="ui-shell-magic-sort-slot" data-magic-sort-slot="">
+          {props.magicSortAction}
         </div>
         <PreflightBadge status={props.preflightStatus} />
         <button
