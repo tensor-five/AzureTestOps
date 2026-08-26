@@ -1,0 +1,9 @@
+{
+  "contract": "add-spacer-manual-bug-placement.v1.html",
+  "files": [
+    {
+      "path": "src/features/relations-view/add-spacer-manual-bug-placement.contract.spec.tsx",
+      "sha256": "883179dd5609e29c267fe3cadcf6145ff665d63103dff7c0b9bd139cb5aff129"
+    }
+  ]
+}
