@@ -12,7 +12,8 @@ const LINE: LineSpec = {
   workItemItemKey: "wi:2",
   testCaseWorkItemId: 1,
   workItemWorkItemId: 2,
-  pending: false
+  pending: false,
+  conflict: false
 };
 
 describe("RelationLineLayer", () => {
