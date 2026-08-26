@@ -19,14 +19,17 @@ export type MagicSortController = {
 export function useMagicSort(options: {
   input: MagicSortInput;
   applyLayout(layout: MagicSortLayout): void;
+  captureGeometry?(): Pick<MagicSortInput, "measuredTestCaseSlotCenters" | "measuredWorkItemSlotCenters">;
 }): MagicSortController {
   const [isRunning, setIsRunning] = React.useState(false);
   const [status, setStatus] = React.useState("");
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = React.useRef(options.input);
   const applyLayoutRef = React.useRef(options.applyLayout);
+  const captureGeometryRef = React.useRef(options.captureGeometry);
   inputRef.current = options.input;
   applyLayoutRef.current = options.applyLayout;
+  captureGeometryRef.current = options.captureGeometry;
 
   React.useEffect(() => () => {
     if (timerRef.current !== null) {
@@ -38,7 +41,7 @@ export function useMagicSort(options: {
     if (isRunning) {
       return;
     }
-    const plan = planMagicSort(inputRef.current);
+    const plan = planMagicSort({ ...inputRef.current, ...captureGeometryRef.current?.() });
     const finalLayout = plan.steps.at(-1)!;
     const reduceMotion = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     if (plan.steps.length === 1) {
