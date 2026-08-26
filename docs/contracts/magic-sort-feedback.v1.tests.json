@@ -1,0 +1,9 @@
+{
+  "contract": "magic-sort-feedback.v1.html",
+  "files": [
+    {
+      "path": "src/features/relations-view/magic-sort-feedback.contract.spec.tsx",
+      "sha256": "f7b9cd4fda7e42b6da1c8b1a1b1fd9a4fd543ba05830760f6cd4374fff61a933"
+    }
+  ]
+}

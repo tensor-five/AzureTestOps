@@ -340,6 +340,8 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
             onStart={magicSortControl.start}
             isRunning={magicSortControl.isRunning}
             status={magicSortControl.status}
+            progress={magicSortControl.progress}
+            feedbackState={magicSortControl.feedbackState}
             addSpacer={magicSortControl.addSpacer}
             onAddSpacerChange={magicSortControl.setAddSpacer}
           />
