@@ -1,0 +1,9 @@
+{
+  "contract": "magic-sort-measured-geometry.v1.html",
+  "files": [
+    {
+      "path": "src/features/relations-view/magic-sort-measured-geometry.contract.spec.ts",
+      "sha256": "6df6b48432ba6ea2f3c7c71b5fd2879c5923c30a2a9d6945992a18e9f2c8c533"
+    }
+  ]
+}

@@ -30,6 +30,7 @@ import { useMagicSort, type MagicSortController } from "./use-magic-sort.js";
 import { MagicSortAction } from "./magic-sort-action.js";
 import { buildSuiteExplorerEntries, selectVisibleSuiteEntries } from "./suite-explorer.js";
 import { useMagicSortSpacerOption } from "./use-magic-sort-spacer-option.js";
+import { captureMagicSortGeometry } from "./magic-sort-geometry.js";
 
 const NO_VISIBLE_LINES: ReadonlySet<string> = new Set();
 
@@ -172,10 +173,17 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
       };
     });
   }, [derived.filteredProjections, magicSortVisibleRows, projections, testCaseOrder]);
-  const magicSortWorkItems = React.useMemo(
-    () => workItemOrder.sortByStoredOrder(derived.filteredWorkItems),
-    [derived.filteredWorkItems, workItemOrder]
-  );
+  const magicSortWorkItems = React.useMemo(() => {
+    const ordered = workItemOrder.sortByStoredOrder(derived.filteredWorkItems);
+    if (!spacerOption.addSpacer) {
+      return ordered;
+    }
+    const orderIndex = new Map(ordered.map((workItem, index) => [workItem.id, index]));
+    return ordered.slice().sort((left, right) => (
+      (spacerOption.workItemPositions[left.id] ?? 0) - (spacerOption.workItemPositions[right.id] ?? 0)
+      || (orderIndex.get(left.id) ?? 0) - (orderIndex.get(right.id) ?? 0)
+    ));
+  }, [derived.filteredWorkItems, spacerOption.addSpacer, spacerOption.workItemPositions, workItemOrder]);
   const magicSortVisibleTestCaseIds = React.useMemo(
     () => new Set(magicSortSuites.flatMap((suite) => suite.testCaseIds)),
     [magicSortSuites]
@@ -217,7 +225,12 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
           current.naturalIds
         );
       });
-    }
+    },
+    captureGeometry: () => captureMagicSortGeometry({
+      container: containerRef.current,
+      visibleRows: magicSortVisibleRows,
+      workItemIds: magicSortWorkItems.map((workItem) => workItem.id)
+    })
   });
   const magicSortControl = React.useMemo<MagicSortController>(() => ({
     ...magicSort,

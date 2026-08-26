@@ -19,6 +19,8 @@ export type MagicSortInput = {
   workItems: readonly MagicSortWorkItem[];
   addSpacer?: boolean;
   workItemPositions?: Readonly<Record<number, number>>;
+  measuredTestCaseSlotCenters?: readonly number[];
+  measuredWorkItemSlotCenters?: readonly number[];
 };
 
 export type MagicSortLayout = {
@@ -52,7 +54,7 @@ export function planMagicSort(input: MagicSortInput): MagicSortPlan {
   const steps: MagicSortLayout[] = [current];
 
   for (let iteration = 0; iteration < 48; iteration += 1) {
-    const next = findBestImprovement(current, workItems, input.visibleRows);
+    const next = findBestImprovement(current, workItems, input.visibleRows, input.measuredTestCaseSlotCenters, input.measuredWorkItemSlotCenters);
     if (!next) {
       break;
     }
@@ -65,14 +67,16 @@ export function planMagicSort(input: MagicSortInput): MagicSortPlan {
 function findBestImprovement(
   current: MagicSortLayout,
   workItems: ReadonlyMap<number, MagicSortWorkItem>,
-  visibleRows: readonly MagicSortVisibleRow[] | undefined
+  visibleRows: readonly MagicSortVisibleRow[] | undefined,
+  measuredTestCaseSlotCenters?: readonly number[],
+  measuredWorkItemSlotCenters?: readonly number[]
 ): MagicSortLayout | null {
-  const currentMetrics = measure(current, workItems, visibleRows);
+  const currentMetrics = measure(current, workItems, visibleRows, measuredTestCaseSlotCenters, measuredWorkItemSlotCenters);
   let best: MagicSortLayout | null = null;
   let bestMetrics: Metrics | null = null;
 
   const consider = (candidate: MagicSortLayout) => {
-    const metrics = measure(candidate, workItems, visibleRows);
+    const metrics = measure(candidate, workItems, visibleRows, measuredTestCaseSlotCenters, measuredWorkItemSlotCenters);
     if (!dominates(metrics, currentMetrics)) {
       return;
     }
@@ -112,14 +116,17 @@ function findBestImprovement(
 function measure(
   layout: MagicSortLayout,
   workItems: ReadonlyMap<number, MagicSortWorkItem>,
-  visibleRows: readonly MagicSortVisibleRow[] | undefined
+  visibleRows: readonly MagicSortVisibleRow[] | undefined,
+  measuredTestCaseSlotCenters?: readonly number[],
+  measuredWorkItemSlotCenters?: readonly number[]
 ): Metrics {
-  const testCasePosition = visibleRows
+  const logicalTestCasePosition = visibleRows
     ? positionsFromVisibleRows(layout, visibleRows)
     : positionsFromFlatSuites(layout);
+  const testCasePosition = new Map([...logicalTestCasePosition].map(([id, position]) => [id, measuredTestCaseSlotCenters?.[position] ?? position]));
   const workItemPosition = layout.workItemPositions
-    ? new Map(Object.entries(layout.workItemPositions).map(([id, position]) => [Number(id), position]))
-    : new Map(layout.workItemIds.map((id, index) => [id, index]));
+    ? new Map(Object.entries(layout.workItemPositions).map(([id, position]) => [Number(id), measuredWorkItemSlotCenters?.[position] ?? position]))
+    : new Map(layout.workItemIds.map((id, index) => [id, measuredWorkItemSlotCenters?.[index] ?? index]));
   const edges = layout.workItemIds.flatMap((workItemId) => (workItems.get(workItemId)?.relatedTestCaseIds ?? [])
     .filter((testCaseId) => testCasePosition.has(testCaseId))
     .map((testCaseId) => ({
