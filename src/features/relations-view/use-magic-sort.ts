@@ -42,9 +42,13 @@ export function useMagicSort(options: {
       return;
     }
     const plan = planMagicSort({ ...inputRef.current, ...captureGeometryRef.current?.() });
+    const initialLayout = plan.steps[0]!;
     const finalLayout = plan.steps.at(-1)!;
     const reduceMotion = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     if (plan.steps.length === 1) {
+      if (layoutDiffersFromInput(initialLayout, inputRef.current)) {
+        applyLayoutRef.current(initialLayout);
+      }
       setStatus("Magic Sort completed the layout optimization.");
       return;
     }
@@ -55,6 +59,9 @@ export function useMagicSort(options: {
     }
 
     setIsRunning(true);
+    if (layoutDiffersFromInput(initialLayout, inputRef.current)) {
+      applyLayoutRef.current(initialLayout);
+    }
     setStatus("Magic Sort is optimizing the layout.");
     let stepIndex = 1;
     const applyNext = () => {
@@ -76,4 +83,18 @@ export function useMagicSort(options: {
   }, [isRunning]);
 
   return { isRunning, status, start };
+}
+
+function layoutDiffersFromInput(layout: MagicSortLayout, input: MagicSortInput): boolean {
+  if (layout.workItemIds.some((id, index) => input.workItemIds[index] !== id)) {
+    return true;
+  }
+  if (layout.suites.some((suite, index) => suite.testCaseIds.some(
+    (id, testCaseIndex) => input.suites[index]?.testCaseIds[testCaseIndex] !== id
+  ))) {
+    return true;
+  }
+  return Object.entries(layout.workItemPositions ?? {}).some(([id, position]) =>
+    input.workItemPositions?.[Number(id)] !== position
+  );
 }

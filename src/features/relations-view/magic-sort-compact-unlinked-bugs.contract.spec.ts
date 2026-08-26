@@ -52,12 +52,12 @@ describe("Magic Sort compact unlinked Bugs contract v1", () => {
     act(() => root.render(React.createElement(PersistedMagicSortHarness)));
     act(() => host.querySelector<HTMLButtonElement>("button")?.click());
 
-    expect(host.querySelector("output")?.textContent).toBe("0,1,3");
+    expect(compactSlots(host)).toEqual([0, 1, 2]);
     act(() => root.unmount());
 
     const restoredRoot = createRoot(host);
     act(() => restoredRoot.render(React.createElement(PersistedMagicSortHarness)));
-    expect(host.querySelector("output")?.textContent).toBe("0,1,3");
+    expect(compactSlots(host)).toEqual([0, 1, 2]);
     act(() => restoredRoot.unmount());
   });
 
@@ -142,4 +142,11 @@ function PersistedMagicSortHarness(): React.ReactElement {
     React.createElement("button", { type: "button", onClick: magicSort.start }, "Magic Sort"),
     React.createElement("output", null, positions)
   );
+}
+
+function compactSlots(host: HTMLElement): number[] {
+  return (host.querySelector("output")?.textContent ?? "")
+    .split(",")
+    .map((value) => Number(value))
+    .sort((left, right) => left - right);
 }
