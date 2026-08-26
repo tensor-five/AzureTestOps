@@ -1,9 +1,13 @@
 import * as React from "react";
 
+import type { MagicSortFeedbackState } from "./use-magic-sort.js";
+
 export type MagicSortActionProps = {
   onStart(): void;
   isRunning: boolean;
   status: string;
+  progress?: number;
+  feedbackState?: MagicSortFeedbackState;
   addSpacer?: boolean;
   onAddSpacerChange?(next: boolean): void;
 };
@@ -13,6 +17,9 @@ export type MagicSortActionProps = {
  * state so the action can be composed into the application header.
  */
 export function MagicSortAction(props: MagicSortActionProps): React.ReactElement {
+  const progress = Math.max(0, Math.min(100, props.progress ?? 0));
+  const feedbackState = props.feedbackState ?? "idle";
+  const showsProgress = feedbackState === "running" || feedbackState === "complete";
   return (
     <>
       {props.onAddSpacerChange ? (
@@ -28,13 +35,29 @@ export function MagicSortAction(props: MagicSortActionProps): React.ReactElement
       ) : null}
       <button
         type="button"
-        className="ui-shell-magic-sort"
+        className={[
+          "ui-shell-magic-sort",
+          feedbackState === "running" ? "is-magic-running" : "",
+          feedbackState === "complete" ? "is-magic-complete" : ""
+        ].filter(Boolean).join(" ")}
         aria-label="Magic Sort"
         onClick={props.onStart}
         disabled={props.isRunning}
       >
         <MagicWandIcon />
         <span className="ui-shell-magic-sort-label">Magic Sort</span>
+        {showsProgress ? (
+          <span
+            className="ui-shell-magic-sort-progress"
+            role="progressbar"
+            aria-label="Magic Sort optimization progress"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progress}
+          >
+            <span className="ui-shell-magic-sort-progress-bar" style={{ width: `${progress}%` }} />
+          </span>
+        ) : null}
       </button>
       <span className="u-visually-hidden" role="status" aria-live="polite" aria-atomic="true">
         {props.status}

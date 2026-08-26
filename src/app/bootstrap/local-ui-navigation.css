@@ -79,6 +79,7 @@
 }
 
 .ui-shell-magic-sort {
+  position: relative;
   min-height: calc(var(--space-8) + var(--space-1));
   display: inline-flex;
   align-items: center;
@@ -92,6 +93,7 @@
   font-size: var(--text-xs);
   font-weight: var(--font-bold);
   white-space: nowrap;
+  overflow: hidden;
 }
 
 .ui-shell-magic-sort:hover:not(:disabled),
@@ -99,6 +101,30 @@
 .ui-shell-magic-sort:disabled { cursor: wait; opacity: .7; }
 .ui-shell-magic-sort svg { width: var(--space-4); height: var(--space-4); fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
 .ui-shell-magic-sort svg path:last-child { fill: currentColor; stroke: none; }
+.ui-shell-magic-sort > svg,
+.ui-shell-magic-sort-label { position: relative; z-index: 1; }
+.ui-shell-magic-sort::after {
+  content: "";
+  position: absolute;
+  inset: -70% -45%;
+  opacity: 0;
+  background: linear-gradient(108deg, transparent 43%, color-mix(in srgb, var(--color-secondary) 70%, transparent) 52%, color-mix(in srgb, var(--color-on-primary) 72%, transparent) 58%, transparent 68%);
+  transform: translateX(-70%) rotate(8deg);
+  pointer-events: none;
+}
+.ui-shell-magic-sort.is-magic-running::after { opacity: 1; animation: ui-shell-magic-sweep 1.05s ease-in-out infinite; }
+.ui-shell-magic-sort.is-magic-running svg { animation: ui-shell-magic-wand 700ms ease-in-out infinite alternate; }
+.ui-shell-magic-sort.is-magic-complete::after { opacity: 1; animation: ui-shell-magic-finish 650ms ease-out both; }
+.ui-shell-magic-sort-progress { position: absolute; z-index: 2; right: 0; bottom: 0; left: 0; height: 3px; background: color-mix(in srgb, var(--color-on-primary) 28%, transparent); }
+.ui-shell-magic-sort-progress-bar { display: block; height: 100%; background: linear-gradient(90deg, var(--color-secondary), var(--color-on-primary)); transition: width var(--transition-duration-base) var(--transition-easing-standard); }
+@keyframes ui-shell-magic-sweep { from { transform: translateX(-70%) rotate(8deg); } to { transform: translateX(70%) rotate(8deg); } }
+@keyframes ui-shell-magic-wand { from { transform: rotate(-8deg) scale(.92); } to { transform: rotate(9deg) scale(1.08); } }
+@keyframes ui-shell-magic-finish { from { transform: translateX(-18%) rotate(8deg); } to { transform: translateX(100%) rotate(8deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .ui-shell-magic-sort::after,
+  .ui-shell-magic-sort.is-magic-running svg,
+  .ui-shell-magic-sort-progress-bar { animation: none; transition: none; }
+}
 
 .ui-shell-set-picker {
   display: flex;

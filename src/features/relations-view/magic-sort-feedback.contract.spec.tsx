@@ -57,8 +57,12 @@ describe("Magic Sort feedback contract v1", () => {
     expect(host.querySelector("output")?.textContent).toBe("running:0");
 
     act(() => vi.advanceTimersByTime(120));
-    expect(host.querySelector("output")?.textContent).toMatch(/^running:(?:50|67)$/);
-    act(() => vi.runAllTimers());
+    expect(host.querySelector("output")?.textContent).toBe("running:33");
+    act(() => vi.advanceTimersByTime(120));
+    expect(host.querySelector("output")?.textContent).toBe("running:67");
+    act(() => vi.advanceTimersByTime(120));
+    expect(host.querySelector("output")?.textContent).toBe("running:100");
+    act(() => vi.advanceTimersByTime(120));
     expect(host.querySelector("output")?.textContent).toBe("complete:100");
     act(() => vi.advanceTimersByTime(650));
     expect(host.querySelector("output")?.textContent).toBe("idle:0");
@@ -134,16 +138,18 @@ function renderFeedbackHarness(input: MagicSortInput): { host: HTMLDivElement; u
 
 function feedbackInput(): MagicSortInput {
   return {
-    suites: [{ suiteId: 11, testCaseIds: [102, 101] }],
+    suites: [{ suiteId: 11, testCaseIds: [103, 102, 101] }],
     visibleRows: [
       { kind: "suite-header", suiteId: 11 },
       { kind: "test-case", suiteId: 11, testCaseId: 101 },
-      { kind: "test-case", suiteId: 11, testCaseId: 102 }
+      { kind: "test-case", suiteId: 11, testCaseId: 102 },
+      { kind: "test-case", suiteId: 11, testCaseId: 103 }
     ],
-    workItemIds: [202, 201],
+    workItemIds: [101, 202, 303],
     workItems: [
-      { id: 201, relatedTestCaseIds: [101] },
-      { id: 202, relatedTestCaseIds: [102] }
+      { id: 101, relatedTestCaseIds: [101] },
+      { id: 202, relatedTestCaseIds: [102] },
+      { id: 303, relatedTestCaseIds: [103] }
     ]
   };
 }

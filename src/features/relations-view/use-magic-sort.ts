@@ -7,10 +7,15 @@ import {
 } from "./magic-sort-layout.js";
 
 const STEP_DELAY_MS = 120;
+const FEEDBACK_COMPLETE_MS = 650;
+
+export type MagicSortFeedbackState = "idle" | "running" | "complete";
 
 export type MagicSortController = {
   isRunning: boolean;
   status: string;
+  progress: number;
+  feedbackState: MagicSortFeedbackState;
   start(): void;
   addSpacer?: boolean;
   setAddSpacer?(next: boolean): void;
@@ -23,7 +28,10 @@ export function useMagicSort(options: {
 }): MagicSortController {
   const [isRunning, setIsRunning] = React.useState(false);
   const [status, setStatus] = React.useState("");
+  const [progress, setProgress] = React.useState(0);
+  const [feedbackState, setFeedbackState] = React.useState<MagicSortFeedbackState>("idle");
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const feedbackTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = React.useRef(options.input);
   const applyLayoutRef = React.useRef(options.applyLayout);
   const captureGeometryRef = React.useRef(options.captureGeometry);
@@ -35,12 +43,20 @@ export function useMagicSort(options: {
     if (timerRef.current !== null) {
       clearTimeout(timerRef.current);
     }
+    if (feedbackTimerRef.current !== null) {
+      clearTimeout(feedbackTimerRef.current);
+    }
   }, []);
 
   const start = React.useCallback(() => {
     if (isRunning) {
       return;
     }
+    if (feedbackTimerRef.current !== null) {
+      clearTimeout(feedbackTimerRef.current);
+    }
+    setProgress(0);
+    setFeedbackState("idle");
     const plan = planMagicSort({ ...inputRef.current, ...captureGeometryRef.current?.() });
     const initialLayout = plan.steps[0]!;
     const finalLayout = plan.steps.at(-1)!;
@@ -59,6 +75,7 @@ export function useMagicSort(options: {
     }
 
     setIsRunning(true);
+    setFeedbackState("running");
     if (layoutDiffersFromInput(initialLayout, inputRef.current)) {
       applyLayoutRef.current(initialLayout);
     }
@@ -68,11 +85,18 @@ export function useMagicSort(options: {
       const step = plan.steps[stepIndex];
       if (!step) {
         setIsRunning(false);
+        setProgress(100);
+        setFeedbackState("complete");
         setStatus("Magic Sort completed the layout optimization.");
+        feedbackTimerRef.current = setTimeout(() => {
+          setProgress(0);
+          setFeedbackState("idle");
+        }, FEEDBACK_COMPLETE_MS);
         return;
       }
       applyLayoutRef.current(step);
       const isLastLayout = stepIndex === plan.steps.length - 1;
+      setProgress(Math.round((stepIndex / (plan.steps.length - 1)) * 100));
       stepIndex += 1;
       setStatus(isLastLayout
         ? "Magic Sort is finalizing the layout optimization."
@@ -82,7 +106,7 @@ export function useMagicSort(options: {
     timerRef.current = setTimeout(applyNext, STEP_DELAY_MS);
   }, [isRunning]);
 
-  return { isRunning, status, start };
+  return { isRunning, status, progress, feedbackState, start };
 }
 
 function layoutDiffersFromInput(layout: MagicSortLayout, input: MagicSortInput): boolean {
