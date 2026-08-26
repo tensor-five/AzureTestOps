@@ -27,6 +27,7 @@ export type WorkItemColumnProps = {
   highlightQuery?: string;
   focusActive?: boolean;
   focusedWorkItemIds?: ReadonlySet<number>;
+  onFocusWorkItem?(workItemId: number): void;
 };
 
 export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
@@ -242,6 +243,9 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
                 onLinePointerDown={props.onLinePointerDown}
                 getWorkItemHref={props.getWorkItemHref}
                 highlightQuery={props.highlightQuery}
+                onFocus={workItem.workItemType.trim().toLowerCase() === "bug"
+                  ? () => props.onFocusWorkItem?.(workItem.id)
+                  : undefined}
               />
               {reorderEnabled ? (
                 <button

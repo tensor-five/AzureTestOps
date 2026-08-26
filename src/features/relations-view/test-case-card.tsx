@@ -2,6 +2,7 @@ import * as React from "react";
 
 import type { TestCaseProjection } from "../../domain/test-management/test-case-projection.js";
 import { HighlightedText } from "../../shared/search/highlighted-text.js";
+import { FocusIcon } from "./focus-icon.js";
 import { testCaseItemKey } from "./item-key.js";
 
 export type TestCaseCardProps = {
@@ -10,6 +11,7 @@ export type TestCaseCardProps = {
   /** Resolves the Azure DevOps deep link for a work item id, or null if unavailable. */
   getWorkItemHref?: (workItemId: number) => string | null;
   highlightQuery?: string;
+  onFocus?(): void;
 };
 
 type OutcomeDisplay = { slug: string; shortLabel: string };
@@ -82,6 +84,18 @@ export function TestCaseCard(props: TestCaseCardProps): React.ReactElement {
       <span className="relations-view-card-title">
         <HighlightedText text={projection.title} query={props.highlightQuery} />
       </span>
+      {props.onFocus ? (
+        <button
+          type="button"
+          className="relations-view-card-focus"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={props.onFocus}
+          aria-label={`Focus test case #${projection.workItemId}`}
+          title="Focus related items"
+        >
+          <FocusIcon />
+        </button>
+      ) : null}
       {handlePointerDown ? (
         <span
           className="relations-view-card-line-anchor relations-view-card-line-anchor-right"

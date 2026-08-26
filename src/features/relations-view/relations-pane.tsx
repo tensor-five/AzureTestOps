@@ -31,6 +31,7 @@ import { MagicSortAction } from "./magic-sort-action.js";
 import { buildSuiteExplorerEntries, selectVisibleSuiteEntries } from "./suite-explorer.js";
 import { useMagicSortSpacerOption } from "./use-magic-sort-spacer-option.js";
 import { captureMagicSortGeometry } from "./magic-sort-geometry.js";
+import { resolveRelationCardFocus } from "./relation-card-focus.js";
 
 const NO_VISIBLE_LINES: ReadonlySet<string> = new Set();
 
@@ -81,6 +82,16 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
     () => focusedSuite ? new Set(collectSuiteIds(focusedSuite)) : null,
     [focusedSuite]
   );
+  const resolvedCardFocus = React.useMemo(
+    () => resolveRelationCardFocus(
+      viewControls.focusedCard,
+      projections,
+      workItems,
+      mutations.relationIndex
+    ),
+    [mutations.relationIndex, projections, viewControls.focusedCard, workItems]
+  );
+  const cardFocusActive = viewControls.focusedCard !== null;
 
   React.useEffect(() => {
     if (
@@ -371,6 +382,9 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
           focusedSuiteId={focusedSuite?.id ?? null}
           focusedSuiteIds={focusedSuiteIds ?? undefined}
           onFocusSuite={viewControls.setFocusedSuiteId}
+          focusActive={cardFocusActive}
+          focusedTestCaseIds={resolvedCardFocus.testCaseIds}
+          onFocusTestCase={(workItemId) => viewControls.toggleFocusedCard({ kind: "test-case", workItemId })}
         />
         <WorkItemColumn
           workItems={derived.filteredWorkItems}
@@ -383,8 +397,9 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
           workItemPositions={spacerOption.workItemPositions}
           getWorkItemHref={props.getWorkItemHref}
           highlightQuery={filters.workItemFilter.titleQuery ?? ""}
-          focusActive={focusedSuite !== null}
-          focusedWorkItemIds={derived.focusedWorkItemIds}
+          focusActive={focusedSuite !== null || cardFocusActive}
+          focusedWorkItemIds={cardFocusActive ? resolvedCardFocus.workItemIds : derived.focusedWorkItemIds}
+          onFocusWorkItem={(workItemId) => viewControls.toggleFocusedCard({ kind: "work-item", workItemId })}
         />
         <RelationLineLayer
           container={containerEl}
@@ -401,6 +416,8 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
             workItemOrder.layoutRevision,
             viewControls.mobileColumn
           ].join(":")}
+          focusActive={cardFocusActive}
+          focusedRelationKeys={resolvedCardFocus.relationKeys}
         />
         {mutations.error ? (
           <RelationErrorBanner message={mutations.error} onDismiss={mutations.clearError} />

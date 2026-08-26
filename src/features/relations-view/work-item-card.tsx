@@ -2,6 +2,7 @@ import * as React from "react";
 
 import type { WorkItem } from "../../domain/work-items/work-item.js";
 import { HighlightedText } from "../../shared/search/highlighted-text.js";
+import { FocusIcon } from "./focus-icon.js";
 import { workItemItemKey } from "./item-key.js";
 
 export type WorkItemCardProps = {
@@ -10,6 +11,7 @@ export type WorkItemCardProps = {
   /** Resolves the Azure DevOps deep link for a work item id, or null if unavailable. */
   getWorkItemHref?: (workItemId: number) => string | null;
   highlightQuery?: string;
+  onFocus?(): void;
 };
 
 export function WorkItemCard(props: WorkItemCardProps): React.ReactElement {
@@ -48,6 +50,18 @@ export function WorkItemCard(props: WorkItemCardProps): React.ReactElement {
           role="button"
           aria-label={`Drag to create related link from work item #${workItem.id}`}
         />
+      ) : null}
+      {props.onFocus ? (
+        <button
+          type="button"
+          className="relations-view-card-focus"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={props.onFocus}
+          aria-label={`Focus bug #${workItem.id}`}
+          title="Focus related items"
+        >
+          <FocusIcon />
+        </button>
       ) : null}
       {href ? (
         <a

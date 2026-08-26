@@ -481,8 +481,31 @@
   box-shadow: var(--shadow-sm);
 }
 
-.relations-view-card-work-item.relations-view-card-line-source { padding-left: var(--space-5-5); }
-.relations-view-card-test-case.relations-view-card-line-source { padding-right: var(--space-5-5); }
+.relations-view-card-work-item.relations-view-card-line-source { padding-left: calc(var(--space-3-5) + var(--space-6)); }
+.relations-view-card-test-case.relations-view-card-line-source { padding-right: calc(var(--space-3-5) + var(--space-6)); }
+
+.relations-view-card-focus {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  width: var(--space-6);
+  height: var(--space-6);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+.relations-view-card-test-case .relations-view-card-focus { right: var(--space-3-5); }
+.relations-view-card-work-item .relations-view-card-focus { left: var(--space-3-5); }
+.relations-view-card-focus:hover,
+.relations-view-card-focus:focus-visible { border-color: var(--color-border); background: var(--color-bg-muted); color: var(--color-primary); outline: none; }
+.relations-view-card-focus svg { width: var(--space-4); height: var(--space-4); fill: none; stroke: currentColor; stroke-width: 1.8; }
 
 .relations-view-card-id {
   flex: none;
@@ -605,6 +628,8 @@
   stroke: var(--color-danger);
 }
 .relations-view-line-pending .relations-view-line-stroke { opacity: 0.7; stroke-dasharray: 6 4; }
+.relations-view-line-focus-match .relations-view-line-stroke { stroke: var(--color-primary); stroke-width: 3; }
+.relations-view-line-focus-dimmed { opacity: 0.32; }
 .relations-view-line-draft {
   stroke: var(--color-primary);
   stroke-width: 2;
