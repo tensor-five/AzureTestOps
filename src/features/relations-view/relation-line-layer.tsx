@@ -35,6 +35,8 @@ export type RelationLineLayerProps = {
   onVisibleLineIdsChange: (lineIds: ReadonlySet<string>) => void;
   /** Forces an extra recompute when the caller knows positions have moved. */
   layoutVersion: number | string;
+  focusActive?: boolean;
+  focusedRelationKeys?: ReadonlySet<string>;
 };
 
 /**
@@ -145,10 +147,21 @@ export function RelationLineLayer(props: RelationLineLayerProps): React.ReactEle
     >
       {props.lines.map((line) => {
         const c = coords.get(line.lineId);
-        if (!c) {
+        const endpointsExist = props.container?.querySelector(
+          `[data-item-key="${cssAttr(line.testCaseItemKey)}"]`
+        ) !== null && props.container?.querySelector(
+          `[data-item-key="${cssAttr(line.workItemItemKey)}"]`
+        ) !== null;
+        if (!c && !endpointsExist) {
           return null;
         }
         const selected = line.lineId === props.selectedLineId;
+        const relationKey = `${line.testCaseWorkItemId}::${line.workItemWorkItemId}`;
+        const focusClass = props.focusActive
+          ? props.focusedRelationKeys?.has(relationKey)
+            ? "relations-view-line-focus-match"
+            : "relations-view-line-focus-dimmed"
+          : "";
         const className = [
           "relations-view-line",
           selected ? "relations-view-line-selected" : "",
@@ -160,27 +173,32 @@ export function RelationLineLayer(props: RelationLineLayerProps): React.ReactEle
         return (
           <g
             key={line.lineId}
-            className={className}
-            data-line-id={line.lineId}
-            onPointerDown={(event) => {
-              event.stopPropagation();
-              props.onSelectLine(line.lineId);
-            }}
+            className={focusClass}
+            data-line-id={relationKey}
           >
-            <line
-              className="relations-view-line-hitbox"
-              x1={c.fromX}
-              y1={c.fromY}
-              x2={c.toX}
-              y2={c.toY}
-            />
-            <line
-              className="relations-view-line-stroke"
-              x1={c.fromX}
-              y1={c.fromY}
-              x2={c.toX}
-              y2={c.toY}
-            />
+            {c ? <g
+              className={className}
+              data-line-id={line.lineId}
+              onPointerDown={(event) => {
+                event.stopPropagation();
+                props.onSelectLine(line.lineId);
+              }}
+            >
+              <line
+                className="relations-view-line-hitbox"
+                x1={c.fromX}
+                y1={c.fromY}
+                x2={c.toX}
+                y2={c.toY}
+              />
+              <line
+                className="relations-view-line-stroke"
+                x1={c.fromX}
+                y1={c.fromY}
+                x2={c.toX}
+                y2={c.toY}
+              />
+            </g> : null}
           </g>
         );
       })}

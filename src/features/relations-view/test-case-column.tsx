@@ -5,6 +5,7 @@ import type { TestCaseProjection } from "../../domain/test-management/test-case-
 import { HighlightedText } from "../../shared/search/highlighted-text.js";
 import { resolveAdjacentItemMove } from "./item-order.js";
 import { TestCaseCard } from "./test-case-card.js";
+import { FocusIcon } from "./focus-icon.js";
 import type { SuiteCollapseApi } from "./use-suite-collapse.js";
 import { useItemDragging } from "./use-item-dragging.js";
 import type { TestCaseOrderApi } from "./use-test-case-order.js";
@@ -33,6 +34,9 @@ export type TestCaseColumnProps = {
   focusedSuiteId?: number | null;
   focusedSuiteIds?: ReadonlySet<number>;
   onFocusSuite?(suiteId: number | null): void;
+  focusActive?: boolean;
+  focusedTestCaseIds?: ReadonlySet<number>;
+  onFocusTestCase?(workItemId: number): void;
 };
 
 type DragSource = { workItemId: number; suiteId: number };
@@ -218,6 +222,9 @@ export function TestCaseColumn(props: TestCaseColumnProps): React.ReactElement {
               focusedSuiteId={props.focusedSuiteId ?? null}
               focusedSuiteIds={props.focusedSuiteIds}
               onFocusSuite={props.onFocusSuite}
+              focusActive={props.focusActive}
+              focusedTestCaseIds={props.focusedTestCaseIds}
+              onFocusTestCase={props.onFocusTestCase}
             />
           ))}
         </ol>
@@ -243,6 +250,9 @@ function SuiteGroup(props: {
   focusedSuiteId: number | null;
   focusedSuiteIds?: ReadonlySet<number>;
   onFocusSuite?: (suiteId: number | null) => void;
+  focusActive?: boolean;
+  focusedTestCaseIds?: ReadonlySet<number>;
+  onFocusTestCase?(workItemId: number): void;
 }): React.ReactElement {
   const { entry } = props;
   const order = props.order;
@@ -434,7 +444,15 @@ function SuiteGroup(props: {
                 key={rowKey}
                 className={props.draggedKey === rowKey
                   ? "relations-view-test-case-row relations-view-test-case-row-dragging"
-                  : "relations-view-test-case-row"}
+                  : [
+                    "relations-view-test-case-row",
+                    props.focusActive && props.focusedTestCaseIds?.has(projection.workItemId)
+                      ? "relations-view-item-focus-match"
+                      : "",
+                    props.focusActive && !props.focusedTestCaseIds?.has(projection.workItemId)
+                      ? "relations-view-item-focus-dimmed"
+                      : ""
+                  ].filter(Boolean).join(" ")}
                 data-test-case-id={projection.workItemId}
               >
                 {reorderEnabled ? (
@@ -464,6 +482,9 @@ function SuiteGroup(props: {
                   onLinePointerDown={props.onLinePointerDown}
                   getWorkItemHref={props.getWorkItemHref}
                   highlightQuery={props.searchQuery}
+                  onFocus={props.onFocusTestCase
+                    ? () => props.onFocusTestCase?.(projection.workItemId)
+                    : undefined}
                 />
               </div>
             );
@@ -499,15 +520,6 @@ function FolderIcon(props: { open: boolean }): React.ReactElement {
       <path d={props.open
         ? "M3 7.5h7l2 2h9l-2.2 8.5H5.2L3 7.5Z"
         : "M3 6.5h7l2 2h9v9.5H3V6.5Z"} />
-    </svg>
-  );
-}
-
-function FocusIcon(): React.ReactElement {
-  return (
-    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
     </svg>
   );
 }

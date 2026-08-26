@@ -1,0 +1,9 @@
+{
+  "contract": "relation-card-focus.v1.html",
+  "files": [
+    {
+      "path": "src/features/relations-view/relation-card-focus.contract.spec.tsx",
+      "sha256": "fed42e2b45aca0643a554492755eaeba38f288a71d84277f11a8e5b6194f378b"
+    }
+  ]
+}
