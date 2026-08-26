@@ -1,0 +1,69 @@
+<article class="contract" aria-labelledby="contract-title">
+  <style>
+    .contract { max-width: 980px; margin: 0 auto; color: #1c2c45; font-family: Inter, ui-sans-serif, system-ui, sans-serif; line-height: 1.5; }
+    .contract header { padding: 28px 32px; color: #f7faff; background: linear-gradient(135deg, #163a6b, #405ca1); border-radius: 14px 14px 0 0; }
+    .contract h1 { margin: 0; font-size: 28px; }
+    .contract header p { margin: 8px 0 0; color: #d9e6fd; }
+    .contract main { overflow: hidden; border: 1px solid #ccd8e8; border-top: 0; border-radius: 0 0 14px 14px; background: #fff; }
+    .contract section { padding: 24px 32px; border-top: 1px solid #e0e7f0; }
+    .contract section:first-child { border-top: 0; }
+    .contract h2 { margin: 0 0 12px; color: #264b84; font-size: 18px; }
+    .contract ul { margin: 0; padding-left: 22px; }
+    .contract li + li { margin-top: 7px; }
+    .contract table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .contract th, .contract td { padding: 9px; border: 1px solid #d7e0ec; text-align: left; vertical-align: top; }
+    .contract th { color: #294b7c; background: #eef4fc; }
+    .contract .preview { display: grid; grid-template-columns: 1fr 1.2fr; overflow: hidden; border: 1px solid #cbd7e8; border-radius: 9px; background: #f8fbff; }
+    .contract .preview-column { padding: 16px; }
+    .contract .preview-column + .preview-column { border-left: 1px solid #d6e1ed; }
+    .contract .preview-title { margin: 0 0 10px; color: #536783; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+    .contract .item, .contract .spacer, .contract .target { min-height: 34px; display: flex; align-items: center; padding: 7px 9px; border-radius: 6px; font-size: 13px; }
+    .contract .item { margin-top: 7px; border: 1px solid #cbd9e8; background: #fff; }
+    .contract .bug { justify-content: space-between; border-color: #b9cae1; }
+    .contract .spacer { margin: 7px 0; justify-content: center; color: #627792; border: 1px dashed #9eb4cf; background: #eef5fc; font-size: 12px; }
+    .contract .target { justify-content: center; color: #1f5797; border: 1px dashed #3473b8; background: #eaf4ff; }
+    .contract .meta { color: #536783; font-size: 13px; }
+    @media (max-width: 620px) { .contract .preview { grid-template-columns: 1fr; }.contract .preview-column + .preview-column { border-top: 1px solid #d6e1ed; border-left: 0; } }
+  </style>
+  <header>
+    <h1 id="contract-title">Vertrag v1: Manuelle Bug-Positionierung mit Add Spacer</h1>
+    <p>Freigegeben am 26. August 2026</p>
+  </header>
+  <main>
+    <section>
+      <h2>Versprechen</h2>
+      <p>Ist Add Spacer aktiv, lassen sich Bugs weiterhin manuell vertikal sortieren. Spacer verhalten sich dabei wie feste, nicht verschiebbare Blöcke: Bugs werden oberhalb oder unterhalb dieser Blöcke abgelegt, ohne Spacer zu entfernen, zusammenzuführen oder zu verschieben.</p>
+    </section>
+    <section>
+      <h2>Vorschau</h2>
+      <div class="preview" aria-label="Vorschau der manuellen Bug-Positionierung zwischen festen Spacern">
+        <div class="preview-column"><p class="preview-title">Test Cases</p><div class="item">TC-101 · Anmeldung</div><div class="item">TC-102 · Berechtigung</div><div class="item">TC-103 · Export</div></div>
+        <div class="preview-column"><p class="preview-title">Bugs · Add Spacer aktiv</p><div class="item bug">BUG-201 · Login-Fehler <span aria-hidden="true">⠿</span></div><div class="spacer">Fester Spacer</div><div class="target">BUG-203 hier ablegen</div><div class="spacer">Fester Spacer</div><div class="item bug">BUG-202 · Export-Timeout <span aria-hidden="true">⠿</span></div></div>
+      </div>
+    </section>
+    <section>
+      <h2>Verbindliche Anforderungen</h2>
+      <table>
+        <thead><tr><th>ID</th><th>Anforderung</th></tr></thead>
+        <tbody>
+          <tr><td>ASMB-01</td><td>Bei aktivem Add Spacer bleiben die vorhandenen Drag-Handles und die Tastaturbedienung für die manuelle Sortierung von Bugs verfügbar.</td></tr>
+          <tr><td>ASMB-02</td><td>Spacer sind sichtbare, nicht verschiebbare Höhenblöcke. Sie erhalten weder einen Drag-Handle noch können sie als Bug behandelt werden.</td></tr>
+          <tr><td>ASMB-03</td><td>Ein Bug kann per Drag &amp; Drop oberhalb oder unterhalb eines Bugs sowie oberhalb oder unterhalb eines Spacers abgelegt werden. Die Drop-Vorschau macht die Zielposition sichtbar.</td></tr>
+          <tr><td>ASMB-04</td><td>Ein manueller Bug-Move ordnet Bugs um die bestehenden Spacer-Blöcke herum an. Anzahl, Reihenfolge und Höhe der Spacer-Blöcke bleiben dabei unverändert.</td></tr>
+          <tr><td>ASMB-05</td><td>Die resultierende Bug- und Spacer-Anordnung wird pro aktivem Set über die bestehende Layout-Persistenz gespeichert und nach Neuaufruf wiederhergestellt.</td></tr>
+          <tr><td>ASMB-06</td><td>Die manuelle Sortierung respektiert den aktiven Filter: Sie verändert ausschließlich aktuell sichtbare Bugs. Ausgeblendete Bugs und ihre gespeicherten Positionen bleiben unverändert.</td></tr>
+          <tr><td>ASMB-07</td><td>Bei deaktiviertem Add Spacer bleiben die bisherige manuelle Sortierung, Magic Sort, Add Spacer selbst, Filter, Linien und übrige Bedienung unverändert.</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <section>
+      <h2>Nicht Teil dieses Vertrags</h2>
+      <ul>
+        <li>Manuelles Anlegen, Löschen oder Vergrößern von Spacern.</li>
+        <li>Änderungen am Optimierungsalgorithmus von Magic Sort.</li>
+        <li>Veränderungen an nicht sichtbaren oder herausgefilterten Bugs.</li>
+      </ul>
+    </section>
+    <section class="meta"><strong>Freigabestatus:</strong> durch die Nutzerfreigabe bestätigt. Diese Version wird nach ihrer Prüfsumme eingefroren.</section>
+  </main>
+</article>
