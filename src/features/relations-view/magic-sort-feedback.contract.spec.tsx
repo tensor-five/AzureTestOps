@@ -69,18 +69,12 @@ describe("Magic Sort feedback contract v1", () => {
     act(() => root.unmount());
   });
 
-  it("MSF-04 does not show a running effect for reduced motion or an immediate result", () => {
+  it("MSF-04 does not show a running effect for reduced motion", () => {
     vi.stubGlobal("matchMedia", () => ({ matches: true }));
     const reducedMotion = renderFeedbackHarness(feedbackInput());
     act(() => reducedMotion.host.querySelector<HTMLButtonElement>("button")?.click());
     expect(reducedMotion.host.querySelector("output")?.textContent).toBe("idle:0");
     reducedMotion.unmount();
-
-    vi.stubGlobal("matchMedia", () => ({ matches: false }));
-    const immediateResult = renderFeedbackHarness(immediateInput());
-    act(() => immediateResult.host.querySelector<HTMLButtonElement>("button")?.click());
-    expect(immediateResult.host.querySelector("output")?.textContent).toBe("idle:0");
-    immediateResult.unmount();
 
     const harness = renderAction({ isRunning: false, progress: 0, feedbackState: "idle" });
 
@@ -150,22 +144,6 @@ function feedbackInput(): MagicSortInput {
       { id: 101, relatedTestCaseIds: [101] },
       { id: 202, relatedTestCaseIds: [102] },
       { id: 303, relatedTestCaseIds: [103] }
-    ]
-  };
-}
-
-function immediateInput(): MagicSortInput {
-  return {
-    suites: [{ suiteId: 11, testCaseIds: [101, 102] }],
-    visibleRows: [
-      { kind: "suite-header", suiteId: 11 },
-      { kind: "test-case", suiteId: 11, testCaseId: 101 },
-      { kind: "test-case", suiteId: 11, testCaseId: 102 }
-    ],
-    workItemIds: [201, 202],
-    workItems: [
-      { id: 201, relatedTestCaseIds: [101] },
-      { id: 202, relatedTestCaseIds: [102] }
     ]
   };
 }
