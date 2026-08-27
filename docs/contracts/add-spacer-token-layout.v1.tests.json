@@ -1,0 +1,9 @@
+{
+  "contract": "add-spacer-token-layout.v1.html",
+  "files": [
+    {
+      "path": "src/features/relations-view/add-spacer-token-layout.contract.spec.tsx",
+      "sha256": "0ec1eb21c9b289a9c8ab7b2e46f9e4ec2fb1ab58017d114ecbe519daf9d06fd5"
+    }
+  ]
+}
