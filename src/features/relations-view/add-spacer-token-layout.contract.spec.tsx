@@ -26,6 +26,7 @@ type TokenLayoutApi = {
   addSpacer: boolean;
   spacerLayout: readonly SpacerToken[];
   moveVisibleWorkItemToSpacerSlot(sourceWorkItemId: number, targetTokenIndex: number): void;
+  applyVisiblePositions(visibleIds: readonly number[], nextPositions: Readonly<Record<number, number>>): void;
 };
 
 const TokenLayoutColumn = WorkItemColumn as unknown as React.ComponentType<TokenLayoutProps>;
@@ -104,6 +105,7 @@ describe("Add Spacer token layout contract v1", () => {
     expect(readAddSpacer(first.host)).toBe(true);
     act(() => first.host.querySelector<HTMLButtonElement>("[data-token-layout-move]")?.click());
     expect(readLayout(first.host)).toEqual([201, 202, 203, null, null]);
+    expect(renderedTokens(first.host)).toEqual([201, 202, 203, null, null]);
     first.unmount();
 
     clearSetLayoutPreferenceForTests();
@@ -140,6 +142,24 @@ describe("Add Spacer token layout contract v1", () => {
     expect(restored.host.querySelector('[data-work-item-id="203"]')).toBeNull();
 
     restored.unmount();
+  });
+
+  it("ASTL-06 preserves every visible Bug when Magic Sort targets a slot occupied by a filtered-out Bug", () => {
+    mockPreferences({
+      "active-set": {
+        magicSortAddSpacer: true,
+        workItemSpacerLayout: [201, null, 203, 202]
+      }
+    });
+    const harness = renderPersistentTokenHarness({ visibleWorkItems: [workItem(201), workItem(202)] });
+
+    act(() => harness.host.querySelector<HTMLButtonElement>("[data-token-layout-magic-sort]")?.click());
+    const layout = readLayout(harness.host);
+    expect(layout).toContain(201);
+    expect(layout).toContain(202);
+    expect(layout[2]).toBe(203);
+
+    harness.unmount();
   });
 
   it("ASTL-07 keeps dense manual ordering when Add Spacer is disabled", () => {
@@ -214,6 +234,7 @@ function PersistentTokenHarness(props: { setId: string; visibleWorkItems: readon
     <output>{JSON.stringify(spacer.spacerLayout)}</output>
     <output data-add-spacer="">{String(spacer.addSpacer)}</output>
     <button type="button" data-token-layout-move="" onClick={() => spacer.moveVisibleWorkItemToSpacerSlot(202, 1)}>Move</button>
+    <button type="button" data-token-layout-magic-sort="" onClick={() => spacer.applyVisiblePositions([201, 202], { 201: 0, 202: 2 })}>Magic Sort</button>
   </>;
 }
 
