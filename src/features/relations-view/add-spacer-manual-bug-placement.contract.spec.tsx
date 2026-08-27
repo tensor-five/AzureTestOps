@@ -87,13 +87,13 @@ describe("Add Spacer manual Bug placement contract v1", () => {
     expect(spacer.hasAttribute("data-spacer-drop-target")).toBe(true);
     expect(spacer.getAttribute("data-drop-edge")).toBe("before");
     act(() => fireDrag(spacer, "drop", { dataTransfer: transfer, clientY: 40 }));
-    expect(onSpacerPositionsChange).toHaveBeenCalledWith([201, 202], { 201: 3, 202: 0 });
+    expect(onSpacerPositionsChange).toHaveBeenCalledWith([201, 202], { 201: 0, 202: 3 });
 
     act(() => fireDrag(handles[0]!, "dragstart", { dataTransfer: transfer }));
     act(() => fireDrag(spacers[1]!, "dragover", { dataTransfer: transfer, clientY: 84 }));
     expect(spacers[1]?.getAttribute("data-drop-edge")).toBe("after");
     act(() => fireDrag(spacers[1]!, "drop", { dataTransfer: transfer, clientY: 84 }));
-    expect(onSpacerPositionsChange).toHaveBeenCalledWith([201, 202], { 201: 3, 202: 0 });
+    expect(onSpacerPositionsChange).toHaveBeenCalledWith([201, 202], { 201: 0, 202: 3 });
 
     harness.unmount();
   });

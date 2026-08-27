@@ -206,7 +206,7 @@
 
 .relations-view-work-item-spacer {
   min-height: calc(var(--space-8) + var(--space-1));
-  pointer-events: none;
+  position: relative;
   transition: min-height var(--transition-duration-base) var(--transition-easing-standard);
 }
 .relations-view-suite-cards {
@@ -408,7 +408,9 @@
 .relations-view-test-case-row[data-drop-edge="before"]::before,
 .relations-view-test-case-row[data-drop-edge="after"]::after,
 .relations-view-work-item-list-item[data-drop-edge="before"]::before,
-.relations-view-work-item-list-item[data-drop-edge="after"]::after {
+.relations-view-work-item-list-item[data-drop-edge="after"]::after,
+.relations-view-work-item-spacer[data-drop-edge="before"]::before,
+.relations-view-work-item-spacer[data-drop-edge="after"]::after {
   content: "";
   position: absolute;
   left: 0;
@@ -420,11 +422,13 @@
 }
 
 .relations-view-test-case-row[data-drop-edge="before"]::before,
-.relations-view-work-item-list-item[data-drop-edge="before"]::before {
+.relations-view-work-item-list-item[data-drop-edge="before"]::before,
+.relations-view-work-item-spacer[data-drop-edge="before"]::before {
   top: calc(-1 * var(--space-1));
 }
 .relations-view-test-case-row[data-drop-edge="after"]::after,
-.relations-view-work-item-list-item[data-drop-edge="after"]::after {
+.relations-view-work-item-list-item[data-drop-edge="after"]::after,
+.relations-view-work-item-spacer[data-drop-edge="after"]::after {
   bottom: calc(-1 * var(--space-1));
 }
 

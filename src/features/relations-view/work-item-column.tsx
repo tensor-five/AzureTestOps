@@ -22,6 +22,11 @@ export type WorkItemColumnProps = {
   addSpacer?: boolean;
   /** Vertical positions in the visible Bug layout when Add Spacer is enabled. */
   workItemPositions?: Readonly<Record<number, number>>;
+  /** Persists a manual visible Bug order into the existing free Spacer slots. */
+  onSpacerPositionsChange?(
+    visibleIds: readonly number[],
+    nextPositions: Readonly<Record<number, number>>
+  ): void;
   /** Resolves the Azure DevOps deep link for a work item id, or null if unavailable. */
   getWorkItemHref?: (workItemId: number) => string | null;
   highlightQuery?: string;
@@ -52,6 +57,7 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
 
   const draggedIdRef = React.useRef<number | null>(null);
   const [draggedId, setDraggedId] = React.useState<number | null>(null);
+  const [spacerDropPreview, setSpacerDropPreview] = React.useState<string | null>(null);
   const [reorderAnnouncement, setReorderAnnouncement] = React.useState("");
   const reorderInstructionId = React.useId();
   const listRef = React.useRef<HTMLOListElement | null>(null);
@@ -88,8 +94,37 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
   const handleDragEnd = React.useCallback(() => {
     draggedIdRef.current = null;
     setDraggedId(null);
+    setSpacerDropPreview(null);
     itemDragging.clearPreview();
   }, [itemDragging]);
+
+  const applyManualMove = React.useCallback(
+    (draggedWorkItemId: number, targetWorkItemId: number, edge: "before" | "after") => {
+      if (
+        !props.order ||
+        draggedWorkItemId === targetWorkItemId ||
+        !naturalIdSet.has(draggedWorkItemId) ||
+        !naturalIdSet.has(targetWorkItemId)
+      ) {
+        return;
+      }
+      props.order.move(draggedWorkItemId, targetWorkItemId, edge, naturalIds);
+      if (props.addSpacer && props.workItemPositions && props.onSpacerPositionsChange) {
+        const visibleIds = sorted.map((item) => item.id);
+        props.onSpacerPositionsChange(
+          visibleIds,
+          reorderIntoExistingSpacerSlots(
+            visibleIds,
+            props.workItemPositions,
+            draggedWorkItemId,
+            targetWorkItemId,
+            edge
+          )
+        );
+      }
+    },
+    [naturalIds, naturalIdSet, props.addSpacer, props.onSpacerPositionsChange, props.order, props.workItemPositions, sorted]
+  );
 
   const handleListDragOver = React.useCallback(
     (event: React.DragEvent<HTMLOListElement>) => {
@@ -126,10 +161,10 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
         handleDragEnd();
         return;
       }
-      props.order.move(draggedId, target.item, target.edge, naturalIds);
+      applyManualMove(draggedId, target.item, target.edge);
       handleDragEnd();
     },
-    [props.order, itemDragging, naturalIds, naturalIdSet, handleDragEnd]
+    [applyManualMove, props.order, itemDragging, naturalIdSet, handleDragEnd]
   );
 
   const handleReorderKeyDown = React.useCallback(
@@ -154,17 +189,55 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
         return;
       }
 
-      props.order.move(
-        workItemId,
-        adjacentMove.targetId,
-        adjacentMove.edge,
-        naturalIds
-      );
+      applyManualMove(workItemId, adjacentMove.targetId, adjacentMove.edge);
       setReorderAnnouncement(
         `Moved work item #${workItemId} ${adjacentMove.edge} work item #${adjacentMove.targetId}.`
       );
     },
-    [naturalIds, naturalIdSet, props.order, sorted]
+    [applyManualMove, naturalIdSet, props.order, sorted]
+  );
+
+  const handleSpacerDragOver = React.useCallback(
+    (previousWorkItemId: number | undefined, followingWorkItemId: number, spacerIndex: number, event: React.DragEvent<HTMLLIElement>) => {
+      if (!props.order || draggedIdRef.current === null) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      event.dataTransfer.dropEffect = "move";
+      const bounds = event.currentTarget.getBoundingClientRect();
+      const edge = event.clientY < bounds.top + bounds.height / 2 ? "before" : "after";
+      setSpacerDropPreview(`${previousWorkItemId ?? "start"}:${followingWorkItemId}:${spacerIndex}:${edge}`);
+    },
+    [props.order]
+  );
+
+  const handleSpacerDrop = React.useCallback(
+    (previousWorkItemId: number | undefined, followingWorkItemId: number, spacerIndex: number, event: React.DragEvent<HTMLLIElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const raw = event.dataTransfer.getData(DRAG_DATA_TYPE);
+      const parsed = Number.parseInt(raw, 10);
+      const source = Number.isFinite(parsed) && parsed > 0 ? parsed : draggedIdRef.current;
+      const preview = spacerDropPreview?.split(":");
+      const edge = preview?.[0] === String(previousWorkItemId ?? "start")
+        && preview[1] === String(followingWorkItemId)
+        && preview[2] === String(spacerIndex)
+        && preview[3] === "after"
+        ? "after"
+        : "before";
+      const target = edge === "before" ? previousWorkItemId ?? followingWorkItemId : followingWorkItemId;
+      const targetEdge = edge === "before" && previousWorkItemId !== undefined
+        ? "after"
+        : edge === "after"
+          ? "before"
+          : "before";
+      if (source !== null) {
+        applyManualMove(source, target, targetEdge);
+      }
+      handleDragEnd();
+    },
+    [applyManualMove, handleDragEnd, spacerDropPreview]
   );
 
   const reorderEnabled = props.order !== undefined;
@@ -189,7 +262,7 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
         <>
           <span id={reorderInstructionId} className="u-visually-hidden">
             Drag the reorder handle, or use Arrow Up and Arrow Down, to move the work item
-            relative to visible neighbours.
+            relative to visible neighbours and fixed Spacer blocks.
           </span>
           <span
             className="u-visually-hidden"
@@ -234,7 +307,16 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
                   key={`spacer-${previous?.id ?? "start"}-${workItem.id}-${spacerIndex}`}
                   className="relations-view-work-item-spacer"
                   {...(previous ? { "data-work-item-spacer": "" } : { "data-work-item-leading-spacer": "" })}
-                  aria-hidden="true"
+                  data-spacer-drop-target=""
+                  {...spacerDropPreview === `${previous?.id ?? "start"}:${workItem.id}:${spacerIndex}:before`
+                    ? { "data-drop-edge": "before" }
+                    : spacerDropPreview === `${previous?.id ?? "start"}:${workItem.id}:${spacerIndex}:after`
+                      ? { "data-drop-edge": "after" }
+                      : {}}
+                  aria-label="Drop Bug here"
+                  onDragOver={(event) => handleSpacerDragOver(previous?.id, workItem.id, spacerIndex, event)}
+                  onDrop={(event) => handleSpacerDrop(previous?.id, workItem.id, spacerIndex, event)}
+                  onDragLeave={() => setSpacerDropPreview(null)}
                 />
               )),
               <li key={workItem.id} className={className} data-work-item-id={workItem.id}>
@@ -277,4 +359,23 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
 function readWorkItemId(row: HTMLElement): number | null {
   const id = Number.parseInt(row.dataset.workItemId ?? "", 10);
   return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+function reorderIntoExistingSpacerSlots(
+  visibleIds: readonly number[],
+  positions: Readonly<Record<number, number>>,
+  sourceId: number,
+  targetId: number,
+  edge: "before" | "after"
+): Record<number, number> {
+  const reorderedIds = visibleIds.filter((id) => id !== sourceId);
+  const targetIndex = reorderedIds.indexOf(targetId);
+  if (targetIndex === -1) {
+    return Object.fromEntries(visibleIds.map((id, index) => [id, positions[id] ?? index]));
+  }
+  reorderedIds.splice(edge === "after" ? targetIndex + 1 : targetIndex, 0, sourceId);
+  const spacerSlots = visibleIds
+    .map((id, index) => positions[id] ?? index)
+    .sort((left, right) => left - right);
+  return Object.fromEntries(reorderedIds.map((id, index) => [id, spacerSlots[index]! ]));
 }
