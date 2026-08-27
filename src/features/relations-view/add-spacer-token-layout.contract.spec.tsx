@@ -48,13 +48,17 @@ describe("Add Spacer token layout contract v1", () => {
   });
 
   it("ASTL-02 through ASTL-04 moves a Bug onto the exact free slot between two fixed Spacer blocks and previews it", () => {
-    const onSpacerTokenMove = vi.fn();
-    const harness = renderTokenColumn(onSpacerTokenMove);
+    mockPreferences({
+      magicSortAddSpacer: true,
+      workItemSpacerPositions: { "201": 0, "202": 4, "203": 3 }
+    });
+    const harness = renderPersistentTokenHarness();
     const handles = harness.host.querySelectorAll<HTMLButtonElement>(".relations-view-drag-handle");
     const slots = harness.host.querySelectorAll<HTMLElement>("[data-spacer-slot-index]");
     const targetSlot = slots[1]!;
     const transfer = buildDataTransferStub();
 
+    expect(readLayout(harness.host)).toEqual([201, null, null, 203, 202]);
     expect(slots).toHaveLength(2);
     act(() => fireDrag(handles[1]!, "dragstart", { dataTransfer: transfer }));
     act(() => fireDrag(targetSlot, "dragover", { dataTransfer: transfer }));
@@ -63,55 +67,49 @@ describe("Add Spacer token layout contract v1", () => {
     expect(targetSlot.querySelector(".relations-view-drag-handle")).toBeNull();
 
     act(() => fireDrag(targetSlot, "drop", { dataTransfer: transfer }));
-    expect(onSpacerTokenMove).toHaveBeenCalledWith(203, 3);
+    expect(readLayout(harness.host)).toEqual([201, null, 203, null, 202]);
+    expect(renderedTokens(harness.host)).toEqual([201, null, 203, null, 202]);
 
     harness.unmount();
   });
 
   it("ASTL-05 persists the token stack per Set and migrates legacy Spacer positions without losing slots", () => {
-    let preferences = {
-      setLayouts: {
-        "active-set": {
-          magicSortAddSpacer: true,
-          workItemSpacerPositions: { "201": 0, "202": 4, "203": 2 }
-        }
-      }
-    };
-    vi.spyOn(preferencesClient, "getCachedUserPreferences").mockImplementation(() => preferences);
-    vi.spyOn(preferencesClient, "isUserPreferencesCacheAuthoritative").mockReturnValue(true);
-    vi.spyOn(preferencesClient, "persistUserPreferencesPatch").mockImplementation((patch) => {
-      preferences = { ...preferences, setLayouts: { ...preferences.setLayouts, ...patch.setLayouts } };
+    mockPreferences({
+      magicSortAddSpacer: true,
+      workItemSpacerPositions: { "201": 0, "202": 4, "203": 2 }
     });
 
-    const first = renderPersistentHarness();
+    const first = renderPersistentTokenHarness();
     expect(readLayout(first.host)).toEqual([201, null, 203, null, 202]);
     act(() => first.host.querySelector<HTMLButtonElement>("button")?.click());
     expect(readLayout(first.host)).toEqual([201, 202, 203, null, null]);
     first.unmount();
 
     clearSetLayoutPreferenceForTests();
-    const restored = renderPersistentHarness();
+    const restored = renderPersistentTokenHarness();
     expect(readLayout(restored.host)).toEqual([201, 202, 203, null, null]);
     restored.unmount();
   });
 
   it("ASTL-06 changes only visible Bugs and slots while filtered-out Bug tokens stay intact", () => {
-    const onSpacerTokenMove = vi.fn();
-    const harness = renderTokenColumn(onSpacerTokenMove, {
-      workItems: [workItem(201), workItem(202)],
-      allWorkItems: [workItem(201), workItem(202), workItem(203)]
+    mockPreferences({
+      magicSortAddSpacer: true,
+      workItemSpacerLayout: [201, null, 203, null, 202]
     });
-    const slots = harness.host.querySelectorAll<HTMLElement>("[data-spacer-slot-index]");
-    const handles = harness.host.querySelectorAll<HTMLButtonElement>(".relations-view-drag-handle");
-    const transfer = buildDataTransferStub();
+    const harness = renderPersistentTokenHarness([workItem(201), workItem(202)]);
 
     expect(renderedTokens(harness.host)).toEqual([201, null, null, 202]);
     expect(harness.host.querySelector('[data-work-item-id="203"]')).toBeNull();
-    act(() => fireDrag(handles[1]!, "dragstart", { dataTransfer: transfer }));
-    act(() => fireDrag(slots[0]!, "drop", { dataTransfer: transfer }));
-    expect(onSpacerTokenMove).toHaveBeenCalledWith(202, 1);
-
+    act(() => harness.host.querySelector<HTMLButtonElement>("button")?.click());
+    expect(readLayout(harness.host)).toEqual([201, 202, 203, null, null]);
     harness.unmount();
+
+    clearSetLayoutPreferenceForTests();
+    const restored = renderPersistentTokenHarness([workItem(201), workItem(202)]);
+    expect(readLayout(restored.host)).toEqual([201, 202, 203, null, null]);
+    expect(restored.host.querySelector('[data-work-item-id="203"]')).toBeNull();
+
+    restored.unmount();
   });
 
   it("ASTL-07 keeps dense manual ordering when Add Spacer is disabled", () => {
@@ -158,20 +156,40 @@ function renderTokenColumn(
   return { host, unmount() { act(() => root.unmount()); host.remove(); } };
 }
 
-function renderPersistentHarness(): { host: HTMLDivElement; unmount(): void } {
+function renderPersistentTokenHarness(
+  visibleWorkItems = [workItem(201), workItem(202), workItem(203)]
+): { host: HTMLDivElement; unmount(): void } {
   const host = document.createElement("div");
   document.body.append(host);
   const root = createRoot(host);
-  act(() => root.render(<PersistentHarness />));
+  act(() => root.render(<PersistentTokenHarness visibleWorkItems={visibleWorkItems} />));
   return { host, unmount() { act(() => root.unmount()); host.remove(); } };
 }
 
-function PersistentHarness(): React.ReactElement {
+function PersistentTokenHarness(props: { visibleWorkItems: readonly WorkItem[] }): React.ReactElement {
   const spacer = useMagicSortSpacerOption("active-set") as unknown as TokenLayoutApi;
   return <>
+    <TokenLayoutColumn
+      workItems={props.visibleWorkItems}
+      allWorkItems={[workItem(201), workItem(202), workItem(203)]}
+      unfilteredCount={3}
+      order={{ sortByStoredOrder: (items) => items.slice(), move: vi.fn() }}
+      addSpacer={spacer.addSpacer}
+      spacerLayout={spacer.spacerLayout}
+      onSpacerTokenMove={spacer.moveVisibleWorkItemToSpacerSlot}
+    />
     <output>{JSON.stringify(spacer.spacerLayout)}</output>
     <button type="button" onClick={() => spacer.moveVisibleWorkItemToSpacerSlot(202, 1)}>Move</button>
   </>;
+}
+
+function mockPreferences(layout: Record<string, unknown>): void {
+  let preferences = { setLayouts: { "active-set": layout } };
+  vi.spyOn(preferencesClient, "getCachedUserPreferences").mockImplementation(() => preferences);
+  vi.spyOn(preferencesClient, "isUserPreferencesCacheAuthoritative").mockReturnValue(true);
+  vi.spyOn(preferencesClient, "persistUserPreferencesPatch").mockImplementation((patch) => {
+    preferences = { ...preferences, setLayouts: { ...preferences.setLayouts, ...patch.setLayouts } };
+  });
 }
 
 function renderedTokens(host: HTMLElement): SpacerToken[] {
