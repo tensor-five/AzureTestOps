@@ -102,7 +102,7 @@ describe("Add Spacer token layout contract v1", () => {
     const first = renderPersistentTokenHarness();
     expect(readLayout(first.host)).toEqual([201, null, 203, null, 202]);
     expect(readAddSpacer(first.host)).toBe(true);
-    act(() => first.host.querySelector<HTMLButtonElement>("button")?.click());
+    act(() => first.host.querySelector<HTMLButtonElement>("[data-token-layout-move]")?.click());
     expect(readLayout(first.host)).toEqual([201, 202, 203, null, null]);
     first.unmount();
 
@@ -130,7 +130,7 @@ describe("Add Spacer token layout contract v1", () => {
 
     expect(renderedTokens(harness.host)).toEqual([201, null, null, 202]);
     expect(harness.host.querySelector('[data-work-item-id="203"]')).toBeNull();
-    act(() => harness.host.querySelector<HTMLButtonElement>("button")?.click());
+    act(() => harness.host.querySelector<HTMLButtonElement>("[data-token-layout-move]")?.click());
     expect(readLayout(harness.host)).toEqual([201, 202, 203, null, null]);
     harness.unmount();
 
@@ -213,7 +213,7 @@ function PersistentTokenHarness(props: { setId: string; visibleWorkItems: readon
     />
     <output>{JSON.stringify(spacer.spacerLayout)}</output>
     <output data-add-spacer="">{String(spacer.addSpacer)}</output>
-    <button type="button" onClick={() => spacer.moveVisibleWorkItemToSpacerSlot(202, 1)}>Move</button>
+    <button type="button" data-token-layout-move="" onClick={() => spacer.moveVisibleWorkItemToSpacerSlot(202, 1)}>Move</button>
   </>;
 }
 
