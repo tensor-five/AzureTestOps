@@ -395,6 +395,8 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
           addSpacer={spacerOption.addSpacer}
           workItemPositions={spacerOption.workItemPositions}
           onSpacerPositionsChange={spacerOption.applyVisiblePositions}
+          spacerLayout={spacerOption.spacerLayout}
+          onSpacerTokenMove={spacerOption.moveVisibleWorkItemToSpacerSlot}
           getWorkItemHref={props.getWorkItemHref}
           highlightQuery={filters.workItemFilter.titleQuery ?? ""}
           focusActive={focusedSuite !== null || cardFocusActive}
