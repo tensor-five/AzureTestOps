@@ -2,6 +2,8 @@
 import * as React from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { WorkItem } from "../../domain/work-items/work-item.js";
@@ -27,6 +29,8 @@ type TokenLayoutApi = {
 };
 
 const TokenLayoutColumn = WorkItemColumn as unknown as React.ComponentType<TokenLayoutProps>;
+const relationsCss = await readFile(path.resolve("src/app/bootstrap/local-ui-relations.css"), "utf8");
+const spacerHeightRule = /\.relations-view-work-item-spacer\s*\{[^}]*min-height:\s*(?<height>[^;]+);/su.exec(relationsCss)?.groups?.height;
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -49,8 +53,10 @@ describe("Add Spacer token layout contract v1", () => {
 
   it("ASTL-02 through ASTL-04 moves a Bug onto the exact free slot between two fixed Spacer blocks and previews it", () => {
     mockPreferences({
-      magicSortAddSpacer: true,
-      workItemSpacerPositions: { "201": 0, "202": 4, "203": 3 }
+      "active-set": {
+        magicSortAddSpacer: true,
+        workItemSpacerPositions: { "201": 0, "202": 4, "203": 3 }
+      }
     });
     const harness = renderPersistentTokenHarness();
     const handles = harness.host.querySelectorAll<HTMLButtonElement>(".relations-view-drag-handle");
@@ -60,43 +66,67 @@ describe("Add Spacer token layout contract v1", () => {
 
     expect(readLayout(harness.host)).toEqual([201, null, null, 203, 202]);
     expect(slots).toHaveLength(2);
+    slots.forEach((slot) => {
+      act(() => fireDrag(handles[1]!, "dragstart", { dataTransfer: transfer }));
+      act(() => fireDrag(slot, "dragover", { dataTransfer: transfer }));
+      expect(slot.getAttribute("data-drop-preview")).toBe("true");
+      expect(slot.getAttribute("draggable")).not.toBe("true");
+      expect(slot.querySelector(".relations-view-drag-handle")).toBeNull();
+      act(() => fireDrag(slot, "dragleave", { dataTransfer: transfer }));
+    });
+
     act(() => fireDrag(handles[1]!, "dragstart", { dataTransfer: transfer }));
     act(() => fireDrag(targetSlot, "dragover", { dataTransfer: transfer }));
-    expect(targetSlot.getAttribute("data-drop-preview")).toBe("true");
-    expect(targetSlot.getAttribute("draggable")).not.toBe("true");
-    expect(targetSlot.querySelector(".relations-view-drag-handle")).toBeNull();
-
     act(() => fireDrag(targetSlot, "drop", { dataTransfer: transfer }));
     expect(readLayout(harness.host)).toEqual([201, null, 203, null, 202]);
     expect(renderedTokens(harness.host)).toEqual([201, null, 203, null, 202]);
+    expect(renderedSpacerSlots(harness.host)).toHaveLength(2);
+    expect(renderedSpacerSlots(harness.host).every((slot) => slot.classList.contains("relations-view-work-item-spacer"))).toBe(true);
+    expect(spacerHeightRule).toBe("calc(var(--space-8) + var(--space-1))");
 
     harness.unmount();
   });
 
   it("ASTL-05 persists the token stack per Set and migrates legacy Spacer positions without losing slots", () => {
     mockPreferences({
-      magicSortAddSpacer: true,
-      workItemSpacerPositions: { "201": 0, "202": 4, "203": 2 }
+      "active-set": {
+        magicSortAddSpacer: true,
+        workItemSpacerPositions: { "201": 0, "202": 4, "203": 2 }
+      },
+      "other-set": {
+        magicSortAddSpacer: false,
+        workItemSpacerLayout: [201, null, 202]
+      }
     });
 
     const first = renderPersistentTokenHarness();
     expect(readLayout(first.host)).toEqual([201, null, 203, null, 202]);
+    expect(readAddSpacer(first.host)).toBe(true);
     act(() => first.host.querySelector<HTMLButtonElement>("button")?.click());
     expect(readLayout(first.host)).toEqual([201, 202, 203, null, null]);
     first.unmount();
 
     clearSetLayoutPreferenceForTests();
+    const otherSet = renderPersistentTokenHarness({ setId: "other-set" });
+    expect(readAddSpacer(otherSet.host)).toBe(false);
+    expect(readLayout(otherSet.host)).toEqual([201, null, 202]);
+    otherSet.unmount();
+
+    clearSetLayoutPreferenceForTests();
     const restored = renderPersistentTokenHarness();
     expect(readLayout(restored.host)).toEqual([201, 202, 203, null, null]);
+    expect(readAddSpacer(restored.host)).toBe(true);
     restored.unmount();
   });
 
   it("ASTL-06 changes only visible Bugs and slots while filtered-out Bug tokens stay intact", () => {
     mockPreferences({
-      magicSortAddSpacer: true,
-      workItemSpacerLayout: [201, null, 203, null, 202]
+      "active-set": {
+        magicSortAddSpacer: true,
+        workItemSpacerLayout: [201, null, 203, null, 202]
+      }
     });
-    const harness = renderPersistentTokenHarness([workItem(201), workItem(202)]);
+    const harness = renderPersistentTokenHarness({ visibleWorkItems: [workItem(201), workItem(202)] });
 
     expect(renderedTokens(harness.host)).toEqual([201, null, null, 202]);
     expect(harness.host.querySelector('[data-work-item-id="203"]')).toBeNull();
@@ -105,7 +135,7 @@ describe("Add Spacer token layout contract v1", () => {
     harness.unmount();
 
     clearSetLayoutPreferenceForTests();
-    const restored = renderPersistentTokenHarness([workItem(201), workItem(202)]);
+    const restored = renderPersistentTokenHarness({ visibleWorkItems: [workItem(201), workItem(202)] });
     expect(readLayout(restored.host)).toEqual([201, 202, 203, null, null]);
     expect(restored.host.querySelector('[data-work-item-id="203"]')).toBeNull();
 
@@ -157,17 +187,20 @@ function renderTokenColumn(
 }
 
 function renderPersistentTokenHarness(
-  visibleWorkItems = [workItem(201), workItem(202), workItem(203)]
+  options: { setId?: string; visibleWorkItems?: readonly WorkItem[] } = {}
 ): { host: HTMLDivElement; unmount(): void } {
   const host = document.createElement("div");
   document.body.append(host);
   const root = createRoot(host);
-  act(() => root.render(<PersistentTokenHarness visibleWorkItems={visibleWorkItems} />));
+  act(() => root.render(<PersistentTokenHarness
+    setId={options.setId ?? "active-set"}
+    visibleWorkItems={options.visibleWorkItems ?? [workItem(201), workItem(202), workItem(203)]}
+  />));
   return { host, unmount() { act(() => root.unmount()); host.remove(); } };
 }
 
-function PersistentTokenHarness(props: { visibleWorkItems: readonly WorkItem[] }): React.ReactElement {
-  const spacer = useMagicSortSpacerOption("active-set") as unknown as TokenLayoutApi;
+function PersistentTokenHarness(props: { setId: string; visibleWorkItems: readonly WorkItem[] }): React.ReactElement {
+  const spacer = useMagicSortSpacerOption(props.setId) as unknown as TokenLayoutApi;
   return <>
     <TokenLayoutColumn
       workItems={props.visibleWorkItems}
@@ -179,12 +212,13 @@ function PersistentTokenHarness(props: { visibleWorkItems: readonly WorkItem[] }
       onSpacerTokenMove={spacer.moveVisibleWorkItemToSpacerSlot}
     />
     <output>{JSON.stringify(spacer.spacerLayout)}</output>
+    <output data-add-spacer="">{String(spacer.addSpacer)}</output>
     <button type="button" onClick={() => spacer.moveVisibleWorkItemToSpacerSlot(202, 1)}>Move</button>
   </>;
 }
 
-function mockPreferences(layout: Record<string, unknown>): void {
-  let preferences = { setLayouts: { "active-set": layout } };
+function mockPreferences(layouts: Record<string, Record<string, unknown>>): void {
+  let preferences = { setLayouts: layouts };
   vi.spyOn(preferencesClient, "getCachedUserPreferences").mockImplementation(() => preferences);
   vi.spyOn(preferencesClient, "isUserPreferencesCacheAuthoritative").mockReturnValue(true);
   vi.spyOn(preferencesClient, "persistUserPreferencesPatch").mockImplementation((patch) => {
@@ -204,6 +238,14 @@ function renderedTokens(host: HTMLElement): SpacerToken[] {
 function readLayout(host: HTMLElement): readonly SpacerToken[] {
   const raw = host.querySelector("output")?.textContent;
   return raw ? JSON.parse(raw) as SpacerToken[] : [];
+}
+
+function readAddSpacer(host: HTMLElement): boolean {
+  return host.querySelector("[data-add-spacer]")?.textContent === "true";
+}
+
+function renderedSpacerSlots(host: HTMLElement): HTMLElement[] {
+  return [...host.querySelectorAll<HTMLElement>("[data-spacer-slot-index]")];
 }
 
 function buildDataTransferStub(): DataTransfer {
