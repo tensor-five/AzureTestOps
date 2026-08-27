@@ -5,6 +5,7 @@ import { resolveAdjacentItemMove } from "./item-order.js";
 import { useItemDragging } from "./use-item-dragging.js";
 import { WorkItemCard } from "./work-item-card.js";
 import type { WorkItemOrderApi } from "./use-work-item-order.js";
+import { projectVisibleSpacerLayout, type WorkItemSpacerToken } from "./work-item-spacer-layout.js";
 
 const DRAG_DATA_TYPE = "application/x-azure-testops-work-item-id";
 
@@ -27,6 +28,9 @@ export type WorkItemColumnProps = {
     visibleIds: readonly number[],
     nextPositions: Readonly<Record<number, number>>
   ): void;
+  /** Shared Bug/Spacer stack; numeric entries are Bug ids, null entries are fixed slots. */
+  spacerLayout?: readonly WorkItemSpacerToken[];
+  onSpacerTokenMove?(sourceWorkItemId: number, targetTokenIndex: number): void;
   /** Resolves the Azure DevOps deep link for a work item id, or null if unavailable. */
   getWorkItemHref?: (workItemId: number) => string | null;
   highlightQuery?: string;
@@ -53,6 +57,27 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
         || (orderIndex.get(left.id) ?? 0) - (orderIndex.get(right.id) ?? 0));
     },
     [baseSorted, props.addSpacer, props.order, props.workItemPositions]
+  );
+  const visibleSpacerTokens = React.useMemo(
+    () => props.addSpacer && props.spacerLayout
+      ? projectVisibleSpacerLayout(props.spacerLayout, new Set(props.workItems.map((item) => item.id)))
+      : [],
+    [props.addSpacer, props.spacerLayout, props.workItems]
+  );
+  const spacerTokenMode = visibleSpacerTokens.length > 0 && props.onSpacerTokenMove !== undefined;
+  const trailingSpacerTokens = React.useMemo(() => {
+    let lastWorkItemIndex = -1;
+    visibleSpacerTokens.forEach((token, index) => {
+      if (token.workItemId !== null) lastWorkItemIndex = index;
+    });
+    return visibleSpacerTokens.slice(lastWorkItemIndex + 1).filter((token) => token.workItemId === null);
+  }, [visibleSpacerTokens]);
+  const workItemsById = React.useMemo(() => new Map(props.workItems.map((item) => [item.id, item])), [props.workItems]);
+  const displayedItems = React.useMemo(
+    () => spacerTokenMode
+      ? visibleSpacerTokens.flatMap((token) => token.workItemId === null ? [] : [workItemsById.get(token.workItemId)!])
+      : sorted,
+    [sorted, spacerTokenMode, visibleSpacerTokens, workItemsById]
   );
 
   const draggedIdRef = React.useRef<number | null>(null);
@@ -205,11 +230,16 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
       event.preventDefault();
       event.stopPropagation();
       event.dataTransfer.dropEffect = "move";
+      const tokenIndex = Number(event.currentTarget.dataset.spacerSlotIndex);
+      if (props.onSpacerTokenMove && Number.isInteger(tokenIndex)) {
+        setSpacerDropPreview(`slot:${tokenIndex}`);
+        return;
+      }
       const bounds = event.currentTarget.getBoundingClientRect();
       const edge = event.clientY < bounds.top + bounds.height / 2 ? "before" : "after";
       setSpacerDropPreview(`${previousWorkItemId ?? "start"}:${followingWorkItemId}:${spacerIndex}:${edge}`);
     },
-    [props.order]
+    [props.onSpacerTokenMove, props.order]
   );
 
   const handleSpacerDrop = React.useCallback(
@@ -219,6 +249,12 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
       const raw = event.dataTransfer.getData(DRAG_DATA_TYPE);
       const parsed = Number.parseInt(raw, 10);
       const source = Number.isFinite(parsed) && parsed > 0 ? parsed : draggedIdRef.current;
+      if (source !== null && props.onSpacerTokenMove && props.spacerLayout) {
+        const tokenIndex = Number(event.currentTarget.dataset.spacerSlotIndex);
+        if (Number.isInteger(tokenIndex)) props.onSpacerTokenMove(source, tokenIndex);
+        handleDragEnd();
+        return;
+      }
       const preview = spacerDropPreview?.split(":");
       const edge = preview?.[0] === String(previousWorkItemId ?? "start")
         && preview[1] === String(followingWorkItemId)
@@ -237,7 +273,7 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
       }
       handleDragEnd();
     },
-    [applyManualMove, handleDragEnd, spacerDropPreview]
+    [applyManualMove, handleDragEnd, props.onSpacerTokenMove, props.spacerLayout, spacerDropPreview]
   );
 
   const reorderEnabled = props.order !== undefined;
@@ -286,7 +322,7 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
           onDragLeave={reorderEnabled ? itemDragging.handleDragLeave : undefined}
           onDrop={reorderEnabled ? handleListDrop : undefined}
         >
-          {sorted.flatMap((workItem, index) => {
+          {displayedItems.flatMap((workItem, index) => {
             const isFocusMatch = props.focusedWorkItemIds?.has(workItem.id) ?? false;
             const className = [
               "relations-view-work-item-list-item",
@@ -294,19 +330,26 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
               props.focusActive && isFocusMatch ? "relations-view-item-focus-match" : "",
               props.focusActive && !isFocusMatch ? "relations-view-item-focus-dimmed" : ""
             ].filter(Boolean).join(" ");
-            const previous = sorted[index - 1];
-            const spacerCount = props.addSpacer && props.workItemPositions
+            const previous = displayedItems[index - 1];
+            const spacerTokensBefore = spacerTokenMode
+              ? visibleSpacerTokens.slice(
+                index === 0 ? 0 : visibleSpacerTokens.findIndex((token) => token.workItemId === previous?.id) + 1,
+                visibleSpacerTokens.findIndex((token) => token.workItemId === workItem.id)
+              ).filter((token) => token.workItemId === null)
+              : [];
+            const spacerCount = !spacerTokenMode && props.addSpacer && props.workItemPositions
               ? previous
                 ? Math.max(0, (props.workItemPositions[workItem.id] ?? index)
                   - (props.workItemPositions[previous.id] ?? index - 1) - 1)
                 : Math.max(0, props.workItemPositions[workItem.id] ?? 0)
               : 0;
             return [
-              ...Array.from({ length: spacerCount }, (_, spacerIndex) => (
+              ...(spacerTokenMode ? spacerTokensBefore : Array.from({ length: spacerCount }, (_, spacerIndex) => ({ tokenIndex: spacerIndex, workItemId: null }))).map((spacerToken, spacerIndex) => (
                 <li
-                  key={`spacer-${previous?.id ?? "start"}-${workItem.id}-${spacerIndex}`}
+                  key={`spacer-${spacerTokenMode ? spacerToken.tokenIndex : `${previous?.id ?? "start"}-${workItem.id}-${spacerIndex}`}`}
                   className="relations-view-work-item-spacer"
                   {...(previous ? { "data-work-item-spacer": "" } : { "data-work-item-leading-spacer": "" })}
+                  {...(spacerTokenMode ? { "data-spacer-slot-index": spacerToken.tokenIndex } : {})}
                   data-spacer-drop-target=""
                   {...spacerDropPreview === `${previous?.id ?? "start"}:${workItem.id}:${spacerIndex}:before`
                     ? { "data-drop-edge": "before" }
@@ -314,6 +357,7 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
                       ? { "data-drop-edge": "after" }
                       : {}}
                   aria-label="Drop Bug here"
+                  {...(spacerTokenMode && spacerDropPreview === `slot:${spacerToken.tokenIndex}` ? { "data-drop-preview": "true" } : {})}
                   onDragOver={(event) => handleSpacerDragOver(previous?.id, workItem.id, spacerIndex, event)}
                   onDrop={(event) => handleSpacerDrop(previous?.id, workItem.id, spacerIndex, event)}
                   onDragLeave={() => setSpacerDropPreview(null)}
@@ -350,6 +394,22 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
               </li>
             ];
           })}
+          {spacerTokenMode
+            ? trailingSpacerTokens.map((token) => (
+                <li
+                  key={`spacer-${token.tokenIndex}`}
+                  className="relations-view-work-item-spacer"
+                  data-work-item-spacer=""
+                  data-spacer-slot-index={token.tokenIndex}
+                  data-spacer-drop-target=""
+                  aria-label="Drop Bug here"
+                  {...(spacerDropPreview === `slot:${token.tokenIndex}` ? { "data-drop-preview": "true" } : {})}
+                  onDragOver={(event) => handleSpacerDragOver(undefined, 0, token.tokenIndex, event)}
+                  onDrop={(event) => handleSpacerDrop(undefined, 0, token.tokenIndex, event)}
+                  onDragLeave={() => setSpacerDropPreview(null)}
+                />
+              ))
+            : null}
         </ol>
       )}
     </section>

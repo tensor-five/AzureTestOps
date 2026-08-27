@@ -24,6 +24,8 @@ export type SetLayoutPreference = {
   magicSortAddSpacer?: boolean;
   /** Persisted vertical slot per Bug when free Magic Sort slots are enabled. */
   workItemSpacerPositions?: Record<string, number>;
+  /** Compact Stack of Bug references and fixed free Spacer slots. */
+  workItemSpacerLayout?: Array<number | null>;
   testCaseOrder?: Record<string, number[]>;
 };
 
@@ -386,6 +388,8 @@ function sanitizeSetLayoutPreference(value: unknown): SetLayoutPreference | null
   if (spacerPositions) {
     next.workItemSpacerPositions = spacerPositions;
   }
+  const spacerLayout = sanitizeWorkItemSpacerLayout(value.workItemSpacerLayout);
+  if (spacerLayout) next.workItemSpacerLayout = spacerLayout;
 
   if (isPlainRecord(value.testCaseOrder)) {
     const sanitized: Record<string, number[]> = {};
@@ -418,6 +422,18 @@ function sanitizeSetLayoutPreference(value: unknown): SetLayoutPreference | null
   }
 
   return next;
+}
+
+function sanitizeWorkItemSpacerLayout(value: unknown): Array<number | null> | null {
+  if (!Array.isArray(value)) return null;
+  const seen = new Set<number>();
+  return value.flatMap((entry) => {
+    if (entry === null) return [null];
+    const id = readPositiveInteger(entry);
+    if (id === null || seen.has(id)) return [];
+    seen.add(id);
+    return [id];
+  });
 }
 
 function readPositiveInteger(value: unknown): number | null {

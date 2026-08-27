@@ -116,6 +116,19 @@ function sanitizeSetLayoutInput(value: unknown): SetLayoutPreference | null {
     }
   }
 
+  if (Array.isArray(value.workItemSpacerLayout)) {
+    const seen = new Set<number>();
+    const layout: Array<number | null> = [];
+    value.workItemSpacerLayout.forEach((token) => {
+      if (token === null) { layout.push(null); return; }
+      if (typeof token === "number" && Number.isInteger(token) && token > 0 && !seen.has(token)) {
+        seen.add(token);
+        layout.push(token);
+      }
+    });
+    next.workItemSpacerLayout = layout;
+  }
+
   if (isPlainRecord(value.testCaseOrder)) {
     const perSuite: Record<string, number[]> = {};
     Object.entries(value.testCaseOrder).forEach(([rawSuiteId, rawIds]) => {

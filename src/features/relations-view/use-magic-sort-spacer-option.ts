@@ -2,12 +2,21 @@ import * as React from "react";
 
 import type { SetLayoutPreference } from "../../shared/user-preferences/user-preferences.client.js";
 import { setLayoutPreferenceStore } from "./set-layout-preference-store.js";
+import {
+  migrateSpacerPositions,
+  moveWorkItemIntoSpacerSlot,
+  normalizeWorkItemSpacerLayout,
+  positionsFromSpacerLayout,
+  type WorkItemSpacerToken
+} from "./work-item-spacer-layout.js";
 
 export type MagicSortSpacerOptionApi = {
   addSpacer: boolean;
   workItemPositions: Readonly<Record<number, number>>;
+  spacerLayout: readonly WorkItemSpacerToken[];
   setAddSpacer(next: boolean): void;
   applyVisiblePositions(visibleIds: readonly number[], nextPositions: Readonly<Record<number, number>>): void;
+  moveVisibleWorkItemToSpacerSlot(sourceWorkItemId: number, targetTokenIndex: number): void;
 };
 
 /** Owns the persisted per-set option and free vertical Bug slots for Magic Sort. */
@@ -32,26 +41,43 @@ export function useMagicSortSpacerOption(setId: string | null): MagicSortSpacerO
   const applyVisiblePositions = React.useCallback(
     (visibleIds: readonly number[], nextPositions: Readonly<Record<number, number>>) => {
       const currentLayout = readLayoutForSet(setId);
-      const current = currentLayout.workItemSpacerPositions ?? {};
-      const merged: Record<string, number> = { ...current };
+      const next = materializeLayout(currentLayout);
+      visibleIds.forEach((id) => {
+        const index = next.indexOf(id);
+        if (index >= 0) next[index] = null;
+      });
+      const maximum = Math.max(-1, ...Object.values(nextPositions));
+      while (next.length <= maximum) next.push(null);
       visibleIds.forEach((id) => {
         const position = nextPositions[id];
-        if (position === undefined) {
-          delete merged[String(id)];
-        } else {
-          merged[String(id)] = position;
+        if (position === undefined) return;
+        let target = position;
+        while (next[target] !== null) {
+          target += 1;
+          if (target === next.length) next.push(null);
         }
+        next[target] = id;
       });
-      save({ ...currentLayout, workItemSpacerPositions: merged });
+      save({ ...currentLayout, workItemSpacerLayout: next, workItemSpacerPositions: toStringPositions(next) });
     },
     [save, setId]
   );
 
+  const moveVisibleWorkItemToSpacerSlot = React.useCallback((sourceWorkItemId: number, targetTokenIndex: number) => {
+    const currentLayout = readLayoutForSet(setId);
+    const next = moveWorkItemIntoSpacerSlot(materializeLayout(currentLayout), sourceWorkItemId, targetTokenIndex);
+    save({ ...currentLayout, workItemSpacerLayout: next, workItemSpacerPositions: toStringPositions(next) });
+  }, [save, setId]);
+
+  const spacerLayout = materializeLayout(layout);
+
   return {
     addSpacer: layout.magicSortAddSpacer ?? false,
-    workItemPositions: toNumericPositions(layout.workItemSpacerPositions),
+    workItemPositions: positionsFromSpacerLayout(spacerLayout),
+    spacerLayout,
     setAddSpacer,
-    applyVisiblePositions
+    applyVisiblePositions,
+    moveVisibleWorkItemToSpacerSlot
   };
 }
 
@@ -62,13 +88,19 @@ function readLayoutForSet(setId: string | null): SetLayoutPreference {
   return setLayoutPreferenceStore.load({ scopeKey: setId }) ?? {};
 }
 
+function materializeLayout(layout: SetLayoutPreference): WorkItemSpacerToken[] {
+  return layout.workItemSpacerLayout
+    ? normalizeWorkItemSpacerLayout(layout.workItemSpacerLayout)
+    : migrateSpacerPositions(toNumericPositions(layout.workItemSpacerPositions));
+}
+
 function toNumericPositions(positions: Record<string, number> | undefined): Record<number, number> {
-  const next: Record<number, number> = {};
-  Object.entries(positions ?? {}).forEach(([rawId, position]) => {
+  return Object.fromEntries(Object.entries(positions ?? []).flatMap(([rawId, position]) => {
     const id = Number(rawId);
-    if (Number.isInteger(id) && id > 0) {
-      next[id] = position;
-    }
-  });
-  return next;
+    return Number.isInteger(id) && id > 0 ? [[id, position]] : [];
+  }));
+}
+
+function toStringPositions(layout: readonly WorkItemSpacerToken[]): Record<string, number> {
+  return Object.fromEntries(Object.entries(positionsFromSpacerLayout(layout)).map(([id, position]) => [id, position]));
 }
