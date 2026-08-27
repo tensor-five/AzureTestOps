@@ -65,6 +65,13 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
     [props.addSpacer, props.spacerLayout, props.workItems]
   );
   const spacerTokenMode = visibleSpacerTokens.length > 0 && props.onSpacerTokenMove !== undefined;
+  const trailingSpacerTokens = React.useMemo(() => {
+    let lastWorkItemIndex = -1;
+    visibleSpacerTokens.forEach((token, index) => {
+      if (token.workItemId !== null) lastWorkItemIndex = index;
+    });
+    return visibleSpacerTokens.slice(lastWorkItemIndex + 1).filter((token) => token.workItemId === null);
+  }, [visibleSpacerTokens]);
   const workItemsById = React.useMemo(() => new Map(props.workItems.map((item) => [item.id, item])), [props.workItems]);
   const displayedItems = React.useMemo(
     () => spacerTokenMode
@@ -315,7 +322,7 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
           onDragLeave={reorderEnabled ? itemDragging.handleDragLeave : undefined}
           onDrop={reorderEnabled ? handleListDrop : undefined}
         >
-            {displayedItems.flatMap((workItem, index) => {
+          {displayedItems.flatMap((workItem, index) => {
             const isFocusMatch = props.focusedWorkItemIds?.has(workItem.id) ?? false;
             const className = [
               "relations-view-work-item-list-item",
@@ -387,6 +394,22 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
               </li>
             ];
           })}
+          {spacerTokenMode
+            ? trailingSpacerTokens.map((token) => (
+                <li
+                  key={`spacer-${token.tokenIndex}`}
+                  className="relations-view-work-item-spacer"
+                  data-work-item-spacer=""
+                  data-spacer-slot-index={token.tokenIndex}
+                  data-spacer-drop-target=""
+                  aria-label="Drop Bug here"
+                  {...(spacerDropPreview === `slot:${token.tokenIndex}` ? { "data-drop-preview": "true" } : {})}
+                  onDragOver={(event) => handleSpacerDragOver(undefined, 0, token.tokenIndex, event)}
+                  onDrop={(event) => handleSpacerDrop(undefined, 0, token.tokenIndex, event)}
+                  onDragLeave={() => setSpacerDropPreview(null)}
+                />
+              ))
+            : null}
         </ol>
       )}
     </section>

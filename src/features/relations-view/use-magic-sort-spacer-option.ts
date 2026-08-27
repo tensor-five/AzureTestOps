@@ -50,7 +50,13 @@ export function useMagicSortSpacerOption(setId: string | null): MagicSortSpacerO
       while (next.length <= maximum) next.push(null);
       visibleIds.forEach((id) => {
         const position = nextPositions[id];
-        if (position !== undefined && next[position] === null) next[position] = id;
+        if (position === undefined) return;
+        let target = position;
+        while (next[target] !== null) {
+          target += 1;
+          if (target === next.length) next.push(null);
+        }
+        next[target] = id;
       });
       save({ ...currentLayout, workItemSpacerLayout: next, workItemSpacerPositions: toStringPositions(next) });
     },
