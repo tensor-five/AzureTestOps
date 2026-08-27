@@ -106,6 +106,15 @@ describe("Add Spacer token layout contract v1", () => {
     act(() => first.host.querySelector<HTMLButtonElement>("[data-token-layout-move]")?.click());
     expect(readLayout(first.host)).toEqual([201, 202, 203, null, null]);
     expect(renderedTokens(first.host)).toEqual([201, 202, 203, null, null]);
+    const trailingSlots = first.host.querySelectorAll<HTMLElement>("[data-spacer-slot-index]");
+    const handles = first.host.querySelectorAll<HTMLButtonElement>(".relations-view-drag-handle");
+    const transfer = buildDataTransferStub();
+    expect(trailingSlots).toHaveLength(2);
+    act(() => fireDrag(handles[0]!, "dragstart", { dataTransfer: transfer }));
+    act(() => fireDrag(trailingSlots[1]!, "dragover", { dataTransfer: transfer }));
+    expect(trailingSlots[1]?.getAttribute("data-drop-preview")).toBe("true");
+    act(() => fireDrag(trailingSlots[1]!, "drop", { dataTransfer: transfer }));
+    expect(readLayout(first.host)).toEqual([null, 202, 203, null, 201]);
     first.unmount();
 
     clearSetLayoutPreferenceForTests();
@@ -116,7 +125,7 @@ describe("Add Spacer token layout contract v1", () => {
 
     clearSetLayoutPreferenceForTests();
     const restored = renderPersistentTokenHarness();
-    expect(readLayout(restored.host)).toEqual([201, 202, 203, null, null]);
+    expect(readLayout(restored.host)).toEqual([null, 202, 203, null, 201]);
     expect(readAddSpacer(restored.host)).toBe(true);
     restored.unmount();
   });
