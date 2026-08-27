@@ -199,6 +199,7 @@
 
 .relations-view-suite-list { gap: var(--space-0-5); padding: var(--space-1) 0; }
 .relations-view-work-item-list {
+  --relations-view-work-item-slot-height: calc(var(--space-8) + var(--space-1));
   gap: var(--space-2);
   padding: var(--space-2) 0;
   min-height: var(--space-20);
@@ -207,7 +208,21 @@
 .relations-view-work-item-spacer {
   min-height: calc(var(--space-8) + var(--space-1));
   position: relative;
-  transition: min-height var(--transition-duration-base) var(--transition-easing-standard);
+  border: 1px dashed transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  transition: border-color var(--transition-duration-fast) var(--transition-easing-standard), background-color var(--transition-duration-fast) var(--transition-easing-standard), box-shadow var(--transition-duration-fast) var(--transition-easing-standard);
+}
+
+.relations-view-work-item-list-item,
+.relations-view-work-item-spacer {
+  min-height: var(--relations-view-work-item-slot-height);
+}
+
+.relations-view-work-item-spacer[data-drop-preview="true"] {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 11%, var(--color-surface));
+  box-shadow: 0 0 0 var(--space-1) color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
 .relations-view-suite-cards {
   gap: var(--space-2);
