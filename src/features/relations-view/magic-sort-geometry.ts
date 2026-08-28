@@ -44,12 +44,27 @@ export function captureMagicSortGeometry(
     return {};
   }
 
-  extendWorkItemSlotCenters(workItemSlotCenters as number[], input.visibleRows.length);
+  const centers = workItemSlotCenters as number[];
+  extendWorkItemSlotCenters(centers, Math.max(input.visibleRows.length, slotsNeededForTestCaseRange(centers, testCaseSlotCenters as number[])));
+
+  logMagicSortGeometry({ testCaseSlotCenters: testCaseSlotCenters as number[], workItemSlotCenters: centers });
 
   return {
     measuredTestCaseSlotCenters: testCaseSlotCenters as number[],
     measuredWorkItemSlotCenters: workItemSlotCenters as number[]
   };
+}
+
+function slotsNeededForTestCaseRange(workItemCenters: readonly number[], testCaseCenters: readonly number[]): number {
+  if (workItemCenters.length < 2 || testCaseCenters.length === 0) return workItemCenters.length;
+  const pitch = (workItemCenters.at(-1)! - workItemCenters[0]!) / (workItemCenters.length - 1);
+  if (pitch <= 0) return workItemCenters.length;
+  return Math.max(1, Math.ceil((Math.max(...testCaseCenters) - workItemCenters[0]!) / pitch) + 1);
+}
+
+function logMagicSortGeometry(values: { testCaseSlotCenters: readonly number[]; workItemSlotCenters: readonly number[] }): void {
+  if (!globalThis.location?.search.includes("magicSortDebug=1")) return;
+  console.debug("[Magic Sort geometry]", values);
 }
 
 /**
