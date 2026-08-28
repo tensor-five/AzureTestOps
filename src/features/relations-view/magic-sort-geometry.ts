@@ -44,8 +44,25 @@ export function captureMagicSortGeometry(
     return {};
   }
 
+  extendWorkItemSlotCenters(workItemSlotCenters as number[], input.visibleRows.length);
+
   return {
     measuredTestCaseSlotCenters: testCaseSlotCenters as number[],
     measuredWorkItemSlotCenters: workItemSlotCenters as number[]
   };
+}
+
+/**
+ * Candidate Spacer slots may not exist in the DOM yet. Extend the real slot
+ * grid with its measured pitch so Magic Sort never compares pixel centres with
+ * raw list indices after the Bug-stack gap changes.
+ */
+function extendWorkItemSlotCenters(centers: number[], requiredLength: number): void {
+  if (centers.length === 0) return;
+  const pitch = centers.length > 1
+    ? (centers.at(-1)! - centers[0]!) / (centers.length - 1)
+    : 0;
+  while (centers.length < requiredLength) {
+    centers.push(centers.at(-1)! + pitch);
+  }
 }
