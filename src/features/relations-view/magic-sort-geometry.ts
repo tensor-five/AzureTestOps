@@ -15,6 +15,7 @@ export function captureMagicSortGeometry(
 ): Pick<MagicSortInput, "measuredTestCaseSlotCenters" | "measuredWorkItemSlotCenters"> {
   const { container } = input;
   if (!container) {
+    logMagicSortGeometry({ reason: "missing-container" });
     return {};
   }
 
@@ -36,18 +37,35 @@ export function captureMagicSortGeometry(
     container.querySelectorAll<HTMLElement>(".relations-view-work-item-list > li")
   ).map((slot) => centre(slot));
 
+  const missingTestCaseCenters = testCaseSlotCenters
+    .map((center, index) => center === undefined ? input.visibleRows[index] : undefined)
+    .filter((row) => row !== undefined);
+  const missingWorkItemSlotIndexes = workItemSlotCenters
+    .flatMap((center, index) => center === undefined ? [index] : []);
+  const tooFewWorkItemSlots = workItemSlotCenters.length < input.workItemIds.length;
+
   if (
-    testCaseSlotCenters.some((value) => value === undefined)
-    || workItemSlotCenters.some((value) => value === undefined)
-    || workItemSlotCenters.length < input.workItemIds.length
+    missingTestCaseCenters.length > 0
+    || missingWorkItemSlotIndexes.length > 0
+    || tooFewWorkItemSlots
   ) {
+    logMagicSortGeometry({
+      reason: "incomplete-dom-geometry",
+      visibleRows: input.visibleRows,
+      workItemIds: input.workItemIds,
+      testCaseSlotCenters,
+      workItemSlotCenters,
+      missingTestCaseCenters,
+      missingWorkItemSlotIndexes,
+      tooFewWorkItemSlots
+    });
     return {};
   }
 
   const centers = workItemSlotCenters as number[];
   extendWorkItemSlotCenters(centers, Math.max(input.visibleRows.length, slotsNeededForTestCaseRange(centers, testCaseSlotCenters as number[])));
 
-  logMagicSortGeometry({ testCaseSlotCenters: testCaseSlotCenters as number[], workItemSlotCenters: centers });
+  logMagicSortGeometry({ reason: "captured", testCaseSlotCenters: testCaseSlotCenters as number[], workItemSlotCenters: centers });
 
   return {
     measuredTestCaseSlotCenters: testCaseSlotCenters as number[],
@@ -62,7 +80,7 @@ function slotsNeededForTestCaseRange(workItemCenters: readonly number[], testCas
   return Math.max(1, Math.ceil((Math.max(...testCaseCenters) - workItemCenters[0]!) / pitch) + 1);
 }
 
-function logMagicSortGeometry(values: { testCaseSlotCenters: readonly number[]; workItemSlotCenters: readonly number[] }): void {
+function logMagicSortGeometry(values: Record<string, unknown>): void {
   if (!globalThis.location?.search.includes("magicSortDebug=1")) return;
   console.debug("[Magic Sort geometry]", values);
 }
