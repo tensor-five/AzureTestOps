@@ -94,7 +94,7 @@ function findBestImprovement(
       });
     }
   } else {
-    considerFreeWorkItemSlots(current, visibleRows, workItems, consider);
+    considerFreeWorkItemSlots(current, visibleRows, workItems, measuredWorkItemSlotCenters, consider);
   }
   for (let suiteIndex = 0; suiteIndex < current.suites.length; suiteIndex += 1) {
     const suite = current.suites[suiteIndex]!;
@@ -144,10 +144,12 @@ function considerFreeWorkItemSlots(
   current: MagicSortLayout,
   visibleRows: readonly MagicSortVisibleRow[] | undefined,
   workItems: ReadonlyMap<number, MagicSortWorkItem>,
+  measuredWorkItemSlotCenters: readonly number[] | undefined,
   consider: (candidate: MagicSortLayout) => void
 ): void {
   const positions = current.workItemPositions!;
   const maximumPosition = Math.max(
+    (measuredWorkItemSlotCenters?.length ?? 0) - 1,
     (visibleRows?.length ?? 0) - 1,
     ...Object.values(positions),
     current.workItemIds.length - 1
