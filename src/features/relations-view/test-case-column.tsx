@@ -6,8 +6,10 @@ import { HighlightedText } from "../../shared/search/highlighted-text.js";
 import { resolveAdjacentItemMove } from "./item-order.js";
 import { TestCaseCard } from "./test-case-card.js";
 import { FocusIcon } from "./focus-icon.js";
+import { SuiteTicketSortMenu } from "./suite-ticket-sort-menu.js";
 import type { SuiteCollapseApi } from "./use-suite-collapse.js";
 import { useItemDragging } from "./use-item-dragging.js";
+import { useSuiteTicketSorting, type SuiteTicketSortingApi } from "./use-suite-ticket-sorting.js";
 import type { TestCaseOrderApi } from "./use-test-case-order.js";
 import {
   buildSuiteExplorerEntries,
@@ -42,6 +44,7 @@ export type TestCaseColumnProps = {
 type DragSource = { workItemId: number; suiteId: number };
 
 export function TestCaseColumn(props: TestCaseColumnProps): React.ReactElement {
+  const sorting = useSuiteTicketSorting();
   const entries = React.useMemo(
     () => buildSuiteExplorerEntries(
       props.suiteTree,
@@ -208,6 +211,7 @@ export function TestCaseColumn(props: TestCaseColumnProps): React.ReactElement {
               key={entry.suite.id}
               entry={entry}
               collapse={props.collapse}
+              sorting={sorting}
               onLinePointerDown={props.onLinePointerDown}
               getWorkItemHref={props.getWorkItemHref}
               order={props.order}
@@ -236,6 +240,7 @@ export function TestCaseColumn(props: TestCaseColumnProps): React.ReactElement {
 function SuiteGroup(props: {
   entry: SuiteExplorerEntry;
   collapse: SuiteCollapseApi;
+  sorting: SuiteTicketSortingApi;
   onLinePointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
   getWorkItemHref?: (workItemId: number) => string | null;
   order?: TestCaseOrderApi;
@@ -268,11 +273,15 @@ function SuiteGroup(props: {
     rowSelector: ":scope > [data-test-case-id]",
     readItem: readTestCaseId
   });
-  const ordered = React.useMemo(
+  const storedOrdered = React.useMemo(
     () => props.order
       ? props.order.sortByStoredOrder(entry.suite.id, entry.projections)
       : entry.projections,
     [props.order, entry.projections, entry.suite.id]
+  );
+  const ordered = React.useMemo(
+    () => props.sorting.sortTickets(entry.suite.id, storedOrdered),
+    [entry.suite.id, props.sorting, storedOrdered]
   );
   const naturalIdSet = React.useMemo(() => new Set(entry.naturalIds), [entry.naturalIds]);
 
@@ -398,6 +407,15 @@ function SuiteGroup(props: {
             <HighlightedText text={entry.suite.name} query={props.searchQuery} />
           </span>
         </button>
+        {entry.projections.length > 0 ? (
+          <SuiteTicketSortMenu
+            suiteName={entry.suite.name}
+            selectedSort={props.sorting.activeSortFor(entry.suite.id)}
+            isOpen={props.sorting.openMenuSuiteId === entry.suite.id}
+            onToggle={() => props.sorting.toggleMenu(entry.suite.id)}
+            onSelect={(sort) => props.sorting.selectSort(entry.suite.id, sort)}
+          />
+        ) : null}
         {props.onFocusSuite && entry.branchProjectionCount > 0 ? (
           <button
             type="button"

@@ -364,6 +364,84 @@
     background-color var(--transition-duration-fast) var(--transition-easing-standard);
 }
 
+.relations-view-suite-sort {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.relations-view-suite-sort-trigger {
+  min-height: var(--space-7);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
+  white-space: nowrap;
+}
+
+.relations-view-suite-sort-trigger:hover,
+.relations-view-suite-sort-trigger:focus-visible,
+.relations-view-suite-sort-trigger[aria-expanded="true"] {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 9%, var(--color-surface));
+  color: var(--color-primary);
+  outline: none;
+}
+
+.relations-view-suite-sort-menu {
+  position: absolute;
+  z-index: 3;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  width: 13.5rem;
+  padding: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.relations-view-suite-sort-option {
+  position: relative;
+  width: 100%;
+  min-height: var(--space-7);
+  padding: 0 calc(var(--space-3) + var(--space-3)) 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: var(--text-xs);
+  text-align: left;
+}
+
+.relations-view-suite-sort-option:hover,
+.relations-view-suite-sort-option:focus-visible {
+  background: var(--color-bg-muted);
+  outline: none;
+}
+
+.relations-view-suite-sort-option[data-selected="true"] {
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+  color: var(--color-primary);
+  font-weight: var(--font-bold);
+}
+
+.relations-view-suite-sort-option[data-selected="true"]::after {
+  position: absolute;
+  top: 50%;
+  right: var(--space-2);
+  color: currentColor;
+  content: "✓";
+  transform: translateY(-50%);
+}
+
 .relations-view-suite-focus svg {
   width: var(--space-3-5);
   height: var(--space-3-5);
