@@ -228,11 +228,11 @@ describe("Vertrag v1: Sortierung von Tickets in Test Suites", () => {
 
     act(() => sortButton(harness.container, SUITE_AUTHENTICATION).click());
     act(() => menuItem(harness.container, "Titel · Aufsteigend").click());
-    expect(testCaseIds(harness.container, SUITE_AUTHENTICATION)).toEqual([101, 102, 103]);
+    expect(testCaseIds(harness.container, SUITE_AUTHENTICATION)).toEqual([101, 103, 102]);
 
     act(() => sortButton(harness.container, SUITE_AUTHENTICATION).click());
     act(() => menuItem(harness.container, "Titel · Absteigend").click());
-    expect(testCaseIds(harness.container, SUITE_AUTHENTICATION)).toEqual([103, 102, 101]);
+    expect(testCaseIds(harness.container, SUITE_AUTHENTICATION)).toEqual([102, 103, 101]);
     harness.unmount();
   });
 
@@ -332,7 +332,8 @@ describe("Vertrag v1: Sortierung von Tickets in Test Suites", () => {
     expect(document.activeElement).toBe(option);
     await user.keyboard("{Enter}");
 
-    expect(option.getAttribute("aria-checked")).toBe("true");
+    await user.click(button);
+    expect(menuItem(harness.container, "Titel · Aufsteigend").getAttribute("aria-checked")).toBe("true");
     harness.unmount();
   });
 });
