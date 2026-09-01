@@ -21,6 +21,7 @@ on:
       - src/features/relations-view/add-spacer-manual-bug-placement.contract.spec.tsx
       - src/features/relations-view/add-spacer-token-layout.contract.spec.tsx
       - src/features/relations-view/spacer-slot-preview.contract.spec.tsx
+      - src/features/relations-view/test-suite-ticket-sorting.contract.spec.tsx
       - tests/e2e/bug-test-case-status-conflicts.contract.spec.ts
       - tests/e2e/bug-test-case-status-conflicts-harness.tsx
       - .github/workflows/contract-integrity.yml
@@ -45,6 +46,7 @@ on:
       - src/features/relations-view/add-spacer-manual-bug-placement.contract.spec.tsx
       - src/features/relations-view/add-spacer-token-layout.contract.spec.tsx
       - src/features/relations-view/spacer-slot-preview.contract.spec.tsx
+      - src/features/relations-view/test-suite-ticket-sorting.contract.spec.tsx
       - tests/e2e/bug-test-case-status-conflicts.contract.spec.ts
       - tests/e2e/bug-test-case-status-conflicts-harness.tsx
       - .github/workflows/contract-integrity.yml
@@ -66,6 +68,6 @@ jobs:
           node scripts/check-contract-integrity.mjs
           node scripts/check-frozen-tests.mjs
           npm ci
-          npm test -- src/features/relations-view/magic-sort.contract.spec.tsx src/features/relations-view/magic-sort-header-placement.contract.spec.tsx src/features/relations-view/magic-sort-visible-positions.contract.spec.tsx src/features/relations-view/magic-sort-spacers.contract.spec.tsx src/features/relations-view/magic-sort-measured-geometry.contract.spec.ts src/features/relations-view/magic-sort-compact-unlinked-bugs.contract.spec.ts src/features/relations-view/magic-sort-feedback.contract.spec.tsx src/features/relations-view/magic-sort-immediate-feedback.contract.spec.tsx src/features/relations-view/bug-test-case-status-conflicts.contract.spec.tsx src/features/relations-view/relation-card-focus.contract.spec.tsx src/features/relations-view/relation-card-focus-conflict-color.contract.spec.tsx src/features/relations-view/refresh-header-placement.contract.spec.tsx src/features/relations-view/add-spacer-manual-bug-placement.contract.spec.tsx src/features/relations-view/add-spacer-token-layout.contract.spec.tsx src/features/relations-view/spacer-slot-preview.contract.spec.tsx
+          npm test -- src/features/relations-view/magic-sort.contract.spec.tsx src/features/relations-view/magic-sort-header-placement.contract.spec.tsx src/features/relations-view/magic-sort-visible-positions.contract.spec.tsx src/features/relations-view/magic-sort-spacers.contract.spec.tsx src/features/relations-view/magic-sort-measured-geometry.contract.spec.ts src/features/relations-view/magic-sort-compact-unlinked-bugs.contract.spec.ts src/features/relations-view/magic-sort-feedback.contract.spec.tsx src/features/relations-view/magic-sort-immediate-feedback.contract.spec.tsx src/features/relations-view/bug-test-case-status-conflicts.contract.spec.tsx src/features/relations-view/relation-card-focus.contract.spec.tsx src/features/relations-view/relation-card-focus-conflict-color.contract.spec.tsx src/features/relations-view/refresh-header-placement.contract.spec.tsx src/features/relations-view/add-spacer-manual-bug-placement.contract.spec.tsx src/features/relations-view/add-spacer-token-layout.contract.spec.tsx src/features/relations-view/spacer-slot-preview.contract.spec.tsx src/features/relations-view/test-suite-ticket-sorting.contract.spec.tsx
           npx playwright install chromium
           npm run test:e2e -- tests/e2e/bug-test-case-status-conflicts.contract.spec.ts
