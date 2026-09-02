@@ -1,6 +1,7 @@
 import * as React from "react";
 
 import type { WorkItem } from "../../domain/work-items/work-item.js";
+import { exactWorkItemIdHighlightQuery } from "../../shared/search/exact-work-item-id-query.js";
 import { HighlightedText } from "../../shared/search/highlighted-text.js";
 import { FocusIcon } from "./focus-icon.js";
 import { workItemItemKey } from "./item-key.js";
@@ -35,6 +36,7 @@ export function WorkItemCard(props: WorkItemCardProps): React.ReactElement {
     : undefined;
 
   const href = getWorkItemHref?.(workItem.id) ?? null;
+  const idHighlightQuery = exactWorkItemIdHighlightQuery(props.highlightQuery);
 
   return (
     <article
@@ -72,10 +74,12 @@ export function WorkItemCard(props: WorkItemCardProps): React.ReactElement {
           onPointerDown={(event) => event.stopPropagation()}
           aria-label={`Open work item #${workItem.id} in Azure DevOps (new tab)`}
         >
-          #{workItem.id}
+          <HighlightedText text={`#${workItem.id}`} query={idHighlightQuery} />
         </a>
       ) : (
-        <span className="relations-view-card-id">#{workItem.id}</span>
+        <span className="relations-view-card-id">
+          <HighlightedText text={`#${workItem.id}`} query={idHighlightQuery} />
+        </span>
       )}
       <span
         className={`relations-view-type-chip relations-view-type-chip-${typeSlug}`}
