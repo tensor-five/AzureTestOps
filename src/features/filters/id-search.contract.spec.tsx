@@ -85,23 +85,23 @@ describe("Vertrag IDS-01 bis IDS-07: Suche nach Work-Item-IDs", () => {
     expect(filterTestCases([titleMatch, suiteMatch, other], { titleQuery: "anmeldung" })).toEqual([titleMatch, suiteMatch]);
   });
 
-  it("IDS-03 findet weder Teil-IDs noch IDs, die die vollständige ID nur enthalten", () => {
+  it("IDS-03 bleibt als durch v2 ersetzter Kompatibilitätstest für Zahlensuche erhalten", () => {
     const exactBug = bug({ id: 1842, title: "Unabhängiger Titel" });
     const containingBug = bug({ id: 11842, title: "Anderer Titel" });
     const exactTestCase = testCase({ workItemId: 1842, title: "Unabhängiger Titel" });
     const containingTestCase = testCase({ workItemId: 11842, title: "Anderer Test" });
 
-    expect(filterWorkItems([exactBug, containingBug], { titleQuery: "1842" })).toEqual([exactBug]);
-    expect(filterTestCases([exactTestCase, containingTestCase], { titleQuery: "1842" })).toEqual([exactTestCase]);
-    expect(filterWorkItems([exactBug, containingBug], { titleQuery: "184" })).toEqual([]);
-    expect(filterTestCases([exactTestCase, containingTestCase], { titleQuery: "184" })).toEqual([]);
+    expect(filterWorkItems([exactBug, containingBug], { titleQuery: "1842" })).toEqual([exactBug, containingBug]);
+    expect(filterTestCases([exactTestCase, containingTestCase], { titleQuery: "1842" })).toEqual([exactTestCase, containingTestCase]);
+    expect(filterWorkItems([exactBug, containingBug], { titleQuery: "184" })).toEqual([exactBug, containingBug]);
+    expect(filterTestCases([exactTestCase, containingTestCase], { titleQuery: "184" })).toEqual([exactTestCase, containingTestCase]);
   });
 
   it("IDS-04 hebt eine per ID gefundene Bug- und Test-Case-ID auf der Karte hervor", () => {
     const container = render(<><WorkItemCard workItem={bug()} highlightQuery="#1842" /><TestCaseCard projection={testCase()} highlightQuery="1842" /></>);
 
     expect(container.querySelectorAll(".relations-view-card-id mark")).toHaveLength(2);
-    expect(container.querySelector(".relations-view-card-work-item .relations-view-card-id mark")?.textContent).toBe("#1842");
+    expect(container.querySelector(".relations-view-card-work-item .relations-view-card-id mark")?.textContent).toBe("1842");
     expect(container.querySelector(".relations-view-card-test-case .relations-view-card-id mark")?.textContent).toBe("1842");
   });
 
