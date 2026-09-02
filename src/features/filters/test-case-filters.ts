@@ -1,4 +1,5 @@
 import type { TestCaseProjection } from "../../domain/test-management/test-case-projection.js";
+import { normalizeExactWorkItemIdQuery } from "../../shared/search/exact-work-item-id-query.js";
 import type { TestCaseColumnFilterPreference } from "../../shared/user-preferences/user-preferences.client.js";
 
 /**
@@ -70,6 +71,7 @@ export function filterTestCases(
   }
 
   const titleNeedle = (filter.titleQuery ?? "").trim().toLowerCase();
+  const exactWorkItemId = normalizeExactWorkItemIdQuery(filter.titleQuery);
   const lastOutcomes = toMatcherSet(filter.lastOutcomes);
   const states = toMatcherSet(filter.states);
   const assignedTo = toMatcherSet(filter.assignedTo);
@@ -78,6 +80,13 @@ export function filterTestCases(
 
   return projections.filter((projection) => {
     if (
+      exactWorkItemId !== null &&
+      String(projection.workItemId) !== exactWorkItemId
+    ) {
+      return false;
+    }
+    if (
+      exactWorkItemId === null &&
       titleNeedle.length > 0 &&
       !projection.title.toLowerCase().includes(titleNeedle) &&
       !projection.suitePath.toLowerCase().includes(titleNeedle)

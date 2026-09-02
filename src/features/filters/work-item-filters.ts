@@ -1,4 +1,5 @@
 import type { WorkItem } from "../../domain/work-items/work-item.js";
+import { normalizeExactWorkItemIdQuery } from "../../shared/search/exact-work-item-id-query.js";
 import type { WorkItemColumnFilterPreference } from "../../shared/user-preferences/user-preferences.client.js";
 
 export type WorkItemFacets = {
@@ -53,13 +54,21 @@ export function filterWorkItems(
   }
 
   const titleNeedle = (filter.titleQuery ?? "").trim().toLowerCase();
+  const exactWorkItemId = normalizeExactWorkItemIdQuery(filter.titleQuery);
   const states = toMatcherSet(filter.states);
   const assignedTo = toMatcherSet(filter.assignedTo);
   const tags = toMatcherSet(filter.tags);
   const workItemTypes = toMatcherSet(filter.workItemTypes);
 
   return workItems.filter((item) => {
-    if (titleNeedle.length > 0 && !item.title.toLowerCase().includes(titleNeedle)) {
+    if (exactWorkItemId !== null && String(item.id) !== exactWorkItemId) {
+      return false;
+    }
+    if (
+      exactWorkItemId === null &&
+      titleNeedle.length > 0 &&
+      !item.title.toLowerCase().includes(titleNeedle)
+    ) {
       return false;
     }
     if (states && !states.has(item.state)) {
