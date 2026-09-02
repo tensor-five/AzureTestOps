@@ -1,0 +1,17 @@
+{
+  "contract": "id-search.v1.html",
+  "files": [
+    {
+      "path": "src/features/filters/id-search.contract.spec.tsx",
+      "sha256": "9e25c6e0a233603932e7de25c753e38d291655e87df02efc235a0a14c2caac45"
+    },
+    {
+      "path": "tests/e2e/id-search.contract.spec.ts",
+      "sha256": "8a186b30850d7825ba6c78dbed4f873f611608457a875784d198cca9f2384239"
+    },
+    {
+      "path": "tests/e2e/id-search.contract-harness.tsx",
+      "sha256": "14983dd5f30bc0cce1a1cd64b1c08e746b1c67d5f76c39b824dd44d436ec8ef7"
+    }
+  ]
+}
