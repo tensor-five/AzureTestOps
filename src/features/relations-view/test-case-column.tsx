@@ -268,6 +268,10 @@ function SuiteGroup(props: {
   const isCollapsed = !searchActive && props.collapse.isCollapsed(entry.suite.id);
   const suiteHref = props.getSuiteHref?.(entry.suite.id) ?? null;
   const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const [manualOrderRevision, bumpManualOrderRevision] = React.useReducer(
+    (revision: number) => revision + 1,
+    0
+  );
   const itemDragging = useItemDragging({
     containerRef,
     rowSelector: ":scope > [data-test-case-id]",
@@ -277,12 +281,15 @@ function SuiteGroup(props: {
     () => props.order
       ? props.order.sortByStoredOrder(entry.suite.id, entry.projections)
       : entry.projections,
-    [props.order, entry.projections, entry.suite.id]
+    [manualOrderRevision, props.order, entry.projections, entry.suite.id]
   );
   const ordered = React.useMemo(
     () => props.sorting.sortTickets(entry.suite.id, storedOrdered),
     [entry.suite.id, props.sorting, storedOrdered]
   );
+  React.useEffect(() => {
+    props.sorting.reconcileStoredOrder(entry.suite.id, storedOrdered);
+  }, [entry.suite.id, props.sorting, storedOrdered]);
   const naturalIdSet = React.useMemo(() => new Set(entry.naturalIds), [entry.naturalIds]);
 
   React.useEffect(() => {
@@ -328,6 +335,7 @@ function SuiteGroup(props: {
         target.edge,
         entry.naturalIds
       );
+      bumpManualOrderRevision();
       onDragEnd();
     },
     [dragSourceRef, entry.suite.id, entry.naturalIds, itemDragging, naturalIdSet, onDragEnd, order]
@@ -360,11 +368,25 @@ function SuiteGroup(props: {
         adjacentMove.edge,
         entry.naturalIds
       );
+      bumpManualOrderRevision();
       onReorderAnnouncement(
         `Moved test case #${workItemId} ${adjacentMove.edge} test case #${adjacentMove.targetId} in this suite.`
       );
     },
     [entry.naturalIds, entry.suite.id, naturalIdSet, onReorderAnnouncement, order, ordered]
+  );
+
+  const applyOneTimeSort = React.useCallback(
+    (sort: Parameters<SuiteTicketSortingApi["selectSort"]>[3]) => {
+      const next = props.sorting.selectSort(entry.suite.id, ordered, storedOrdered, sort);
+      order?.applyVisibleOrder?.(
+        entry.suite.id,
+        ordered.map((projection) => projection.workItemId),
+        next.map((projection) => projection.workItemId),
+        entry.naturalIds
+      );
+    },
+    [entry.naturalIds, entry.suite.id, order, ordered, props.sorting, storedOrdered]
   );
 
   const reorderEnabled = props.order !== undefined;
@@ -410,10 +432,9 @@ function SuiteGroup(props: {
         {entry.projections.length > 0 ? (
           <SuiteTicketSortMenu
             suiteName={entry.suite.name}
-            selectedSort={props.sorting.activeSortFor(entry.suite.id)}
             isOpen={props.sorting.openMenuSuiteId === entry.suite.id}
             onToggle={() => props.sorting.toggleMenu(entry.suite.id)}
-            onSelect={(sort) => props.sorting.selectSort(entry.suite.id, sort)}
+            onSelect={applyOneTimeSort}
           />
         ) : null}
         {props.onFocusSuite && entry.branchProjectionCount > 0 ? (
