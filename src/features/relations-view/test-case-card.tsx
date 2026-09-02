@@ -1,7 +1,7 @@
 import * as React from "react";
 
 import type { TestCaseProjection } from "../../domain/test-management/test-case-projection.js";
-import { exactWorkItemIdHighlightQuery } from "../../shared/search/exact-work-item-id-query.js";
+import { exactWorkItemIdHighlightQuery, normalizeWorkItemSearchQuery } from "../../shared/search/exact-work-item-id-query.js";
 import { HighlightedText } from "../../shared/search/highlighted-text.js";
 import { FocusIcon } from "./focus-icon.js";
 import { testCaseItemKey } from "./item-key.js";
@@ -42,6 +42,7 @@ export function TestCaseCard(props: TestCaseCardProps): React.ReactElement {
   const display = outcomeDisplay(projection.lastOutcome);
   const href = getWorkItemHref?.(projection.workItemId) ?? null;
   const idHighlightQuery = exactWorkItemIdHighlightQuery(props.highlightQuery);
+  const titleHighlightQuery = normalizeWorkItemSearchQuery(props.highlightQuery);
 
   const className = [
     "relations-view-card",
@@ -86,7 +87,7 @@ export function TestCaseCard(props: TestCaseCardProps): React.ReactElement {
         {display.shortLabel}
       </span>
       <span className="relations-view-card-title">
-        <HighlightedText text={projection.title} query={props.highlightQuery} />
+        <HighlightedText text={projection.title} query={titleHighlightQuery} />
       </span>
       {props.onFocus ? (
         <button

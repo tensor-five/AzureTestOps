@@ -2,6 +2,7 @@ import * as React from "react";
 
 import type { TestSuiteNode } from "../../domain/test-management/test-suite-tree.js";
 import type { TestCaseProjection } from "../../domain/test-management/test-case-projection.js";
+import { normalizeWorkItemSearchQuery } from "../../shared/search/exact-work-item-id-query.js";
 import { HighlightedText } from "../../shared/search/highlighted-text.js";
 import { resolveAdjacentItemMove } from "./item-order.js";
 import { TestCaseCard } from "./test-case-card.js";
@@ -265,6 +266,7 @@ function SuiteGroup(props: {
   const onDragEnd = props.onDragEnd;
   const onReorderAnnouncement = props.onReorderAnnouncement;
   const searchActive = props.searchQuery.trim().length > 0;
+  const highlightQuery = normalizeWorkItemSearchQuery(props.searchQuery);
   const isCollapsed = !searchActive && props.collapse.isCollapsed(entry.suite.id);
   const suiteHref = props.getSuiteHref?.(entry.suite.id) ?? null;
   const containerRef = React.useRef<HTMLDivElement | null>(null);
@@ -426,7 +428,7 @@ function SuiteGroup(props: {
             <FolderIcon open={!isCollapsed && entry.hasChildren} />
           </span>
           <span className="relations-view-suite-name" title={entry.suite.path}>
-            <HighlightedText text={entry.suite.name} query={props.searchQuery} />
+            <HighlightedText text={entry.suite.name} query={highlightQuery} />
           </span>
         </button>
         {entry.projections.length > 0 ? (

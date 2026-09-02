@@ -1,7 +1,7 @@
 import * as React from "react";
 
 import type { WorkItem } from "../../domain/work-items/work-item.js";
-import { exactWorkItemIdHighlightQuery } from "../../shared/search/exact-work-item-id-query.js";
+import { exactWorkItemIdHighlightQuery, normalizeWorkItemSearchQuery } from "../../shared/search/exact-work-item-id-query.js";
 import { HighlightedText } from "../../shared/search/highlighted-text.js";
 import { FocusIcon } from "./focus-icon.js";
 import { workItemItemKey } from "./item-key.js";
@@ -37,6 +37,7 @@ export function WorkItemCard(props: WorkItemCardProps): React.ReactElement {
 
   const href = getWorkItemHref?.(workItem.id) ?? null;
   const idHighlightQuery = exactWorkItemIdHighlightQuery(props.highlightQuery);
+  const titleHighlightQuery = normalizeWorkItemSearchQuery(props.highlightQuery);
 
   return (
     <article
@@ -94,7 +95,7 @@ export function WorkItemCard(props: WorkItemCardProps): React.ReactElement {
         {stateLabel || "—"}
       </span>
       <span className="relations-view-card-title">
-        <HighlightedText text={workItem.title} query={props.highlightQuery} />
+        <HighlightedText text={workItem.title} query={titleHighlightQuery} />
       </span>
     </article>
   );

@@ -10,5 +10,10 @@ export function normalizeExactWorkItemIdQuery(query: string | undefined): string
 
 /** Returns the user-entered complete ID form for card highlighting. */
 export function exactWorkItemIdHighlightQuery(query: string | undefined): string {
-  return normalizeExactWorkItemIdQuery(query) === null ? "" : query?.trim() ?? "";
+  return normalizeExactWorkItemIdQuery(query) ?? "";
+}
+
+/** Normalizes optional ID syntax while preserving ordinary text searches. */
+export function normalizeWorkItemSearchQuery(query: string | undefined): string {
+  return normalizeExactWorkItemIdQuery(query) ?? query?.trim() ?? "";
 }
