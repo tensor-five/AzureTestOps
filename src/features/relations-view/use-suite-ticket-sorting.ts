@@ -4,43 +4,92 @@ import type { TestCaseProjection } from "../../domain/test-management/test-case-
 import { sortTestSuiteTickets, type TestSuiteTicketSort } from "./test-suite-ticket-sorting.js";
 
 export type SuiteTicketSortingApi = {
-  activeSortFor(suiteId: number): TestSuiteTicketSort | null;
   openMenuSuiteId: number | null;
   toggleMenu(suiteId: number): void;
-  selectSort(suiteId: number, sort: TestSuiteTicketSort): void;
+  selectSort(
+    suiteId: number,
+    visibleTickets: readonly TestCaseProjection[],
+    storedTickets: readonly TestCaseProjection[],
+    sort: TestSuiteTicketSort
+  ): TestCaseProjection[];
+  reconcileStoredOrder(suiteId: number, tickets: readonly TestCaseProjection[]): void;
   sortTickets(suiteId: number, tickets: readonly TestCaseProjection[]): TestCaseProjection[];
 };
 
-/** Holds per-suite sorting for the current UI session without persisting it. */
-export function useSuiteTicketSorting(): SuiteTicketSortingApi {
-  const [sorts, setSorts] = React.useState<ReadonlyMap<number, TestSuiteTicketSort>>(() => new Map());
-  const [openMenuSuiteId, setOpenMenuSuiteId] = React.useState<number | null>(null);
+type PendingOneTimeOrder = {
+  sourceIds: readonly number[];
+  sortedIds: readonly number[];
+};
 
-  const activeSortFor = React.useCallback(
-    (suiteId: number) => sorts.get(suiteId) ?? null,
-    [sorts]
+/**
+ * Shows a selected sort result until the manually persisted order has re-rendered.
+ * It deliberately never stores an active sorting mode, so later manual moves win.
+ */
+export function useSuiteTicketSorting(): SuiteTicketSortingApi {
+  const [pendingOrders, setPendingOrders] = React.useState<ReadonlyMap<number, PendingOneTimeOrder>>(
+    () => new Map()
   );
+  const [openMenuSuiteId, setOpenMenuSuiteId] = React.useState<number | null>(null);
 
   const toggleMenu = React.useCallback((suiteId: number) => {
     setOpenMenuSuiteId((current) => current === suiteId ? null : suiteId);
   }, []);
 
-  const selectSort = React.useCallback((suiteId: number, sort: TestSuiteTicketSort) => {
-    setSorts((current) => {
-      const next = new Map(current);
-      next.set(suiteId, sort);
-      return next;
-    });
-    setOpenMenuSuiteId(null);
-  }, []);
+  const selectSort = React.useCallback(
+    (
+      suiteId: number,
+      visibleTickets: readonly TestCaseProjection[],
+      storedTickets: readonly TestCaseProjection[],
+      sort: TestSuiteTicketSort
+    ) => {
+      const sortedTickets = sortTestSuiteTickets(visibleTickets, sort);
+      setPendingOrders((current) => {
+        const next = new Map(current);
+        next.set(suiteId, {
+          sourceIds: storedTickets.map((ticket) => ticket.workItemId),
+          sortedIds: sortedTickets.map((ticket) => ticket.workItemId)
+        });
+        return next;
+      });
+      setOpenMenuSuiteId(null);
+      return sortedTickets;
+    },
+    []
+  );
 
   const sortTickets = React.useCallback(
     (suiteId: number, tickets: readonly TestCaseProjection[]) => {
-      const sort = sorts.get(suiteId);
-      return sort ? sortTestSuiteTickets(tickets, sort) : tickets.slice();
+      const pending = pendingOrders.get(suiteId);
+      if (!pending || !sameIds(tickets, pending.sourceIds)) {
+        return tickets.slice();
+      }
+      const byId = new Map(tickets.map((ticket) => [ticket.workItemId, ticket]));
+      return pending.sortedIds.flatMap((id) => {
+        const ticket = byId.get(id);
+        return ticket ? [ticket] : [];
+      });
     },
-    [sorts]
+    [pendingOrders]
   );
 
-  return { activeSortFor, openMenuSuiteId, toggleMenu, selectSort, sortTickets };
+  const reconcileStoredOrder = React.useCallback(
+    (suiteId: number, tickets: readonly TestCaseProjection[]) => {
+      setPendingOrders((current) => {
+        const pending = current.get(suiteId);
+        if (!pending || sameIds(tickets, pending.sourceIds)) {
+          return current;
+        }
+        const next = new Map(current);
+        next.delete(suiteId);
+        return next;
+      });
+    },
+    []
+  );
+
+  return { openMenuSuiteId, toggleMenu, selectSort, reconcileStoredOrder, sortTickets };
+}
+
+function sameIds(tickets: readonly TestCaseProjection[], ids: readonly number[]): boolean {
+  return tickets.length === ids.length && tickets.every((ticket, index) => ticket.workItemId === ids[index]);
 }

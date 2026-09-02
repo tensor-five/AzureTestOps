@@ -1,0 +1,9 @@
+{
+  "contract": "test-suite-ticket-sorting.v2.html",
+  "files": [
+    {
+      "path": "src/features/relations-view/test-suite-ticket-sorting.v2.contract.spec.tsx",
+      "sha256": "329741d9079a33e77c156dd31c9da1e3a91d669a7a839072054e73bd8d5af67a"
+    }
+  ]
+}

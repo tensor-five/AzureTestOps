@@ -11,7 +11,6 @@ const SORT_OPTIONS: readonly { value: TestSuiteTicketSort; label: string }[] = [
 
 export function SuiteTicketSortMenu(props: {
   suiteName: string;
-  selectedSort: TestSuiteTicketSort | null;
   isOpen: boolean;
   onToggle(): void;
   onSelect(sort: TestSuiteTicketSort): void;
@@ -26,12 +25,11 @@ export function SuiteTicketSortMenu(props: {
         aria-haspopup="menu"
         aria-controls={menuId}
         aria-expanded={props.isOpen}
-        aria-label={`Sort test cases in suite ${props.suiteName}`}
+        aria-label={`Testfälle in Suite ${props.suiteName} einmalig sortieren`}
+        title="Testfälle einmalig sortieren"
         onClick={props.onToggle}
       >
-        <span aria-hidden="true">⇅</span>
-        <span>Sortieren</span>
-        <span aria-hidden="true">⌄</span>
+        ⇅
       </button>
       {props.isOpen ? (
         <div
@@ -45,9 +43,8 @@ export function SuiteTicketSortMenu(props: {
               key={option.value}
               type="button"
               role="menuitemradio"
-              aria-checked={props.selectedSort === option.value}
+              aria-checked="false"
               className="relations-view-suite-sort-option"
-              data-selected={props.selectedSort === option.value || undefined}
               onClick={() => props.onSelect(option.value)}
             >
               {option.label}
