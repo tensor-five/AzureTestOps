@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import * as React from "react";
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import { act } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { createRoot } from "react-dom/client";
@@ -173,7 +173,7 @@ describe("Vertrag v2: Einmalige Sortierung von Tickets in Test Suites", () => {
       expect(suite(harness.container, suiteId).querySelector(".relations-view-suite-header")?.contains(trigger)).toBe(true);
     }
     const relationsStyles = readFileSync(
-      fileURLToPath(new URL("../../app/bootstrap/local-ui-relations.css", import.meta.url)),
+      resolve(process.cwd(), "src/app/bootstrap/local-ui-relations.css"),
       "utf8"
     );
     expect(relationsStyles).toMatch(
