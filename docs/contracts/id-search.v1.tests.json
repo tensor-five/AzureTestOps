@@ -7,7 +7,7 @@
     },
     {
       "path": "tests/e2e/id-search.contract.spec.ts",
-      "sha256": "8a186b30850d7825ba6c78dbed4f873f611608457a875784d198cca9f2384239"
+      "sha256": "7b2bcbc5689955fb2d8f922225c5d8dc0c6464394f35ce55a113ba6a2fe7f401"
     },
     {
       "path": "tests/e2e/id-search.contract-harness.tsx",

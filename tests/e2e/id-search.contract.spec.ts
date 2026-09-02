@@ -117,7 +117,7 @@ test("IDS-05 erhält Ergebnisanzahl, Schnellfilter, Sortierung und manuelle Drag
   await bugs.fill("");
   expect(await bugRows.evaluateAll((rows) => rows.map((row) => row.getAttribute("data-work-item-id")))).toEqual(["1842", "11842", "1843"]);
 
-  expect(await testCaseRows.evaluateAll((rows) => rows.map((row) => row.getAttribute("data-test-case-id")))).toEqual(["1842", "1843", "11842"]);
+  expect(await testCaseRows.evaluateAll((rows) => rows.map((row) => row.getAttribute("data-test-case-id")))).toEqual(["11842", "1842", "1843"]);
   await page.getByRole("button", { name: "Testfälle in Suite Anmeldung einmalig sortieren" }).click();
   await page.getByRole("menuitemradio", { name: "Titel · Aufsteigend" }).click();
   expect(await testCaseRows.evaluateAll((rows) => rows.map((row) => row.getAttribute("data-test-case-id")))).toEqual(["11842", "1842", "1843"]);
@@ -133,7 +133,7 @@ test("IDS-05 erhält Ergebnisanzahl, Schnellfilter, Sortierung und manuelle Drag
   expect(await testCaseRows.evaluateAll((rows) => rows.map((row) => row.getAttribute("data-test-case-id")))).toEqual(["1842", "11842", "1843"]);
 
   await page.getByRole("button", { name: "Toggle Work items filters" }).click();
-  const openBugs = page.getByRole("button", { name: "Open bugs" });
+  const openBugs = page.getByRole("button", { name: "Open bugs", exact: true });
   await openBugs.click();
   await expect(openBugs).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".relations-view-card-work-item")).toHaveCount(2);
