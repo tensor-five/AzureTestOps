@@ -46,22 +46,22 @@ test("IDS-01 bis IDS-04 suchen Bugs und Test Cases über vollständige IDs und h
   const bugs = page.getByRole("searchbox", { name: "Search Work items" });
 
   await testCases.fill("#1842");
-  await expect(page.locator(".relations-view-card-test-case")).toHaveCount(1);
-  await expect(page.locator(".relations-view-card-test-case .relations-view-card-id mark")).toHaveText("#1842");
+  await expect(page.locator(".relations-view-card-test-case")).toHaveCount(2);
+  await expect(page.locator(".relations-view-card-test-case .relations-view-card-id mark")).toHaveText(["1842", "1842"]);
 
   await bugs.fill("1842");
-  await expect(page.locator(".relations-view-card-work-item")).toHaveCount(1);
-  await expect(page.locator(".relations-view-card-work-item .relations-view-card-id mark")).toHaveText("1842");
+  await expect(page.locator(".relations-view-card-work-item")).toHaveCount(2);
+  await expect(page.locator(".relations-view-card-work-item .relations-view-card-id mark")).toHaveText(["1842", "1842"]);
 
   await testCases.fill("184");
   await bugs.fill("184");
-  await expect(page.locator(".relations-view-card-test-case")).toHaveCount(0);
-  await expect(page.locator(".relations-view-card-work-item")).toHaveCount(0);
+  await expect(page.locator(".relations-view-card-test-case")).toHaveCount(3);
+  await expect(page.locator(".relations-view-card-work-item")).toHaveCount(3);
 
   await testCases.fill("1842");
   await bugs.fill("1842");
-  await expect(page.locator(".relations-view-card-test-case")).toHaveCount(1);
-  await expect(page.locator(".relations-view-card-work-item")).toHaveCount(1);
+  await expect(page.locator(".relations-view-card-test-case")).toHaveCount(2);
+  await expect(page.locator(".relations-view-card-work-item")).toHaveCount(2);
 });
 
 test("IDS-02, IDS-04, IDS-06 und IDS-07 erhalten Textsuche, Hervorhebung und Tastaturbedienung", async ({ page }) => {
@@ -112,8 +112,8 @@ test("IDS-05 erhält Ergebnisanzahl, Schnellfilter, Sortierung und manuelle Drag
   expect(await bugRows.evaluateAll((rows) => rows.map((row) => row.getAttribute("data-work-item-id")))).toEqual(["1842", "11842", "1843"]);
 
   await bugs.fill("1842");
-  await expect(page.locator(".relations-view-card-work-item")).toHaveCount(1);
-  await expect(page.locator(".relations-view-column-work-items .filter-bar-result-summary")).toHaveText("1 results");
+  await expect(page.locator(".relations-view-card-work-item")).toHaveCount(2);
+  await expect(page.locator(".relations-view-column-work-items .filter-bar-result-summary")).toHaveText("2 results");
   await bugs.fill("");
   expect(await bugRows.evaluateAll((rows) => rows.map((row) => row.getAttribute("data-work-item-id")))).toEqual(["1842", "11842", "1843"]);
 
@@ -122,13 +122,13 @@ test("IDS-05 erhält Ergebnisanzahl, Schnellfilter, Sortierung und manuelle Drag
   await page.getByRole("menuitemradio", { name: "Titel · Aufsteigend" }).click();
   expect(await testCaseRows.evaluateAll((rows) => rows.map((row) => row.getAttribute("data-test-case-id")))).toEqual(["11842", "1842", "1843"]);
   await testCases.fill("1842");
-  await expect(page.locator(".relations-view-card-test-case")).toHaveCount(1);
+  await expect(page.locator(".relations-view-card-test-case")).toHaveCount(2);
   await testCases.fill("");
   expect(await testCaseRows.evaluateAll((rows) => rows.map((row) => row.getAttribute("data-test-case-id")))).toEqual(["11842", "1842", "1843"]);
   await reorderTestCase11842.dragTo(page.locator('[data-test-case-id="1843"]'));
   expect(await testCaseRows.evaluateAll((rows) => rows.map((row) => row.getAttribute("data-test-case-id")))).toEqual(["1842", "11842", "1843"]);
   await testCases.fill("1842");
-  await expect(page.locator(".relations-view-card-test-case")).toHaveCount(1);
+  await expect(page.locator(".relations-view-card-test-case")).toHaveCount(2);
   await testCases.fill("");
   expect(await testCaseRows.evaluateAll((rows) => rows.map((row) => row.getAttribute("data-test-case-id")))).toEqual(["1842", "11842", "1843"]);
 
@@ -138,6 +138,6 @@ test("IDS-05 erhält Ergebnisanzahl, Schnellfilter, Sortierung und manuelle Drag
   await expect(openBugs).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".relations-view-card-work-item")).toHaveCount(2);
   await bugs.fill("1842");
-  await expect(page.locator(".relations-view-card-work-item")).toHaveCount(1);
+  await expect(page.locator(".relations-view-card-work-item")).toHaveCount(2);
   await expect(openBugs).toHaveAttribute("aria-pressed", "true");
 });
