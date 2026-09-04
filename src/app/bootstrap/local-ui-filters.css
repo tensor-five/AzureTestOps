@@ -56,6 +56,12 @@
   font-size: var(--text-sm);
 }
 
+/* Edge renders its own clear control for search inputs; the inline button is the single accessible clear action. */
+.filter-bar-title-input::-webkit-search-cancel-button {
+  appearance: none;
+  -webkit-appearance: none;
+}
+
 .filter-bar-title-input:focus,
 .filter-bar-facet-search:focus {
   outline: none;
