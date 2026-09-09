@@ -15,7 +15,6 @@ export function captureMagicSortGeometry(
 ): Pick<MagicSortInput, "measuredTestCaseSlotCenters" | "measuredWorkItemSlotCenters"> {
   const { container } = input;
   if (!container) {
-    logMagicSortGeometry({ reason: "missing-container" });
     return {};
   }
 
@@ -49,23 +48,11 @@ export function captureMagicSortGeometry(
     || missingWorkItemSlotIndexes.length > 0
     || tooFewWorkItemSlots
   ) {
-    logMagicSortGeometry({
-      reason: "incomplete-dom-geometry",
-      visibleRows: input.visibleRows,
-      workItemIds: input.workItemIds,
-      testCaseSlotCenters,
-      workItemSlotCenters,
-      missingTestCaseCenters,
-      missingWorkItemSlotIndexes,
-      tooFewWorkItemSlots
-    });
     return {};
   }
 
   const centers = workItemSlotCenters as number[];
   extendWorkItemSlotCenters(centers, Math.max(input.visibleRows.length, slotsNeededForTestCaseRange(centers, testCaseSlotCenters as number[])));
-
-  logMagicSortGeometry({ reason: "captured", testCaseSlotCenters: testCaseSlotCenters as number[], workItemSlotCenters: centers });
 
   return {
     measuredTestCaseSlotCenters: testCaseSlotCenters as number[],
@@ -78,11 +65,6 @@ function slotsNeededForTestCaseRange(workItemCenters: readonly number[], testCas
   const pitch = (workItemCenters.at(-1)! - workItemCenters[0]!) / (workItemCenters.length - 1);
   if (pitch <= 0) return workItemCenters.length;
   return Math.max(1, Math.ceil((Math.max(...testCaseCenters) - workItemCenters[0]!) / pitch) + 1);
-}
-
-function logMagicSortGeometry(values: Record<string, unknown>): void {
-  if (!globalThis.location?.search.includes("magicSortDebug=1")) return;
-  console.debug("[Magic Sort geometry]", values);
 }
 
 /**
