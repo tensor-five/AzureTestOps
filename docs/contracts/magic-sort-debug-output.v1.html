@@ -1,0 +1,22 @@
+<article>
+  <h1>Vertrag v1: Magic-Sort-Debug-Output</h1>
+  <p>Freigegeben am 9. September 2026</p>
+  <h2>Versprechen</h2>
+  <p>Magic Sort kann einen ausschließlich lokalen, strukturierten Laufbericht in der Browser-Konsole ausgeben. Der Nutzer kann diesen Bericht kopieren und hier zur Analyse einer unzureichenden Sortierung bereitstellen. Die Produktoberfläche erhält dafür keine neue Anzeige.</p>
+  <h2>Verbindliche Anforderungen</h2>
+  <ol>
+    <li><strong>MSDO-01:</strong> Debug-Output ist ausschließlich aktiv, wenn die aktuelle URL den Query-Parameter <code>magicSortDebug=1</code> enthält. Andere Werte und eine fehlende Angabe erzeugen keinen Debug-Output.</li>
+    <li><strong>MSDO-02:</strong> Jeder bewusste Magic-Sort-Klick schreibt genau einen kopierbaren JSON-Bericht mit der stabilen Kennung <code>magic-sort-debug.v1</code> in die Browser-Konsole. Dies geschieht auch dann, wenn sich kein Layout ändert oder die Geometrie unvollständig ist.</li>
+    <li><strong>MSDO-03:</strong> Der Bericht enthält ausschließlich die für die Ursachenanalyse nötigen Laufdaten: Zeitpunkt und Laufnummer, sichtbare Test-Case-/Bug-IDs, sichtbare Beziehungen, Geometrie-Status und -Fehlergrund, gemessene Mittelpunkte und Slot-Höhen, den tatsächlich geprüften Slot-Bereich, je Verbindung die Ausgangs- und Endposition sowie die Entscheidung und eine Zusammenfassung von Kreuzungen, Gesamtabstand und akzeptierten Verbesserungen.</li>
+    <li><strong>MSDO-04:</strong> Der Bericht ist vollständig JSON-serialisierbar, enthält keine Zugangsdaten, Azure-DevOps-Tokens oder Inhalte ausgeblendeter Elemente und wird weder gespeichert noch an ein externes System übermittelt.</li>
+    <li><strong>MSDO-05:</strong> Jede Ausgabe beruht auf dem für diesen Klick frisch erfassten DOM-Snapshot. Ein-/Ausklappen, Filter und Größenänderungen allein erzeugen keinen Bericht und lösen keine Sortierung aus.</li>
+    <li><strong>MSDO-06:</strong> Der Debug-Output beobachtet den vorhandenen Lauf nur. Magic Sort, Add Spacer, Animation, Zugänglichkeit, Persistenz und das Optimierungsergebnis bleiben unverändert.</li>
+  </ol>
+  <h2>Nicht Teil dieses Vertrags</h2>
+  <ul>
+    <li>Ein Debug-Panel, Button, Dialog oder anderes neues sichtbares Oberflächenelement.</li>
+    <li>Automatisches Sortieren oder Reporting ohne bewussten Magic-Sort-Klick.</li>
+    <li>Server-Logging, Telemetrie oder Speicherung von Debug-Daten.</li>
+  </ul>
+  <p><strong>Freigabestatus:</strong> vom Nutzer freigegeben. Diese Datei wird nach ihrer Prüfsumme eingefroren.</p>
+</article>
