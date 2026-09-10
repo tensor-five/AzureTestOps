@@ -5,7 +5,7 @@ import { resolveAdjacentItemMove } from "./item-order.js";
 import { useItemDragging } from "./use-item-dragging.js";
 import { WorkItemCard } from "./work-item-card.js";
 import type { WorkItemOrderApi } from "./use-work-item-order.js";
-import { projectVisibleSpacerLayout, type WorkItemSpacerToken } from "./work-item-spacer-layout.js";
+import { positionsFromSpacerLayout, projectVisibleSpacerLayout, type WorkItemSpacerToken } from "./work-item-spacer-layout.js";
 
 const DRAG_DATA_TYPE = "application/x-azure-testops-work-item-id";
 
@@ -65,6 +65,9 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
     [props.addSpacer, props.spacerLayout, props.workItems]
   );
   const spacerTokenMode = visibleSpacerTokens.length > 0 && props.onSpacerTokenMove !== undefined;
+  const visiblePositions = React.useMemo(() => spacerTokenMode
+    ? positionsFromSpacerLayout(visibleSpacerTokens.map(row => row.workItemId))
+    : props.workItemPositions, [spacerTokenMode, visibleSpacerTokens, props.workItemPositions]);
   const trailingSpacerTokens = React.useMemo(() => {
     let lastWorkItemIndex = -1;
     visibleSpacerTokens.forEach((token, index) => {
@@ -140,7 +143,7 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
           visibleIds,
           reorderIntoExistingSpacerSlots(
             visibleIds,
-            props.workItemPositions,
+            visiblePositions ?? {},
             draggedWorkItemId,
             targetWorkItemId,
             edge
@@ -148,7 +151,7 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
         );
       }
     },
-    [naturalIds, naturalIdSet, props.addSpacer, props.onSpacerPositionsChange, props.order, props.workItemPositions, sorted]
+    [naturalIds, naturalIdSet, props.addSpacer, props.onSpacerPositionsChange, props.order, props.workItemPositions, sorted, visiblePositions]
   );
 
   const handleListDragOver = React.useCallback(

@@ -1,57 +1,48 @@
-import type { MagicSortInput, MagicSortLayout, MagicSortPlan } from "./magic-sort-layout.js";
+import type { MagicSortGeometry, MagicSortInput, MagicSortPlan } from "./magic-sort-model.js";
+import { magicSortEdges, measureMagicSort, testCaseOccurrences, workItemSlots } from "./magic-sort-metrics.js";
 
-export function buildMagicSortDebugOutput(run: number, input: MagicSortInput, geometry: Pick<MagicSortInput, "measuredTestCaseSlotCenters" | "measuredWorkItemSlotCenters">, plan: MagicSortPlan): string {
-  const testCaseIds = (input.visibleRows ?? []).flatMap((row) => row.kind === "test-case" ? [row.testCaseId] : []);
-  const workItemIds = [...input.workItemIds];
-  const relations = input.workItems.filter((item) => workItemIds.includes(item.id)).flatMap((item) => item.relatedTestCaseIds
-    .filter((testCaseId) => testCaseIds.includes(testCaseId))
-    .map((testCaseId) => ({ testCaseId, workItemId: item.id }))
-  );
+export type MagicSortObservation = { input: MagicSortInput; geometry: MagicSortGeometry };
+
+export function buildMagicSortDebugOutput(run: number, input: MagicSortInput, geometry: MagicSortGeometry, plan: MagicSortPlan, observed?: MagicSortObservation): string {
+  const measuredInput = { ...input, ...geometry };
+  const final = plan.steps.at(-1)!;
+  const edges = magicSortEdges(final, measuredInput);
+  const initialSlots = workItemSlots(input);
+  const finalSlots = workItemSlots(final);
   const measured = Boolean(geometry.measuredTestCaseSlotCenters && geometry.measuredWorkItemSlotCenters);
   const centers = geometry.measuredWorkItemSlotCenters ?? [];
-  const slotHeight = centers.length > 1 ? (centers.at(-1)! - centers[0]!) / (centers.length - 1) : 0;
-  const final = plan.steps.at(-1)!;
-  const initialSlots = slotsFor(plan.steps[0]!);
-  const finalSlots = slotsFor(final);
-  const maxSlot = Math.max(centers.length - 1, (input.visibleRows?.length ?? 0) - 1, ...Object.values(finalSlots), workItemIds.length - 1);
-  const edges = relations.map((relation) => ({
-    ...relation,
-    left: testCasePosition(final, input, relation.testCaseId),
-    right: finalSlots[relation.workItemId] ?? 0
-  }));
+  const finalMetrics = measureMagicSort(final, measuredInput);
+  const actualInput = observed ? { ...observed.input, ...observed.geometry } : undefined;
+  const observedMeasured = Boolean(observed?.geometry.measuredTestCaseSlotCenters && observed.geometry.measuredWorkItemSlotCenters);
+  const actualEdges = actualInput && observedMeasured ? magicSortEdges(actualInput, actualInput) : undefined;
+  const key = (edge: { suiteId: number; testCaseId: number; workItemId: number }) => [edge.suiteId, edge.testCaseId, edge.workItemId].join(":");
+  const actualByKey = new Map(actualEdges?.map(edge => [key(edge), edge]));
+  const deviations = actualEdges ? edges.map(edge => {
+    const actual = actualByKey.get(key(edge));
+    return { suiteId: edge.suiteId, testCaseId: edge.testCaseId, workItemId: edge.workItemId, plannedLeft: edge.left, plannedRight: edge.right, actualLeft: actual?.left ?? null, actualRight: actual?.right ?? null, delta: actual ? Math.abs(actual.left - edge.left) + Math.abs(actual.right - edge.right) : null };
+  }) : undefined;
   const report = {
     schema: "magic-sort-debug.v1",
     run,
     timestamp: new Date().toISOString(),
-    visible: { testCaseIds, workItemIds },
-    relations: relations.sort((a, b) => a.testCaseId - b.testCaseId || a.workItemId - b.workItemId),
-    geometry: measured ? {
-      state: "measured", testCaseCenters: geometry.measuredTestCaseSlotCenters,
-      workItemSlotCenters: centers, workItemSlotHeight: slotHeight
-    } : { state: "fallback", reason: "DOM-Geometrie konnte nicht vollständig erfasst werden" },
-    search: { slotRange: { from: 0, to: maxSlot } },
-    relationDecisions: relations.map((relation) => ({
-      ...relation,
-      initialSlot: initialSlots[relation.workItemId] ?? 0,
-      finalSlot: finalSlots[relation.workItemId] ?? 0,
-      decision: (initialSlots[relation.workItemId] ?? 0) === (finalSlots[relation.workItemId] ?? 0) ? "unchanged" : "accepted"
+    visible: {
+      testCaseIds: testCaseOccurrences(input, measuredInput).map(row => row.testCaseId),
+      testCaseOccurrences: testCaseOccurrences(input, measuredInput),
+      workItemIds: input.workItemIds
+    },
+    relations: edges.map(({ suiteId, testCaseId, workItemId }) => ({ suiteId, testCaseId, workItemId })),
+    geometry: measured ? { state: "measured", testCaseCenters: geometry.measuredTestCaseSlotCenters, workItemSlotCenters: centers, workItemSlotHeight: centers.length > 1 ? (centers.at(-1)! - centers[0]!) / (centers.length - 1) : null }
+      : { state: "fallback", reason: "DOM-Geometrie konnte nicht vollständig erfasst werden" },
+    search: { slotRange: { from: 0, to: Math.max(centers.length - 1, ...Object.values(finalSlots)) }, stopReason: plan.stopReason ?? "unknown" },
+    initial: { slots: initialSlots, metrics: measureMagicSort(input, measuredInput) },
+    planned: { slots: finalSlots, edges, metrics: finalMetrics },
+    observed: observed ? { state: observedMeasured ? "measured" : "unavailable", slots: actualInput ? workItemSlots(actualInput) : null, metrics: actualInput && observedMeasured ? measureMagicSort(actualInput, actualInput) : null, deviations } : { state: "pending" },
+    relationDecisions: edges.map(edge => ({
+      suiteId: edge.suiteId, testCaseId: edge.testCaseId, workItemId: edge.workItemId,
+      initialSlot: initialSlots[edge.workItemId], finalSlot: finalSlots[edge.workItemId],
+      decision: initialSlots[edge.workItemId] === finalSlots[edge.workItemId] ? "unchanged" : "accepted"
     })),
-    summary: {
-      crossings: crossings(edges), totalDistance: edges.reduce((sum, edge) => sum + Math.abs(edge.left - edge.right), 0),
-      acceptedImprovements: Math.max(0, plan.steps.length - 1)
-    }
+    summary: { crossings: finalMetrics.crossings, totalDistance: finalMetrics.length, unit: measured ? "px" : "slot", acceptedImprovements: Math.max(0, plan.steps.length - 1) }
   };
   return JSON.stringify(report, null, 2);
-}
-
-function slotsFor(layout: MagicSortLayout): Record<number, number> {
-  return layout.workItemPositions ? { ...layout.workItemPositions } : Object.fromEntries(layout.workItemIds.map((id, index) => [id, index]));
-}
-function testCasePosition(layout: MagicSortLayout, input: MagicSortInput, id: number): number {
-  const order = layout.suites.flatMap((suite) => suite.testCaseIds);
-  const visibleIndex = (input.visibleRows ?? []).findIndex((row) => row.kind === "test-case" && row.testCaseId === id);
-  return visibleIndex >= 0 ? visibleIndex : order.indexOf(id);
-}
-function crossings(edges: readonly { left: number; right: number }[]): number {
-  return edges.reduce((sum, edge, index) => sum + edges.slice(index + 1).filter((other) => (edge.left - other.left) * (edge.right - other.right) < 0).length, 0);
 }

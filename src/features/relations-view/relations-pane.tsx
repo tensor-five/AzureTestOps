@@ -32,6 +32,7 @@ import { buildSuiteExplorerEntries, selectVisibleSuiteEntries } from "./suite-ex
 import { useMagicSortSpacerOption } from "./use-magic-sort-spacer-option.js";
 import { captureMagicSortGeometry } from "./magic-sort-geometry.js";
 import { resolveRelationCardFocus } from "./relation-card-focus.js";
+import { positionsFromSpacerLayout, projectVisibleSpacerLayout } from "./work-item-spacer-layout.js";
 
 const NO_VISIBLE_LINES: ReadonlySet<string> = new Set();
 
@@ -51,7 +52,7 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
   const collapse = useSuiteCollapse(props.setId);
   const suiteDisplay = useSuiteDisplayOptions(props.setId);
   const workItemOrder = useWorkItemOrder(props.setId);
-  const spacerOption = useMagicSortSpacerOption(props.setId);
+  const spacerOption = useMagicSortSpacerOption(props.setId, workItemOrder.sortByStoredOrder([...(props.snapshot?.workItemsFromQuery ?? [])].sort((a, b) => a.id - b.id)).map(item => item.id));
   const testCaseOrder = useTestCaseOrder(props.setId);
   const filters = useSetFilters(props.setId);
   const viewControls = useRelationsViewControls(props.setId);
@@ -200,15 +201,13 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
     [magicSortSuites]
   );
   const magicSort = useMagicSort({
+    contextKey: JSON.stringify([props.setId, props.snapshot?.loadedAt, filters.testCaseFilter, filters.workItemFilter, [...collapse.collapsedSuiteIds].sort(), suiteDisplay.hideEmptySuites, viewControls.focusedSuiteId]),
     input: {
       suites: magicSortSuites.map(({ suiteId, testCaseIds }) => ({ suiteId, testCaseIds })),
       visibleRows: magicSortVisibleRows,
       workItemIds: magicSortWorkItems.map((workItem) => workItem.id),
       addSpacer: spacerOption.addSpacer,
-      workItemPositions: Object.fromEntries(magicSortWorkItems.flatMap((workItem) => {
-        const position = spacerOption.workItemPositions[workItem.id];
-        return position === undefined ? [] : [[workItem.id, position]];
-      })),
+      workItemPositions: spacerOption.addSpacer ? positionsFromSpacerLayout(projectVisibleSpacerLayout(spacerOption.spacerLayout, new Set(magicSortWorkItems.map(item => item.id))).map(row => row.workItemId)) : undefined,
       workItems: magicSortWorkItems.map((workItem) => ({
         id: workItem.id,
         relatedTestCaseIds: [...(mutations.relationIndex.testCaseIdsByWorkItemId.get(workItem.id) ?? [])]
@@ -222,7 +221,7 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
         workItems.map((workItem) => workItem.id).sort((a, b) => a - b)
       );
       if (layout.workItemPositions) {
-        spacerOption.applyVisiblePositions(magicSortWorkItems.map((workItem) => workItem.id), layout.workItemPositions);
+        spacerOption.applyVisiblePositions(magicSortWorkItems.map((workItem) => workItem.id), layout.workItemPositions, { compact: true });
       }
       layout.suites.forEach((suite) => {
         const current = magicSortSuites.find((candidate) => candidate.suiteId === suite.suiteId);
