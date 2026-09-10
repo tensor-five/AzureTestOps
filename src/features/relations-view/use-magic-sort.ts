@@ -6,6 +6,7 @@ import {
   type MagicSortLayout
 } from "./magic-sort-layout.js";
 import { buildMagicSortDebugOutput } from "./magic-sort-debug-output.js";
+import { workItemSlots } from "./magic-sort-metrics.js";
 
 const STEP_DELAY_MS = 120;
 const FEEDBACK_COMPLETE_MS = 650;
@@ -27,6 +28,7 @@ export type MagicSortController = {
 
 export function useMagicSort(options: {
   input: MagicSortInput;
+  contextKey?: string;
   applyLayout(layout: MagicSortLayout): void;
   captureGeometry?(): Pick<MagicSortInput, "measuredTestCaseSlotCenters" | "measuredWorkItemSlotCenters">;
 }): MagicSortController {
@@ -42,6 +44,12 @@ export function useMagicSort(options: {
   const inputRef = React.useRef(options.input);
   const applyLayoutRef = React.useRef(options.applyLayout);
   const captureGeometryRef = React.useRef(options.captureGeometry);
+  const runKey = magicSortRunKey(options.input, options.contextKey);
+  const runKeyRef = React.useRef(runKey);
+  runKeyRef.current = runKey;
+  const observationTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeRunRef = React.useRef<{ key: string; lastInput: string; expected?: string } | null>(null);
+  const layoutKey = layoutSignature(options.input);
   inputRef.current = options.input;
   applyLayoutRef.current = options.applyLayout;
   captureGeometryRef.current = options.captureGeometry;
@@ -53,7 +61,32 @@ export function useMagicSort(options: {
     if (feedbackTimerRef.current !== null) {
       clearTimeout(feedbackTimerRef.current);
     }
+    if (observationTimerRef.current !== null) clearTimeout(observationTimerRef.current);
   }, []);
+
+  const cancel = React.useCallback(() => {
+    if (activeRunRef.current) setStatus("Magic Sort stopped because the view changed.");
+    activeRunRef.current = null;
+    if (timerRef.current !== null) clearTimeout(timerRef.current);
+    if (feedbackTimerRef.current !== null) clearTimeout(feedbackTimerRef.current);
+    if (observationTimerRef.current !== null) clearTimeout(observationTimerRef.current);
+    setIsRunning(false);
+    setProgress(0);
+    setFeedbackState("idle");
+    setDebugReport(null);
+  }, []);
+  React.useEffect(() => { cancel(); }, [runKey, cancel]);
+  React.useEffect(() => {
+    const run = activeRunRef.current;
+    if (!run) return;
+    if (layoutKey === run.expected) { run.lastInput = layoutKey; run.expected = undefined; }
+    else if (layoutKey !== run.lastInput) cancel();
+  }, [layoutKey, cancel]);
+  React.useEffect(() => {
+    const onResize = () => { cancel(); };
+    globalThis.addEventListener?.("resize", onResize);
+    return () => globalThis.removeEventListener?.("resize", onResize);
+  }, [cancel]);
 
   const start = React.useCallback(() => {
     if (isRunning) {
@@ -64,8 +97,24 @@ export function useMagicSort(options: {
     }
     setProgress(0);
     setFeedbackState("idle");
+    const startedKey = runKeyRef.current;
+    const startedInput = inputRef.current;
+    const activeRun = { key: startedKey, lastInput: layoutSignature(startedInput), expected: undefined as string | undefined };
+    activeRunRef.current = activeRun;
+    const apply = (layout: MagicSortLayout) => {
+      activeRun.expected = layoutSignature(layout);
+      applyLayoutRef.current(layout);
+    };
     const geometry = captureGeometryRef.current?.() ?? {};
-    const plan = planMagicSort({ ...inputRef.current, ...geometry });
+    const plan = planMagicSort({ ...startedInput, ...geometry });
+    const observe = () => {
+      if (!isDebugOpen) return;
+      if (observationTimerRef.current !== null) clearTimeout(observationTimerRef.current);
+      observationTimerRef.current = setTimeout(() => {
+        if (runKeyRef.current !== startedKey) return;
+        setDebugReport(buildMagicSortDebugOutput(debugRunRef.current, startedInput, geometry, plan, { input: inputRef.current, geometry: captureGeometryRef.current?.() ?? {} }));
+      }, 0);
+    };
     if (isDebugOpen) {
       debugRunRef.current += 1;
       setDebugReport(buildMagicSortDebugOutput(debugRunRef.current, inputRef.current, geometry, plan));
@@ -75,9 +124,11 @@ export function useMagicSort(options: {
     const reduceMotion = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     if (plan.steps.length === 1) {
       if (layoutDiffersFromInput(initialLayout, inputRef.current)) {
-        applyLayoutRef.current(initialLayout);
+        apply(initialLayout);
       }
       setStatus("Magic Sort completed the layout optimization.");
+      observe();
+      activeRunRef.current = null;
       if (!reduceMotion) {
         setFeedbackState("confirmed");
         feedbackTimerRef.current = setTimeout(() => {
@@ -88,7 +139,9 @@ export function useMagicSort(options: {
       return;
     }
     if (reduceMotion) {
-      applyLayoutRef.current(finalLayout);
+      apply(finalLayout);
+      observe();
+      activeRunRef.current = null;
       setStatus("Magic Sort completed the layout optimization.");
       return;
     }
@@ -96,24 +149,27 @@ export function useMagicSort(options: {
     setIsRunning(true);
     setFeedbackState("running");
     if (layoutDiffersFromInput(initialLayout, inputRef.current)) {
-      applyLayoutRef.current(initialLayout);
+      apply(initialLayout);
     }
     setStatus("Magic Sort is optimizing the layout.");
     let stepIndex = 1;
     const applyNext = () => {
+      if (activeRunRef.current !== activeRun || runKeyRef.current !== startedKey) { cancel(); return; }
       const step = plan.steps[stepIndex];
       if (!step) {
         setIsRunning(false);
         setProgress(100);
         setFeedbackState("complete");
         setStatus("Magic Sort completed the layout optimization.");
+        observe();
+        activeRunRef.current = null;
         feedbackTimerRef.current = setTimeout(() => {
           setProgress(0);
           setFeedbackState("idle");
         }, FEEDBACK_COMPLETE_MS);
         return;
       }
-      applyLayoutRef.current(step);
+      apply(step);
       const isLastLayout = stepIndex === plan.steps.length - 1;
       setProgress(Math.round((stepIndex / (plan.steps.length - 1)) * 100));
       stepIndex += 1;
@@ -123,9 +179,24 @@ export function useMagicSort(options: {
       timerRef.current = setTimeout(applyNext, STEP_DELAY_MS);
     };
     timerRef.current = setTimeout(applyNext, STEP_DELAY_MS);
-  }, [isDebugOpen, isRunning]);
+  }, [cancel, isDebugOpen, isRunning]);
 
   return { isRunning, status, progress, feedbackState, start, isDebugOpen, toggleDebug: () => setIsDebugOpen((value) => !value), debugReport };
+}
+
+/** Membership and view context change a run; its own reordering does not. */
+function magicSortRunKey(input: MagicSortInput, contextKey?: string): string {
+  return JSON.stringify([
+    contextKey, input.addSpacer,
+    [...input.workItemIds].sort((a, b) => a - b),
+    input.suites.map(suite => [suite.suiteId, [...suite.testCaseIds].sort((a, b) => a - b)]),
+    input.visibleRows?.map(row => [row.kind, row.suiteId]),
+    input.workItems.map(item => [item.id, [...item.relatedTestCaseIds].sort((a, b) => a - b)]).sort((a, b) => Number(a[0]) - Number(b[0]))
+  ]);
+}
+
+function layoutSignature(layout: MagicSortLayout): string {
+  return JSON.stringify([layout.suites.map(suite => [suite.suiteId, suite.testCaseIds]), layout.workItemIds, workItemSlots(layout)]);
 }
 
 function layoutDiffersFromInput(layout: MagicSortLayout, input: MagicSortInput): boolean {

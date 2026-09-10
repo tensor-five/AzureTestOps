@@ -7,6 +7,8 @@ import {
   moveWorkItemIntoSpacerSlot,
   normalizeWorkItemSpacerLayout,
   positionsFromSpacerLayout,
+  completeWorkItemSpacerLayout,
+  replaceVisibleSpacerPositions,
   type WorkItemSpacerToken
 } from "./work-item-spacer-layout.js";
 
@@ -15,12 +17,12 @@ export type MagicSortSpacerOptionApi = {
   workItemPositions: Readonly<Record<number, number>>;
   spacerLayout: readonly WorkItemSpacerToken[];
   setAddSpacer(next: boolean): void;
-  applyVisiblePositions(visibleIds: readonly number[], nextPositions: Readonly<Record<number, number>>): void;
+  applyVisiblePositions(visibleIds: readonly number[], nextPositions: Readonly<Record<number, number>>, options?: { compact: boolean }): void;
   moveVisibleWorkItemToSpacerSlot(sourceWorkItemId: number, targetTokenIndex: number): void;
 };
 
 /** Owns the persisted per-set option and free vertical Bug slots for Magic Sort. */
-export function useMagicSortSpacerOption(setId: string | null): MagicSortSpacerOptionApi {
+export function useMagicSortSpacerOption(setId: string | null, workItemIds: readonly number[] = []): MagicSortSpacerOptionApi {
   const [layout, setLayout] = React.useState(() => readLayoutForSet(setId));
 
   React.useEffect(() => {
@@ -39,37 +41,21 @@ export function useMagicSortSpacerOption(setId: string | null): MagicSortSpacerO
   }, [save, setId]);
 
   const applyVisiblePositions = React.useCallback(
-    (visibleIds: readonly number[], nextPositions: Readonly<Record<number, number>>) => {
+    (visibleIds: readonly number[], nextPositions: Readonly<Record<number, number>>, options?: { compact: boolean }) => {
       const currentLayout = readLayoutForSet(setId);
-      const next = materializeLayout(currentLayout);
-      visibleIds.forEach((id) => {
-        const index = next.indexOf(id);
-        if (index >= 0) next[index] = null;
-      });
-      const maximum = Math.max(-1, ...Object.values(nextPositions));
-      while (next.length <= maximum) next.push(null);
-      visibleIds.forEach((id) => {
-        const position = nextPositions[id];
-        if (position === undefined) return;
-        let target = position;
-        while (next[target] !== null) {
-          target += 1;
-          if (target === next.length) next.push(null);
-        }
-        next[target] = id;
-      });
+      const next = replaceVisibleSpacerPositions(completeWorkItemSpacerLayout(materializeLayout(currentLayout), workItemIds), visibleIds, nextPositions, !options?.compact);
       save({ ...currentLayout, workItemSpacerLayout: next, workItemSpacerPositions: toStringPositions(next) });
     },
-    [save, setId]
+    [save, setId, workItemIds]
   );
 
   const moveVisibleWorkItemToSpacerSlot = React.useCallback((sourceWorkItemId: number, targetTokenIndex: number) => {
     const currentLayout = readLayoutForSet(setId);
-    const next = moveWorkItemIntoSpacerSlot(materializeLayout(currentLayout), sourceWorkItemId, targetTokenIndex);
+    const next = moveWorkItemIntoSpacerSlot(completeWorkItemSpacerLayout(materializeLayout(currentLayout), workItemIds), sourceWorkItemId, targetTokenIndex);
     save({ ...currentLayout, workItemSpacerLayout: next, workItemSpacerPositions: toStringPositions(next) });
-  }, [save, setId]);
+  }, [save, setId, workItemIds]);
 
-  const spacerLayout = materializeLayout(layout);
+  const spacerLayout = completeWorkItemSpacerLayout(materializeLayout(layout), workItemIds);
 
   return {
     addSpacer: layout.magicSortAddSpacer ?? false,

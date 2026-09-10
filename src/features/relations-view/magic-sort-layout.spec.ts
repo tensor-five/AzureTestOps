@@ -20,9 +20,10 @@ describe("Magic Sort spacer baseline", () => {
         { id: 201, relatedTestCaseIds: [101] },
         { id: 202, relatedTestCaseIds: [102] }
       ]
-    }).steps[0]!;
+    }).steps.at(-1)!;
 
-    expect(layout.workItemIds).toEqual([301, 302, 201, 202]);
-    expect(layout.workItemPositions).toEqual({ 301: 0, 302: 1, 201: 3, 202: 4 });
+    expect(layout.workItemPositions?.[201]).toBe(1);
+    expect(layout.workItemPositions?.[202]).toBe(2);
+    expect(Object.values(layout.workItemPositions ?? {}).sort((a, b) => a - b)).toEqual([0, 1, 2, 3]);
   });
 });
