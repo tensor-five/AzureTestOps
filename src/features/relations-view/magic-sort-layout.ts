@@ -190,9 +190,13 @@ function initialWorkItemPositions(
 ): Record<number, number> {
   const occupied = new Set<number>();
   const next: Record<number, number> = {};
+  const hasUnlinkedWorkItems = workItemIds.some((id) => !hasVisibleRelation(workItems.get(id)));
   workItemIds.filter((id) => hasVisibleRelation(workItems.get(id))).forEach((id, index) => {
+    // Magic Sort intentionally starts from a compact baseline. Existing
+    // spacers are reconsidered as optimization candidates instead of being
+    // treated as a fixed, potentially stale starting layout.
     const stored = storedPositions?.[id];
-    const position = isSlotPosition(stored) && !occupied.has(stored)
+    const position = hasUnlinkedWorkItems && isSlotPosition(stored) && !occupied.has(stored)
       ? stored
       : nextFreePosition(occupied, index);
     next[id] = position;
