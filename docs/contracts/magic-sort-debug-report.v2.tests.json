@@ -1,0 +1,9 @@
+{
+  "contract": "magic-sort-debug-report.v2.html",
+  "files": [
+    {
+      "path": "src/features/relations-view/magic-sort-debug-report.contract.spec.tsx",
+      "sha256": "76c44c2acda28b92dc63be5bbae9bdf7b8db23240cfde352915fa6a3b6c765d3"
+    }
+  ]
+}

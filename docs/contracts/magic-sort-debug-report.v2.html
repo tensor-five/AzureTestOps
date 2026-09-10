@@ -1,0 +1,18 @@
+<article>
+  <h1>Vertrag v2: Magic-Sort-Debug-Bericht in der App</h1>
+  <p>Freigegeben am 10. September 2026</p>
+  <h2>Versprechen</h2>
+  <p>Der Nutzer kann einen Magic-Sort-Lauf direkt in der App untersuchen und seinen vollständigen JSON-Bericht mit einem Klick kopieren. Die Browser-Konsole ist dafür nicht erforderlich.</p>
+  <h2>Verbindliche Anforderungen</h2>
+  <ol>
+    <li><strong>MSDR-01:</strong> In der Kopfzeile unmittelbar vor Magic Sort befindet sich ein kleiner Button mit Käfer-Symbol, ohne sichtbaren Text. Er hat einen verständlichen zugänglichen Namen.</li>
+    <li><strong>MSDR-02:</strong> Ein Klick auf den Käfer-Button öffnet oder schließt ausschließlich den Debug-Bereich. Er startet keine Sortierung und verändert keine gespeicherte Einstellung.</li>
+    <li><strong>MSDR-03:</strong> Nach einem bewussten Magic-Sort-Klick zeigt der geöffnete Bereich genau den vollständigen, JSON-serialisierbaren Laufbericht nach <code>magic-sort-debug.v1</code>. Auch Fallbacks und Läufe ohne Layout-Änderung werden dargestellt.</li>
+    <li><strong>MSDR-04:</strong> Der Debug-Bereich enthält einen Copy-Button. Er kopiert den unveränderten vollständigen JSON-Bericht in die Zwischenablage und meldet Erfolg oder Fehler zugänglich. Ist noch kein Bericht vorhanden, ist Copy nicht verfügbar.</li>
+    <li><strong>MSDR-05:</strong> Der Bericht bleibt flüchtig: kein localStorage, keine Benutzerpräferenz, keine Azure-DevOps-Änderung, keine externe Übermittlung. Der Bericht und der Bereich werden beim Neuladen nicht wiederhergestellt.</li>
+    <li><strong>MSDR-06:</strong> Magic Sort, Add Spacer, Animation, Persistenz und das Optimierungsergebnis behalten ihr bestehendes Verhalten. Die Browser-Konsole erhält keinen Magic-Sort-Debug-Output mehr.</li>
+  </ol>
+  <h2>Nicht Teil dieses Vertrags</h2>
+  <ul><li>Ein dauerhaft aktivierter Debug-Modus.</li><li>Server-Logging oder Telemetrie.</li><li>Änderungen der Sortierstrategie.</li></ul>
+  <p><strong>Freigabestatus:</strong> vom Nutzer freigegeben. Diese Datei wird nach ihrer Prüfsumme eingefroren.</p>
+</article>

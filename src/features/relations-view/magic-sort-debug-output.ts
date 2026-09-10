@@ -1,10 +1,6 @@
 import type { MagicSortInput, MagicSortLayout, MagicSortPlan } from "./magic-sort-layout.js";
 
-export function magicSortDebugEnabled(): boolean {
-  return new URLSearchParams(globalThis.location?.search ?? "").get("magicSortDebug") === "1";
-}
-
-export function writeMagicSortDebugOutput(run: number, input: MagicSortInput, geometry: Pick<MagicSortInput, "measuredTestCaseSlotCenters" | "measuredWorkItemSlotCenters">, plan: MagicSortPlan): void {
+export function buildMagicSortDebugOutput(run: number, input: MagicSortInput, geometry: Pick<MagicSortInput, "measuredTestCaseSlotCenters" | "measuredWorkItemSlotCenters">, plan: MagicSortPlan): string {
   const testCaseIds = (input.visibleRows ?? []).flatMap((row) => row.kind === "test-case" ? [row.testCaseId] : []);
   const workItemIds = [...input.workItemIds];
   const relations = input.workItems.filter((item) => workItemIds.includes(item.id)).flatMap((item) => item.relatedTestCaseIds
@@ -45,7 +41,7 @@ export function writeMagicSortDebugOutput(run: number, input: MagicSortInput, ge
       acceptedImprovements: Math.max(0, plan.steps.length - 1)
     }
   };
-  console.info("[magic-sort-debug.v1]", JSON.stringify(report));
+  return JSON.stringify(report, null, 2);
 }
 
 function slotsFor(layout: MagicSortLayout): Record<number, number> {

@@ -354,6 +354,9 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
             feedbackState={magicSortControl.feedbackState}
             addSpacer={magicSortControl.addSpacer}
             onAddSpacerChange={magicSortControl.setAddSpacer}
+            isDebugOpen={magicSortControl.isDebugOpen}
+            onDebugToggle={magicSortControl.toggleDebug}
+            debugReport={magicSortControl.debugReport}
           />
         )}
         mobileColumn={viewControls.mobileColumn}
