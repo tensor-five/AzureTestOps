@@ -42,7 +42,7 @@ type Metrics = { crossings: number; length: number };
 export function planMagicSort(input: MagicSortInput): MagicSortPlan {
   const workItems = new Map(input.workItems.map((workItem) => [workItem.id, workItem]));
   const workItemPositions = input.addSpacer
-    ? initialWorkItemPositions(input.workItemIds, input.workItemPositions, workItems)
+    ? initialWorkItemPositions(input.workItemIds, workItems)
     : undefined;
   let current: MagicSortLayout = {
     suites: input.suites.map((suite) => ({ ...suite, testCaseIds: [...suite.testCaseIds] })),
@@ -185,20 +185,17 @@ function considerFreeWorkItemSlots(
 
 function initialWorkItemPositions(
   workItemIds: readonly number[],
-  storedPositions: Readonly<Record<number, number>> | undefined,
   workItems: ReadonlyMap<number, MagicSortWorkItem>
 ): Record<number, number> {
   const occupied = new Set<number>();
   const next: Record<number, number> = {};
-  const hasUnlinkedWorkItems = workItemIds.some((id) => !hasVisibleRelation(workItems.get(id)));
+  const unlinkedWorkItemCount = workItemIds.filter((id) => !hasVisibleRelation(workItems.get(id))).length;
+  const firstConnectedPosition = unlinkedWorkItemCount === 0 ? 0 : unlinkedWorkItemCount + 1;
   workItemIds.filter((id) => hasVisibleRelation(workItems.get(id))).forEach((id, index) => {
     // Magic Sort intentionally starts from a compact baseline. Existing
     // spacers are reconsidered as optimization candidates instead of being
     // treated as a fixed, potentially stale starting layout.
-    const stored = storedPositions?.[id];
-    const position = hasUnlinkedWorkItems && isSlotPosition(stored) && !occupied.has(stored)
-      ? stored
-      : nextFreePosition(occupied, index);
+    const position = nextFreePosition(occupied, firstConnectedPosition + index);
     next[id] = position;
     occupied.add(position);
   });
