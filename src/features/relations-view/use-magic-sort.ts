@@ -5,7 +5,7 @@ import {
   type MagicSortInput,
   type MagicSortLayout
 } from "./magic-sort-layout.js";
-import { magicSortDebugEnabled, writeMagicSortDebugOutput } from "./magic-sort-debug-output.js";
+import { buildMagicSortDebugOutput } from "./magic-sort-debug-output.js";
 
 const STEP_DELAY_MS = 120;
 const FEEDBACK_COMPLETE_MS = 650;
@@ -20,6 +20,9 @@ export type MagicSortController = {
   start(): void;
   addSpacer?: boolean;
   setAddSpacer?(next: boolean): void;
+  isDebugOpen: boolean;
+  toggleDebug(): void;
+  debugReport: string | null;
 };
 
 export function useMagicSort(options: {
@@ -34,6 +37,8 @@ export function useMagicSort(options: {
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const feedbackTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const debugRunRef = React.useRef(0);
+  const [isDebugOpen, setIsDebugOpen] = React.useState(false);
+  const [debugReport, setDebugReport] = React.useState<string | null>(null);
   const inputRef = React.useRef(options.input);
   const applyLayoutRef = React.useRef(options.applyLayout);
   const captureGeometryRef = React.useRef(options.captureGeometry);
@@ -61,9 +66,9 @@ export function useMagicSort(options: {
     setFeedbackState("idle");
     const geometry = captureGeometryRef.current?.() ?? {};
     const plan = planMagicSort({ ...inputRef.current, ...geometry });
-    if (magicSortDebugEnabled()) {
+    if (isDebugOpen) {
       debugRunRef.current += 1;
-      writeMagicSortDebugOutput(debugRunRef.current, inputRef.current, geometry, plan);
+      setDebugReport(buildMagicSortDebugOutput(debugRunRef.current, inputRef.current, geometry, plan));
     }
     const initialLayout = plan.steps[0]!;
     const finalLayout = plan.steps.at(-1)!;
@@ -118,9 +123,9 @@ export function useMagicSort(options: {
       timerRef.current = setTimeout(applyNext, STEP_DELAY_MS);
     };
     timerRef.current = setTimeout(applyNext, STEP_DELAY_MS);
-  }, [isRunning]);
+  }, [isDebugOpen, isRunning]);
 
-  return { isRunning, status, progress, feedbackState, start };
+  return { isRunning, status, progress, feedbackState, start, isDebugOpen, toggleDebug: () => setIsDebugOpen((value) => !value), debugReport };
 }
 
 function layoutDiffersFromInput(layout: MagicSortLayout, input: MagicSortInput): boolean {
