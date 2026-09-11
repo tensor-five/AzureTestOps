@@ -3,7 +3,7 @@
   "files": [
     {
       "path": "tests/e2e/color-coding.contract.spec.ts",
-      "sha256": "1f90a9b836b0fb216ea88f9437f0bfc57593adbf79d813c4f17d6e52e547bd32"
+      "sha256": "7da72a4363784fa27672a2260957378435ef11db374c3d023b3bd5f4b41a9c7f"
     },
     {
       "path": "tests/e2e/color-coding-fixtures.ts",

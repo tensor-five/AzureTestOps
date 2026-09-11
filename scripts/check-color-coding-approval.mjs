@@ -11,7 +11,7 @@ const checksum = await readFile("docs/contracts/color-coding.v1.sha256", "utf8")
 if (digest(contract) !== approvedContract || checksum !== `${approvedContract}  ${contractName}\n`) {
   throw new Error("Color coding contract or checksum differs from the approved artifact.");
 }
-const approvedTestManifest = "cfbb668fde106a845f4ce259c5ce884313c9cdf4975619d4ccf04b2b911fdcd3";
+const approvedTestManifest = "6741e58917a29990ee8ef35c68fcf705517e752dfb62f1c3015fc29643841e0c";
 if (digest(await readFile("docs/contracts/color-coding.v1.tests.json")) !== approvedTestManifest) {
   throw new Error("Color coding test manifest differs from the independently reviewed gate.");
 }

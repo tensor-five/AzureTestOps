@@ -228,11 +228,17 @@ test("CC-14 editor fits a narrow column and all actions support keyboard input",
     const bounds = (await control.boundingBox())!;
     expect(bounds.x).toBeGreaterThanOrEqual(0); expect(bounds.x + bounds.width).toBeLessThanOrEqual(391);
   }
-  await tabTo(row.getByRole("combobox", { name: "Field", exact: true })); await page.keyboard.press("Home"); await page.keyboard.press("Enter");
-  await tabTo(row.getByRole("combobox", { name: "Comparison", exact: true })); await page.keyboard.press("Home"); await page.keyboard.press("ArrowDown"); await page.keyboard.press("Enter");
+  async function selectByKeyboard(name: string, label: string) {
+    await tabTo(row.getByRole("combobox", { name, exact: true }));
+    await page.keyboard.type(label);
+    await page.keyboard.press("Tab");
+  }
+  await selectByKeyboard("Field", "Title");
+  await selectByKeyboard("Comparison", "Does not contain");
   await expect(row.getByRole("combobox", { name: "Comparison", exact: true })).toHaveValue("notContains");
-  await page.keyboard.press("Home"); await page.keyboard.press("Enter");
-  await tabTo(row.getByRole("combobox", { name: "Color", exact: true })); await page.keyboard.press("Home"); await page.keyboard.press("Enter");
+  await selectByKeyboard("Comparison", "Contains");
+  await expect(row.getByRole("combobox", { name: "Comparison", exact: true })).toHaveValue("contains");
+  await selectByKeyboard("Color", "Blue");
   await tabTo(row.getByRole("textbox")); await page.keyboard.type("Login"); await colored(card(page, 101), "blue");
   await tabTo(row.getByRole("button", { name: "Delete color rule" })); await page.keyboard.press("Enter");
   await expect(rows(page)).toHaveCount(0);

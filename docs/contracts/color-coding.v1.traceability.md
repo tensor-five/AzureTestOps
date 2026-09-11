@@ -19,6 +19,8 @@ Only `color-coding.v1.html`, verified by `color-coding.v1.sha256`, defines the a
 | CC-13 | readable rails and tints (status and text explanation); refresh, filters, focus and relations |
 | CC-14 | icon-only controls (keyboard toggle and hidden controls); narrow column and keyboard input (native Tab traversal and select operations) |
 
+The user-approved CC-14 correction on 2026-09-11 uses native select type-ahead and Tab to commit the selection. It retains the comparison, color, layout and add/delete expectations above. The renewed independent review and exact reviewed hashes are recorded in `color-coding.v1.test-review.md`.
+
 ## Harness
 
 The test server creates and removes a temporary lowdb database, uses the production persistence adapter and HTTP preference adapter, and mounts the production RelationsPane with the existing preferences bootstrap and error surface. Only fixture data, isolated server wiring and refresh/set-switch controls belong to the harness. No implementation stubs or product scaffolding were introduced for the feature. Mutation calls are counted to verify color edits do not write ADO data.
