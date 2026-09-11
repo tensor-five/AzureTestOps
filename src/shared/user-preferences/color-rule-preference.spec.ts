@@ -11,4 +11,9 @@ describe("color rule preference sanitizing", () => {
     expect(sanitizeSetColorRules({ unknown: [] })).toBeNull();
     expect(sanitizeSetColorRules(null)).toBeNull();
   });
+  it("preserves every approved v2 color in the existing per-set lists", () => {
+    const colors = ["blue", "orange", "green", "violet", "red", "teal", "yellow", "gray"];
+    const rules = colors.map((color, index) => ({ ...rule, id: `color-${index}`, color }));
+    expect(sanitizeSetColorRules({ bugs: rules })).toEqual({ bugs: rules });
+  });
 });

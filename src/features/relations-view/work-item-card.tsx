@@ -20,7 +20,7 @@ export type WorkItemCardProps = {
 
 export function WorkItemCard(props: WorkItemCardProps): React.ReactElement {
   const { workItem, onLinePointerDown, getWorkItemHref } = props;
-  const colorRule = workItem.workItemType.trim().toLowerCase() === "bug" ? resolveColorRule(workItem, props.colorRules ?? []) : undefined;
+  const colorRule = resolveColorRule(workItem, props.colorRules ?? []);
   const colorDescription = describeColorRule(colorRule);
   const itemKey = workItemItemKey(workItem.id);
   const typeSlug = workItemTypeSlug(workItem.workItemType);

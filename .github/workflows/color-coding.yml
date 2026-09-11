@@ -56,6 +56,6 @@ jobs:
       - run: node scripts/check-color-coding-approval.mjs
       - run: npm ci
       - run: npm run typecheck && npm run check:cycles
-      - run: npm test -- src/domain/color-coding/color-rule.spec.ts
+      - run: npm test -- src/domain/color-coding/color-rule.spec.ts src/shared/user-preferences/color-rule-preference.spec.ts
       - run: npx playwright install chromium
-      - run: npm run test:e2e -- tests/e2e/color-coding.contract.spec.ts tests/e2e/color-coding-toolbar.spec.ts
+      - run: npm run test:e2e -- tests/e2e/color-coding.contract.spec.ts tests/e2e/color-coding.v2.contract.spec.ts tests/e2e/color-coding-toolbar.spec.ts

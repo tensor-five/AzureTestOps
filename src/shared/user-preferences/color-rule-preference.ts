@@ -1,4 +1,4 @@
-import type { ColorRule } from "../../domain/color-coding/color-rule.js";
+import { isColorRuleColor, type ColorRule } from "../../domain/color-coding/color-rule.js";
 
 export type SetColorRules = { testCases?: ColorRule[]; bugs?: ColorRule[] };
 export type SetColorRulesBySetId = Record<string, SetColorRules>;
@@ -27,6 +27,6 @@ function sanitizeColorRule(value: unknown): ColorRule | null {
   if (rule.field !== "title" && rule.field !== "state" && rule.field !== "tag") return null;
   if (rule.comparison !== "contains" && rule.comparison !== "notContains" && rule.comparison !== "startsWith" && rule.comparison !== "equals") return null;
   if (rule.field !== "title" && rule.comparison !== "equals") return null;
-  if (rule.color !== "blue" && rule.color !== "orange" && rule.color !== "green" && rule.color !== "violet") return null;
+  if (!isColorRuleColor(rule.color)) return null;
   return { id: rule.id.trim(), field: rule.field, comparison: rule.comparison, value: rule.value, color: rule.color };
 }
