@@ -1,10 +1,13 @@
+export const COLOR_RULE_COLORS = ["blue", "orange", "green", "violet", "red", "teal", "yellow", "gray"] as const;
+export type ColorRuleColor = typeof COLOR_RULE_COLORS[number];
+
 /** Ordered, single-predicate presentation rules. No framework or persistence dependencies. */
 export type ColorRule = {
   id: string;
   field: "title" | "state" | "tag";
   comparison: "contains" | "notContains" | "startsWith" | "equals";
   value: string;
-  color: "blue" | "orange" | "green" | "violet";
+  color: ColorRuleColor;
 };
 
 export type ColorRuleSubject = {
@@ -15,6 +18,10 @@ export type ColorRuleSubject = {
 
 export function resolveColorRule(subject: ColorRuleSubject, rules: readonly ColorRule[]): ColorRule | undefined {
   return rules.find(rule => matchesColorRule(subject, rule));
+}
+
+export function isColorRuleColor(value: unknown): value is ColorRuleColor {
+  return typeof value === "string" && COLOR_RULE_COLORS.some(color => color === value);
 }
 
 function matchesColorRule(subject: ColorRuleSubject, rule: ColorRule): boolean {

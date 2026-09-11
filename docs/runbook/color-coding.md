@@ -24,8 +24,8 @@ flowchart LR
 ```
 
 - `src/domain/color-coding/color-rule.ts`: ordered single-predicate matching, without UI or persistence dependencies.
-- `src/features/color-coding/`: row editor, independent disclosure state and per-Set preference state. FilterBar accepts generic action/panel slots; filtering does not depend on color coding.
-- `src/shared/user-preferences/color-rule-preference.ts`: validation and persistence shape. `setColorRules[setId]` holds separate `testCases` and `bugs` arrays. Empty arrays intentionally clear rules; invalid input is excluded. Open/closed state is transient.
+- `src/features/color-coding/`: row editor, immediate card-style color preview, independent disclosure state and per-Set preference state. FilterBar accepts generic action/panel slots; filtering does not depend on color coding.
+- `src/shared/user-preferences/color-rule-preference.ts`: validation and persistence shape. `setColorRules[setId]` holds separate `testCases` and legacy-named `bugs` arrays. The latter now applies to all queried Work Item types so existing Bug rules migrate without data loss. Empty arrays intentionally clear rules; invalid input is excluded. Open/closed state is transient.
 - `src/shared/color-coding/color-rule-description.ts`: shared readable explanation for both card types.
 - Existing HTTP and lowdb adapters merge the new keyed preference branch without overwriting other Sets. The HTTP write/recovery queue includes the branch in late-write reconciliation.
 - Existing application preference error handling surfaces failed saves. lowdb remains authoritative; localStorage is the existing fallback only.

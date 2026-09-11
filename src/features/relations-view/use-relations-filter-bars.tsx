@@ -28,7 +28,7 @@ export function useRelationsFilterBars(options: {
 }): { testCaseFilterBar: React.ReactElement; workItemFilterBar: React.ReactElement } {
   const { filters, colorRules } = options;
   const testCaseColors = useColorRuleEditor({ label: "Test cases", scopeKey: colorRules.scopeKey, rules: colorRules.testCases, onChange: rules => colorRules.setRules("testCases", rules) });
-  const bugColors = useColorRuleEditor({ label: "Bugs", scopeKey: colorRules.scopeKey, rules: colorRules.bugs, onChange: rules => colorRules.setRules("bugs", rules) });
+  const workItemColors = useColorRuleEditor({ label: "Work items", scopeKey: colorRules.scopeKey, rules: colorRules.bugs, onChange: rules => colorRules.setRules("bugs", rules) });
   const toggleTestCaseFacet = React.useCallback(
     (kind: FilterFacetKind, value: string) => {
       const current = filters.testCaseFilter;
@@ -164,8 +164,8 @@ export function useRelationsFilterBars(options: {
     workItemFilterBar: (
       <FilterBar
         ariaLabel="Work items"
-        secondaryAction={bugColors.action}
-        secondaryPanel={bugColors.panel}
+        secondaryAction={workItemColors.action}
+        secondaryPanel={workItemColors.panel}
         titleQuery={filters.workItemFilter.titleQuery ?? ""}
         searchPlaceholder="Search work items…"
         resultSummary={`${options.visibleWorkItemCount} results`}

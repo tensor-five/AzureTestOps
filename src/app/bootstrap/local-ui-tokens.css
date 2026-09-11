@@ -154,10 +154,27 @@
   --color-rule-orange: #c15e0b;
   --color-rule-green: #168044;
   --color-rule-violet: #842cc3;
+  --color-rule-red: #c92a2a;
+  --color-rule-teal: #0f766e;
+  --color-rule-yellow: #a16207;
+  --color-rule-gray: #64748b;
 }
 [data-theme="dark"] {
   --color-rule-blue: #78a5ff;
   --color-rule-orange: #ffad64;
   --color-rule-green: #6fdfa0;
   --color-rule-violet: #bd7ce9;
+  --color-rule-red: #ff7b7b;
+  --color-rule-teal: #5ee0d3;
+  --color-rule-yellow: #f4cf65;
+  --color-rule-gray: #aeb8c7;
 }
+
+[data-color-rule-color="blue"] { --color-rule-applied: var(--color-rule-blue); }
+[data-color-rule-color="orange"] { --color-rule-applied: var(--color-rule-orange); }
+[data-color-rule-color="green"] { --color-rule-applied: var(--color-rule-green); }
+[data-color-rule-color="violet"] { --color-rule-applied: var(--color-rule-violet); }
+[data-color-rule-color="red"] { --color-rule-applied: var(--color-rule-red); }
+[data-color-rule-color="teal"] { --color-rule-applied: var(--color-rule-teal); }
+[data-color-rule-color="yellow"] { --color-rule-applied: var(--color-rule-yellow); }
+[data-color-rule-color="gray"] { --color-rule-applied: var(--color-rule-gray); }

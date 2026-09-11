@@ -309,6 +309,26 @@
   gap: var(--space-2);
   align-items: center;
 }
+.color-rule-color-field {
+  display: grid;
+  grid-template-columns: calc(var(--space-8) + var(--space-1)) minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: center;
+  min-width: 0;
+}
+.color-rule-preview {
+  width: calc(var(--space-8) + var(--space-1));
+  min-height: calc(var(--space-8) + var(--space-1));
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--color-border);
+  border-left: var(--space-1) solid var(--color-rule-applied);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-rule-applied) 9%, var(--color-surface));
+  color: var(--color-text);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+}
 .color-rule-row input,
 .color-rule-row select,
 .color-rule-row button,
@@ -332,6 +352,6 @@
 @container (max-width: 480px) {
   .color-rule-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) var(--space-8); }
   .color-rule-value { grid-column: 1; grid-row: 2; }
-  .color-rule-row select[aria-label="Color"] { grid-column: 2; grid-row: 2; }
+  .color-rule-color-field { grid-column: 2; grid-row: 2; }
   .color-rule-delete { grid-column: 3; grid-row: 1 / 3; }
 }
