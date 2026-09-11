@@ -2,9 +2,9 @@
 
 | Vertragsanforderung | Eingefrorener Test |
 | --- | --- |
-| MSF-01 | `MSF-01 renders a progress bar inside the running Magic Sort button` |
-| MSF-02 | `MSF-02 applies a bounded magic colour effect while Magic Sort is running` |
-| MSF-03 | `MSF-03 advances to completion for accepted live optimization steps and then clears the effect` |
-| MSF-04 | `MSF-04 does not show a running effect for reduced motion` |
-| MSF-05 | `MSF-01 renders a progress bar inside the running Magic Sort button`; `MS-01 exposes the keyboard-operable Magic Sort action with a wand symbol`; `MSH-01 places the keyboard-operable Magic Sort action with its wand in the global header`; `MSS-01 renders the keyboard-operable Add Spacer checkbox beside Magic Sort`; `MS-07 persists and restores both optimized orders for the active set` |
+| MSF-01 | Durch MSI-06 ersetzt: `MSI-06 replaces running progress with immediate confirmation` |
+| MSF-02 | Durch MSI-06 ersetzt: `MSI-06 replaces running progress with immediate confirmation` |
+| MSF-03 | Durch MSI-06 ersetzt: `MSI-06 clears the short confirmation automatically` |
+| MSF-04 | `MSI-06 and MSI-08 suppress animation for reduced motion while retaining completion` |
+| MSF-05 | Nicht auf Feedback bezogene Bestandteile bleiben durch die bestehenden Magic-Sort-, Header-, Add-Spacer- und Persistenztests abgedeckt; der laufende Zustand ist durch MSI-06 ersetzt. |
 | MSF-06 | `MSF-06 confirms an immediate Magic Sort click with a short magic effect and no progress bar`; `MSF-06 starts and clears immediate confirmation automatically, but suppresses it for reduced motion` |

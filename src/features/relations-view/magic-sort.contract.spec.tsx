@@ -127,7 +127,7 @@ describe("Magic Sort contract v1", () => {
     harness.unmount();
   });
 
-  it("MS-03 and MS-06 begin a live optimization only after the user triggers Magic Sort", () => {
+  it("MS-03 and MSI-01 complete optimization only after the user triggers Magic Sort", () => {
     const harness = renderPane();
     const action = harness.container.querySelector<HTMLButtonElement>(
       'button[aria-label="Magic Sort"]'
@@ -219,7 +219,7 @@ describe("Magic Sort contract v1", () => {
     harness.unmount();
   });
 
-  it("MS-05 and MS-06 lower the layout cost through visible accepted improvements", () => {
+  it("MS-05 and MSI-02 lower the layout cost by applying only the completed improvement", () => {
     vi.useFakeTimers();
     const harness = renderPane(makeDenseSnapshot());
     const initialMetrics = layoutMetrics(harness.container, makeDenseSnapshot());
@@ -228,27 +228,19 @@ describe("Magic Sort contract v1", () => {
     expect(action).not.toBeNull();
 
     act(() => action?.click());
-    act(() => vi.advanceTimersByTime(120));
-    const intermediateMetrics = layoutMetrics(harness.container, makeDenseSnapshot());
-    const intermediatePositions = readVisiblePositions(harness.container);
-    const intermediateStatus = magicSortStatus(harness.container)?.textContent ?? "";
-    act(() => vi.runAllTimers());
     const completedMetrics = layoutMetrics(harness.container, makeDenseSnapshot());
+    const completedPositions = readVisiblePositions(harness.container);
+    const completedStatus = magicSortStatus(harness.container)?.textContent ?? "";
 
-    expect(intermediatePositions).not.toEqual(initialPositions);
-    expect(intermediateMetrics.crossings).toBeLessThanOrEqual(initialMetrics.crossings);
-    expect(intermediateMetrics.length).toBeLessThanOrEqual(initialMetrics.length);
-    expect(
-      intermediateMetrics.crossings < initialMetrics.crossings || intermediateMetrics.length < initialMetrics.length
-    ).toBe(true);
-    expect(intermediateStatus).toContain("Magic Sort");
-    expect(intermediateStatus).not.toMatch(/fertig|abgeschlossen/i);
-    expect(completedMetrics.crossings).toBeLessThanOrEqual(intermediateMetrics.crossings);
-    expect(completedMetrics.length).toBeLessThanOrEqual(intermediateMetrics.length);
+    expect(completedPositions).not.toEqual(initialPositions);
+    expect(completedMetrics.crossings).toBeLessThanOrEqual(initialMetrics.crossings);
+    expect(completedMetrics.length).toBeLessThanOrEqual(initialMetrics.length);
     expect(
       completedMetrics.crossings < initialMetrics.crossings || completedMetrics.length < initialMetrics.length
     ).toBe(true);
-    expect(magicSortStatus(harness.container)?.textContent).toMatch(/optim|anordn|fertig|abgeschlossen/i);
+    expect(completedStatus).toMatch(/completed|abgeschlossen|fertig/i);
+    act(() => vi.runAllTimers());
+    expect(readVisiblePositions(harness.container)).toEqual(completedPositions);
     harness.unmount();
     vi.useRealTimers();
   });
@@ -317,19 +309,19 @@ describe("Magic Sort contract v1", () => {
     vi.useRealTimers();
   });
 
-  it("MS-09 changes a text status while Magic Sort is running and after it completes", () => {
+  it("MSI-08 announces completion immediately and does not enter a running status", () => {
     vi.useFakeTimers();
     const harness = renderPane(makeDenseSnapshot());
     const action = magicSortAction(harness.container);
     expect(action).not.toBeNull();
     act(() => action?.click());
-    const running = magicSortStatus(harness.container)?.textContent;
-    act(() => vi.runAllTimers());
     const completed = magicSortStatus(harness.container)?.textContent;
+    act(() => vi.runAllTimers());
+    const afterFeedback = magicSortStatus(harness.container)?.textContent;
 
-    expect(running).toContain("Magic Sort");
     expect(completed).toContain("Magic Sort");
-    expect(completed).not.toBe(running);
+    expect(completed).toMatch(/completed|abgeschlossen|fertig/i);
+    expect(afterFeedback).toBe(completed);
     harness.unmount();
     vi.useRealTimers();
   });

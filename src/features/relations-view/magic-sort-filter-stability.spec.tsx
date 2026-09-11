@@ -90,18 +90,20 @@ describe("Magic Sort filtered layouts", () => {
     expect(planMagicSort({ ...input, ...final }).steps.at(-1)).toEqual(final);
   });
 
-  it("abandons queued animation steps when the visible input changes", () => {
+  it("applies the final layout before a later visible input change and queues no more layout writes", () => {
     vi.useFakeTimers();
     vi.stubGlobal("matchMedia", () => ({ matches: false }));
     const first: MagicSortInput = { ...pairs(3), addSpacer: false, workItemIds: [203, 202, 201] };
     const apply = vi.fn();
     const hook = renderHook(({ input }) => useMagicSort({ input, applyLayout: apply }), { initialProps: { input: first } });
     act(() => hook.result.current.start());
-    hook.rerender({ input: { ...pairs(1), addSpacer: false } });
+    expect(apply).toHaveBeenCalledOnce();
+    expect(apply.mock.lastCall?.[0].workItemIds).toEqual([201, 202, 203]);
+    expect(hook.result.current.isRunning).toBe(false);
     apply.mockClear();
+    hook.rerender({ input: { ...pairs(1), addSpacer: false } });
     act(() => vi.runAllTimers());
     expect(apply).not.toHaveBeenCalled();
-    expect(hook.result.current.isRunning).toBe(false);
   });
 
   it("measures the final layout including each Test Case occurrence", () => {
@@ -116,7 +118,7 @@ describe("Magic Sort filtered layouts", () => {
     expect(measureMagicSort(duplicateInput, measuredDuplicateInput).length).toBe(200);
   });
 
-  it("allows its own applied layouts to finish, but cancels a switch between sets with identical IDs", () => {
+  it("applies its own final layout immediately and a later set switch queues nothing", () => {
     vi.useFakeTimers();
     const input = { ...pairs(3), addSpacer: false, workItemIds: [203, 202, 201] };
     const hook = renderHook(({ setId }) => {
@@ -124,29 +126,30 @@ describe("Magic Sort filtered layouts", () => {
       return useMagicSort({ input: current, contextKey: setId, applyLayout: layout => setCurrent(previous => ({ ...previous, ...layout })) });
     }, { initialProps: { setId: "first" } });
     act(() => hook.result.current.start());
-    act(() => vi.advanceTimersByTime(120));
-    expect(hook.result.current.isRunning).toBe(true);
+    expect(hook.result.current.isRunning).toBe(false);
+    expect(hook.result.current.feedbackState).toBe("confirmed");
     act(() => vi.runAllTimers());
     expect(hook.result.current.feedbackState).toBe("idle");
-    expect(hook.result.current.isRunning).toBe(false);
     hook.unmount();
     const apply = vi.fn();
     const switching = renderHook(({ setId }) => useMagicSort({ input, contextKey: setId, applyLayout: apply }), { initialProps: { setId: "first" } });
     act(() => switching.result.current.start());
-    switching.rerender({ setId: "second" });
+    expect(apply).toHaveBeenCalledOnce();
     apply.mockClear();
+    switching.rerender({ setId: "second" });
     act(() => vi.runAllTimers());
     expect(apply).not.toHaveBeenCalled();
   });
 
-  it("stops before overwriting a manual reorder during animation", () => {
+  it("queues no sort write that could overwrite a later manual reorder", () => {
     vi.useFakeTimers();
     const first: MagicSortInput = { ...pairs(3), addSpacer: false, workItemIds: [203, 202, 201] };
     const apply = vi.fn();
     const hook = renderHook(({ input }) => useMagicSort({ input, applyLayout: apply }), { initialProps: { input: first } });
     act(() => hook.result.current.start());
-    hook.rerender({ input: { ...first, workItemIds: [202, 201, 203] } });
+    expect(apply).toHaveBeenCalledOnce();
     apply.mockClear();
+    hook.rerender({ input: { ...first, workItemIds: [202, 201, 203] } });
     act(() => vi.runAllTimers());
     expect(apply).not.toHaveBeenCalled();
   });

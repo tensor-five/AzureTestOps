@@ -1,0 +1,21 @@
+{
+  "contract": "magic-sort-instant-apply.v1.html",
+  "files": [
+    {
+      "path": "src/features/relations-view/magic-sort-instant-apply.contract.spec.tsx",
+      "sha256": "bea6e978f8a8458d45d137a4d6ac632e0d9b2e125e2400d2f58a08e5701671ff"
+    },
+    {
+      "path": "src/features/relations-view/magic-sort.contract.spec.tsx",
+      "sha256": "ff1ac7db3aa2ed7bf906b6a2ca183adb006f74739b394fe38107edba581f0869"
+    },
+    {
+      "path": "src/features/relations-view/magic-sort-feedback.contract.spec.tsx",
+      "sha256": "628e8f8dc3627b26ce1dac99cdd762f9bd95ef70ebe373b57119aadfef24d9fd"
+    },
+    {
+      "path": "src/features/relations-view/magic-sort-filter-stability.spec.tsx",
+      "sha256": "3c932ef4344870ee4cd7444daba5919e602e7c0c69506196b1293fe1226d460f"
+    }
+  ]
+}
