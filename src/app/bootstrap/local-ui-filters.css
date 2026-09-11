@@ -291,3 +291,47 @@
   .filter-bar-quick-actions,
   .filter-bar-facets { flex: 1 1 100%; }
 }
+
+/* Color coding is a sibling disclosure of filters, with the same button geometry. */
+.filter-bar-toggle-pair {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+}
+.color-rule-toggle svg { fill: none; stroke: currentColor; stroke-width: 1.7; }
+.color-rule-toggle svg circle { fill: currentColor; stroke: none; }
+.color-rule-panel { display: grid; gap: var(--space-2); container-type: inline-size; }
+.color-rule-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1.6fr) max-content var(--space-8);
+  gap: var(--space-2);
+  align-items: center;
+}
+.color-rule-row input,
+.color-rule-row select,
+.color-rule-row button,
+.color-rule-add {
+  min-width: 0;
+  min-height: calc(var(--space-8) + var(--space-1));
+  max-width: 100%;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  background: var(--color-surface-elevated);
+  font: inherit;
+  font-size: var(--text-sm);
+}
+.color-rule-row input { width: 100%; }
+.color-rule-row button, .color-rule-add { cursor: pointer; }
+.color-rule-add { justify-self: start; }
+.color-rule-hint { margin: 0; font-size: var(--text-xs); color: var(--color-text-secondary); }
+.color-rule-row :focus-visible, .color-rule-add:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+@container (max-width: 480px) {
+  .color-rule-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) var(--space-8); }
+  .color-rule-value { grid-column: 1; grid-row: 2; }
+  .color-rule-row select[aria-label="Color"] { grid-column: 2; grid-row: 2; }
+  .color-rule-delete { grid-column: 3; grid-row: 1 / 3; }
+}

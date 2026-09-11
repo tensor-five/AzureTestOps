@@ -1,4 +1,6 @@
 import * as React from "react";
+import type { SetColorRulesApi } from "../color-coding/use-set-color-rules.js";
+import { useColorRuleEditor } from "../color-coding/use-color-rule-editor.js";
 
 import type { TestCaseProjection } from "../../domain/test-management/test-case-projection.js";
 import type { WorkItem } from "../../domain/work-items/work-item.js";
@@ -16,6 +18,7 @@ import type { RelationVisibility } from "./relations-view-controls.js";
 
 export function useRelationsFilterBars(options: {
   filters: SetFiltersApi;
+  colorRules: SetColorRulesApi;
   projections: readonly TestCaseProjection[];
   workItems: readonly WorkItem[];
   testCaseFacets: ReturnType<typeof extractTestCaseFacets>;
@@ -23,7 +26,9 @@ export function useRelationsFilterBars(options: {
   visibleTestCaseCount: number;
   visibleWorkItemCount: number;
 }): { testCaseFilterBar: React.ReactElement; workItemFilterBar: React.ReactElement } {
-  const { filters } = options;
+  const { filters, colorRules } = options;
+  const testCaseColors = useColorRuleEditor({ label: "Test cases", scopeKey: colorRules.scopeKey, rules: colorRules.testCases, onChange: rules => colorRules.setRules("testCases", rules) });
+  const bugColors = useColorRuleEditor({ label: "Bugs", scopeKey: colorRules.scopeKey, rules: colorRules.bugs, onChange: rules => colorRules.setRules("bugs", rules) });
   const toggleTestCaseFacet = React.useCallback(
     (kind: FilterFacetKind, value: string) => {
       const current = filters.testCaseFilter;
@@ -118,6 +123,8 @@ export function useRelationsFilterBars(options: {
     testCaseFilterBar: (
       <FilterBar
         ariaLabel="Test cases"
+        secondaryAction={testCaseColors.action}
+        secondaryPanel={testCaseColors.panel}
         titleQuery={filters.testCaseFilter.titleQuery ?? ""}
         searchPlaceholder="Search suites or test cases…"
         resultSummary={`${options.visibleTestCaseCount} results`}
@@ -157,6 +164,8 @@ export function useRelationsFilterBars(options: {
     workItemFilterBar: (
       <FilterBar
         ariaLabel="Work items"
+        secondaryAction={bugColors.action}
+        secondaryPanel={bugColors.panel}
         titleQuery={filters.workItemFilter.titleQuery ?? ""}
         searchPlaceholder="Search work items…"
         resultSummary={`${options.visibleWorkItemCount} results`}

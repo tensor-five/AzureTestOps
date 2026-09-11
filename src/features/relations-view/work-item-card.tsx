@@ -1,6 +1,8 @@
 import * as React from "react";
+import { resolveColorRule, type ColorRule } from "../../domain/color-coding/color-rule.js";
 
 import type { WorkItem } from "../../domain/work-items/work-item.js";
+import { describeColorRule } from "../../shared/color-coding/color-rule-description.js";
 import { exactWorkItemIdHighlightQuery, normalizeWorkItemSearchQuery } from "../../shared/search/exact-work-item-id-query.js";
 import { HighlightedText } from "../../shared/search/highlighted-text.js";
 import { FocusIcon } from "./focus-icon.js";
@@ -12,11 +14,14 @@ export type WorkItemCardProps = {
   /** Resolves the Azure DevOps deep link for a work item id, or null if unavailable. */
   getWorkItemHref?: (workItemId: number) => string | null;
   highlightQuery?: string;
+  colorRules?: readonly ColorRule[];
   onFocus?(): void;
 };
 
 export function WorkItemCard(props: WorkItemCardProps): React.ReactElement {
   const { workItem, onLinePointerDown, getWorkItemHref } = props;
+  const colorRule = workItem.workItemType.trim().toLowerCase() === "bug" ? resolveColorRule(workItem, props.colorRules ?? []) : undefined;
+  const colorDescription = describeColorRule(colorRule);
   const itemKey = workItemItemKey(workItem.id);
   const typeSlug = workItemTypeSlug(workItem.workItemType);
   const stateLabel = workItem.state.trim();
@@ -44,7 +49,9 @@ export function WorkItemCard(props: WorkItemCardProps): React.ReactElement {
       className={className}
       data-relations-anchor="right"
       data-item-key={itemKey}
-      title={buildTooltip(workItem)}
+      data-color-rule-color={colorRule?.color}
+      aria-description={colorDescription}
+      title={[buildTooltip(workItem), colorDescription].filter(Boolean).join("\n")}
     >
       {handlePointerDown ? (
         <span
