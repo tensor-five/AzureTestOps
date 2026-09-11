@@ -147,7 +147,7 @@ test("CC2-09 and CC2-11 keep both color areas independent and fit the preview in
   await page.getByRole("button", { name: /^Work Items/ }).click();
   await expect(workItemToggle(page)).toHaveAttribute("aria-expanded", "false");
   const row = await addWorkItemRule(page, "Login");
-  await expect(testCaseToggle).toHaveAttribute("aria-expanded", "false");
+  await expect(page.locator('.relations-view-column-test-cases button[aria-label="Toggle Test cases color rules"]')).toHaveAttribute("aria-expanded", "false");
   const preview = row.getByRole("img", { name: "Color preview: Blue", exact: true });
   for (const control of await row.locator("input,select,button,[data-color-rule-preview]").all()) {
     const bounds = (await control.boundingBox())!;
