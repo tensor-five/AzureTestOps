@@ -49,7 +49,7 @@ test("text-filtered single Bug gets spacers, remains aligned on reload, and all 
   await expect(page.locator(".relations-view-card-work-item")).toHaveCount(3);
 });
 
-test("a running animation stops when a text filter changes", async ({ page }) => {
+test("the instant final layout remains stable when a text filter changes", async ({ page }) => {
   await page.goto(origin);
   await page.getByRole("checkbox", { name: "Add Spacer" }).check();
   await page.getByRole("button", { name: "Magic Sort", exact: true }).click();

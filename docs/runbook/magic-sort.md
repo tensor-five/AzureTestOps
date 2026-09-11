@@ -19,9 +19,11 @@ zählt pro sichtbarem Test-Case-Vorkommen `(suiteId, testCaseId)`.
 - `work-item-spacer-layout.ts`: Projektion des persistenten Tokenstacks auf sichtbare
   Slots und Rückübersetzung. Verborgene IDs bleiben erhalten und verbrauchen keinen
   sichtbaren Slot. Neu sichtbare IDs werden genau einmal ergänzt.
-- `use-magic-sort.ts`: Ablauf und Animation. Filter-, Set-, Snapshot-, Resize- und
-  manuelle Layoutänderungen verwerfen einen laufenden Plan. Eigene Schritte werden
-  anhand ihrer erwarteten Layoutsignatur erkannt.
+- `use-magic-sort.ts`: synchroner Anwendungsablauf. Der vollständige Plan wird aus
+  dem aktuellen sichtbaren Snapshot berechnet; ausschließlich sein letztes Layout
+  wird einmal übergeben. Es bleiben keine zeitversetzten Layoutschritte zurück, die
+  spätere Filter-, Set-, Größen- oder manuelle Layoutänderungen überschreiben könnten.
+  Ein kurzer Bestätigungsimpuls läuft erst nach der Layoutübernahme.
 
 ## Persistenz
 
