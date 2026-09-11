@@ -1,4 +1,4 @@
-# Magic Sort: sichtbares Layout und Diagnose
+# Magic Sort: sichtbares Layout
 
 Magic Sort wird ausschließlich durch den Nutzer gestartet. Text- und Facettenfilter,
 Ordnerzustände und die Add-Spacer-Option bestimmen den Eingabesnapshot. Eine Relation
@@ -9,7 +9,7 @@ zählt pro sichtbarem Test-Case-Vorkommen `(suiteId, testCaseId)`.
 - `magic-sort-model.ts`: DOM-unabhängige Eingabe-, Layout- und Plantypen.
 - `magic-sort-geometry.ts`: Messadapter; reale Zentren und Slot-Schrittweite,
   auch für einen einzelnen sichtbaren Bug. Suite-Vorkommen werden getrennt gelesen.
-- `magic-sort-metrics.ts`: gemeinsame Bewertung für Optimierung und Debug-Bericht.
+- `magic-sort-metrics.ts`: Bewertung von Distanz, Kreuzungen und Spacer-Anzahl.
 - `magic-sort-spacer-optimizer.ts`: dynamische Programmierung für die minimale
   Gesamtabweichung einer festen Reihenfolge verbundener Bugs; unverbundene Bugs
   füllen freie Plätze unter Wahrung ihrer relativen Reihenfolge.
@@ -31,20 +31,20 @@ Der Adapter übersetzt diese in den vollständigen Stack. Automatisches Sortiere
 darf überflüssige Restslots entfernen; manuelle Bewegungen erhalten vorhandene
 Spacer-Blöcke. Filterwechsel allein schreiben keine neue Anordnung.
 
-## Debug-Bericht
+## Entfernte Diagnosefunktion
 
-Der Käfer öffnet die vorhandene Ausgabe. Ein Magic-Sort-Klick erfasst Ausgangslage,
-geplante Slots, Distanz und Kreuzungen sowie den Abbruchgrund. Bei geöffneter Ausgabe
-wird nach Anwendung zusätzlich die Darstellung gemessen. `observed.deviations`
-zeigt Unterschiede zum Plan. Fehlende Messungen stehen auf `unavailable`, nicht auf
-einem erfundenen Nullabstand. `summary.unit` kennzeichnet Pixel oder logische Slots.
+Auf Nutzerwunsch vom 11. September 2026 sind Käfer-Button, Bericht, Copy-Funktion
+und die zusätzlichen Diagnosemessungen entfernt. Die Geometriemessung für die
+Sortierung bleibt erhalten. Der frühere Debug-Vertrag v2 ist historisch; seine
+unveränderten Tests liegen unter `docs/contracts/archive/` und werden weiterhin
+über ihre ursprüngliche Prüfsumme geprüft, aber nicht mehr als aktive Tests ausgeführt.
 
 ## Regressionen
 
-`magic-sort-filter-stability.spec.tsx` prüft die sieben freigegebenen Fehlerfälle.
+`magic-sort-filter-stability.spec.tsx` prüft die Filter- und Layoutstabilität.
 `magic-sort-spacer-optimizer.spec.ts` vergleicht kleine Fälle mit vollständig
 enumerierten Lösungen. Der Playwright-Test `magic-sort-filter-stability.spec.ts`
 verwendet die echte RelationsPane mit Produktions-CSS und prüft Textfilter,
-Spacer-Ausrichtung, Debug-Messung, Neuladen und das Aufheben von Filtern.
+Spacer-Ausrichtung, Neuladen, das Aufheben von Filtern und die entfernte Debug-UI.
 Der Workflow `Magic Sort regression` führt die relevanten Qualitätsgates und
 Browserprüfungen bei betroffenen PRs und Integrations-Branch-Änderungen aus.

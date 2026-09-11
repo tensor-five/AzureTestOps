@@ -4,7 +4,7 @@ import { act, cleanup, render, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { planMagicSort, type MagicSortInput } from "./magic-sort-layout.js";
 import { captureMagicSortGeometry } from "./magic-sort-geometry.js";
-import { buildMagicSortDebugOutput } from "./magic-sort-debug-output.js";
+import { magicSortEdges, measureMagicSort } from "./magic-sort-metrics.js";
 import { useMagicSort } from "./use-magic-sort.js";
 import { useMagicSortSpacerOption } from "./use-magic-sort-spacer-option.js";
 import { projectVisibleSpacerLayout } from "./work-item-spacer-layout.js";
@@ -104,17 +104,16 @@ describe("Magic Sort filtered layouts", () => {
     expect(hook.result.current.isRunning).toBe(false);
   });
 
-  it("reports the final measured layout including each Test Case occurrence", () => {
+  it("measures the final layout including each Test Case occurrence", () => {
     const input: MagicSortInput = { ...pairs(2), suites: [{ suiteId: 1, testCaseIds: [102, 101] }], visibleRows: [{ kind: "test-case", suiteId: 1, testCaseId: 102 }, { kind: "test-case", suiteId: 1, testCaseId: 101 }] };
     const geometry = { measuredTestCaseSlotCenters: [100, 200], measuredWorkItemSlotCenters: [100, 200] };
     const plan = { steps: [{ suites: [{ suiteId: 1, testCaseIds: [101, 102] }], workItemIds: [201, 202] }] };
-    const report = JSON.parse(buildMagicSortDebugOutput(1, input, geometry, plan));
-    expect(report.summary).toMatchObject({ crossings: 0, totalDistance: 0 });
+    expect(measureMagicSort(plan.steps[0]!, { ...input, ...geometry })).toMatchObject({ crossings: 0, length: 0 });
     const duplicateInput: MagicSortInput = { ...pairs(1), suites: [{ suiteId: 1, testCaseIds: [101] }, { suiteId: 2, testCaseIds: [101] }] };
     const duplicateGeometry = { measuredTestCaseSlotCenters: [100, 300], measuredWorkItemSlotCenters: [200] };
-    const duplicateReport = JSON.parse(buildMagicSortDebugOutput(2, duplicateInput, duplicateGeometry, { steps: [{ suites: duplicateInput.suites, workItemIds: [201] }] }));
-    expect(duplicateReport.relations).toHaveLength(2);
-    expect(duplicateReport.summary.totalDistance).toBe(200);
+    const measuredDuplicateInput = { ...duplicateInput, ...duplicateGeometry };
+    expect(magicSortEdges(duplicateInput, measuredDuplicateInput)).toHaveLength(2);
+    expect(measureMagicSort(duplicateInput, measuredDuplicateInput).length).toBe(200);
   });
 
   it("allows its own applied layouts to finish, but cancels a switch between sets with identical IDs", () => {
@@ -138,18 +137,6 @@ describe("Magic Sort filtered layouts", () => {
     apply.mockClear();
     act(() => vi.runAllTimers());
     expect(apply).not.toHaveBeenCalled();
-  });
-
-  it("reports measured deviations after rendering and does not invent observations without geometry", () => {
-    const input = pairs(1);
-    const geometry = { measuredTestCaseSlotCenters: [100], measuredWorkItemSlotCenters: [100, 138] };
-    const plan = { steps: [{ suites: input.suites, workItemIds: input.workItemIds }] };
-    const report = JSON.parse(buildMagicSortDebugOutput(1, input, geometry, plan, { input, geometry: { ...geometry, measuredWorkItemSlotCenters: [110, 148] } }));
-    expect(report.observed.metrics.length).toBe(10);
-    expect(report.observed.deviations[0].delta).toBe(10);
-    const unavailable = JSON.parse(buildMagicSortDebugOutput(1, input, geometry, plan, { input, geometry: {} }));
-    expect(unavailable.observed.state).toBe("unavailable");
-    expect(unavailable.observed.metrics).toBeNull();
   });
 
   it("stops before overwriting a manual reorder during animation", () => {
