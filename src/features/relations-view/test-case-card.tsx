@@ -1,6 +1,8 @@
 import * as React from "react";
+import { resolveColorRule, type ColorRule } from "../../domain/color-coding/color-rule.js";
 
 import type { TestCaseProjection } from "../../domain/test-management/test-case-projection.js";
+import { describeColorRule } from "../../shared/color-coding/color-rule-description.js";
 import { exactWorkItemIdHighlightQuery, normalizeWorkItemSearchQuery } from "../../shared/search/exact-work-item-id-query.js";
 import { HighlightedText } from "../../shared/search/highlighted-text.js";
 import { FocusIcon } from "./focus-icon.js";
@@ -12,6 +14,7 @@ export type TestCaseCardProps = {
   /** Resolves the Azure DevOps deep link for a work item id, or null if unavailable. */
   getWorkItemHref?: (workItemId: number) => string | null;
   highlightQuery?: string;
+  colorRules?: readonly ColorRule[];
   onFocus?(): void;
 };
 
@@ -38,6 +41,8 @@ function outcomeDisplay(outcome: string): OutcomeDisplay {
 
 export function TestCaseCard(props: TestCaseCardProps): React.ReactElement {
   const { projection, onLinePointerDown, getWorkItemHref } = props;
+  const colorRule = resolveColorRule(projection, props.colorRules ?? []);
+  const colorDescription = describeColorRule(colorRule);
   const itemKey = testCaseItemKey(projection.workItemId, projection.suiteId);
   const display = outcomeDisplay(projection.lastOutcome);
   const href = getWorkItemHref?.(projection.workItemId) ?? null;
@@ -62,7 +67,9 @@ export function TestCaseCard(props: TestCaseCardProps): React.ReactElement {
       className={className}
       data-relations-anchor="left"
       data-item-key={itemKey}
-      title={buildTooltip(projection)}
+      data-color-rule-color={colorRule?.color}
+      aria-description={colorDescription}
+      title={[buildTooltip(projection), colorDescription].filter(Boolean).join("\n")}
     >
       {href ? (
         <a

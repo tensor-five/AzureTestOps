@@ -63,6 +63,8 @@ export class LowdbUserPreferencesAdapter implements UserPreferencesPort {
       incoming.setFilters
     );
 
+    const colorRulePatch = sanitizeKeyedPreferencePatch(patch, "setColorRules", incoming.setColorRules);
+
     await db.update((data) => {
       const current = sanitizeUserPreferences(data.users[this.userId] ?? {});
       data.users[this.userId] = {
@@ -79,6 +81,7 @@ export class LowdbUserPreferencesAdapter implements UserPreferencesPort {
           incoming.setFilters,
           filterPatch.touchedIds
         ),
+        setColorRules: mergeKeyedScope(current.setColorRules, incoming.setColorRules, colorRulePatch.touchedIds),
         updatedAt: new Date().toISOString()
       };
     });

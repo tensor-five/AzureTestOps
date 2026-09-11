@@ -7,6 +7,7 @@ on:
       - src/features/color-coding/**
       - src/features/filters/**
       - src/features/relations-view/**
+      - src/shared/color-coding/**
       - src/shared/user-preferences/**
       - src/adapters/persistence/settings/**
       - src/adapters/http/http-user-preferences*
@@ -26,6 +27,7 @@ on:
       - src/features/color-coding/**
       - src/features/filters/**
       - src/features/relations-view/**
+      - src/shared/color-coding/**
       - src/shared/user-preferences/**
       - src/adapters/persistence/settings/**
       - src/adapters/http/http-user-preferences*
@@ -56,4 +58,4 @@ jobs:
       - run: npm run typecheck && npm run check:cycles
       - run: npm test -- src/domain/color-coding/color-rule.spec.ts
       - run: npx playwright install chromium
-      - run: npm run test:e2e -- tests/e2e/color-coding.contract.spec.ts
+      - run: npm run test:e2e -- tests/e2e/color-coding.contract.spec.ts tests/e2e/color-coding-toolbar.spec.ts

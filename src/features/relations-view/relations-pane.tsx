@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useSetColorRules } from "../color-coding/use-set-color-rules.js";
 
 import type { ActiveSetSnapshot } from "../../application/dto/active-set-snapshot.dto.js";
 import {
@@ -55,6 +56,7 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
   const spacerOption = useMagicSortSpacerOption(props.setId, workItemOrder.sortByStoredOrder([...(props.snapshot?.workItemsFromQuery ?? [])].sort((a, b) => a.id - b.id)).map(item => item.id));
   const testCaseOrder = useTestCaseOrder(props.setId);
   const filters = useSetFilters(props.setId);
+  const colorRules = useSetColorRules(props.setId);
   const viewControls = useRelationsViewControls(props.setId);
   const containerRef = React.useRef<HTMLElement | null>(null);
   const [containerEl, setContainerEl] = React.useState<HTMLElement | null>(null);
@@ -117,6 +119,7 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
   });
   const filterBars = useRelationsFilterBars({
     filters,
+    colorRules,
     projections,
     workItems,
     testCaseFacets: derived.testCaseFacets,
@@ -364,6 +367,7 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
         data-mobile-column={viewControls.mobileColumn}
       >
         <TestCaseColumn
+          colorRules={colorRules.testCases}
           suiteTree={props.snapshot.suiteTree}
           projections={derived.filteredProjections}
           allProjections={props.snapshot.projections}
@@ -385,6 +389,7 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
           onFocusTestCase={(workItemId) => viewControls.toggleFocusedCard({ kind: "test-case", workItemId })}
         />
         <WorkItemColumn
+          colorRules={colorRules.bugs}
           workItems={derived.filteredWorkItems}
           allWorkItems={props.snapshot.workItemsFromQuery}
           unfilteredCount={props.snapshot.workItemsFromQuery.length}

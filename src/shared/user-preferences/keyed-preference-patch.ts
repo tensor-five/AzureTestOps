@@ -1,4 +1,4 @@
-export type KeyedPreferenceField = "setLayouts" | "setFilters";
+export type KeyedPreferenceField = "setLayouts" | "setFilters" | "setColorRules";
 
 export type KeyedPreferencePatch<T extends object> = {
   values: Record<string, T> | undefined;

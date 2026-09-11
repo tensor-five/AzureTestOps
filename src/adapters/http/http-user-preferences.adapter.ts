@@ -87,9 +87,11 @@ export class HttpUserPreferencesAdapter implements UserPreferencesClientPort {
       "setFilters",
       sanitizedPatch.setFilters
     );
+    const colorRulePatch = sanitizeKeyedPreferencePatch(patch, "setColorRules", sanitizedPatch.setColorRules);
     const transportPatch: UserPreferences = {
       ...sanitizedPatch,
       setLayouts: layoutPatch.values,
+      setColorRules: colorRulePatch.values,
       setFilters: filterPatch.values
     };
 
@@ -97,6 +99,7 @@ export class HttpUserPreferencesAdapter implements UserPreferencesClientPort {
       ...this.cache,
       ...sanitizedPatch,
       sets: sanitizedPatch.sets ?? this.cache.sets,
+      setColorRules: mergeKeyedScope(this.cache.setColorRules, sanitizedPatch.setColorRules, colorRulePatch.touchedIds),
       setLayouts: mergeKeyedScope(
         this.cache.setLayouts,
         sanitizedPatch.setLayouts,
@@ -350,6 +353,7 @@ function mergeTransportPatches(
     ...incoming,
     sets: incoming.sets ?? recovery.sets,
     setLayouts: mergeTransportScope(recovery.setLayouts, incoming.setLayouts),
+    setColorRules: mergeTransportScope(recovery.setColorRules, incoming.setColorRules),
     setFilters: mergeTransportScope(recovery.setFilters, incoming.setFilters)
   };
 }
@@ -376,6 +380,7 @@ function selectTransportPatch(
   copyAffectedValue(selected, desired, affected, "updatedAt");
   selected.setLayouts = selectTransportScope(desired.setLayouts, affected.setLayouts);
   selected.setFilters = selectTransportScope(desired.setFilters, affected.setFilters);
+  selected.setColorRules = selectTransportScope(desired.setColorRules, affected.setColorRules);
   return selected;
 }
 
@@ -421,6 +426,7 @@ function removeTransportFootprint(
   const remaining: UserPreferences = {
     ...recovery,
     setLayouts: recovery.setLayouts ? { ...recovery.setLayouts } : undefined,
+    setColorRules: recovery.setColorRules ? { ...recovery.setColorRules } : undefined,
     setFilters: recovery.setFilters ? { ...recovery.setFilters } : undefined
   };
   removeAffectedValue(remaining, applied, "themeMode");
@@ -436,6 +442,7 @@ function removeTransportFootprint(
     remaining.setFilters,
     applied.setFilters
   );
+  remaining.setColorRules = removeTransportScope(remaining.setColorRules, applied.setColorRules);
   return hasTransportValues(remaining) ? remaining : null;
 }
 
@@ -469,6 +476,7 @@ function hasTransportValues(patch: UserPreferences): boolean {
     patch.adoContext !== undefined ||
     patch.setLayouts !== undefined ||
     patch.setFilters !== undefined ||
+    patch.setColorRules !== undefined ||
     patch.updatedAt !== undefined;
 }
 

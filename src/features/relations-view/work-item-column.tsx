@@ -1,4 +1,5 @@
 import * as React from "react";
+import type { ColorRule } from "../../domain/color-coding/color-rule.js";
 
 import type { WorkItem } from "../../domain/work-items/work-item.js";
 import { resolveAdjacentItemMove } from "./item-order.js";
@@ -16,6 +17,7 @@ export type WorkItemColumnProps = {
   allWorkItems?: readonly WorkItem[];
   unfilteredCount: number;
   filterBar?: React.ReactNode;
+  colorRules?: readonly ColorRule[];
   onLinePointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
   /** Persists the drag-and-drop ordering per Set; absent → fixed id sort. */
   order?: WorkItemOrderApi;
@@ -368,6 +370,7 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
               )),
               <li key={workItem.id} className={className} data-work-item-id={workItem.id}>
               <WorkItemCard
+                colorRules={props.colorRules}
                 workItem={workItem}
                 onLinePointerDown={props.onLinePointerDown}
                 getWorkItemHref={props.getWorkItemHref}

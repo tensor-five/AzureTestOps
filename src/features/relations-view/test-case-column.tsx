@@ -1,4 +1,5 @@
 import * as React from "react";
+import type { ColorRule } from "../../domain/color-coding/color-rule.js";
 
 import type { TestSuiteNode } from "../../domain/test-management/test-suite-tree.js";
 import type { TestCaseProjection } from "../../domain/test-management/test-case-projection.js";
@@ -27,6 +28,7 @@ export type TestCaseColumnProps = {
   unfilteredCount: number;
   collapse: SuiteCollapseApi;
   filterBar?: React.ReactNode;
+  colorRules?: readonly ColorRule[];
   onLinePointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
   order?: TestCaseOrderApi;
   getWorkItemHref?: (workItemId: number) => string | null;
@@ -209,6 +211,7 @@ export function TestCaseColumn(props: TestCaseColumnProps): React.ReactElement {
         >
           {visibleEntries.map((entry) => (
             <SuiteGroup
+              colorRules={props.colorRules}
               key={entry.suite.id}
               entry={entry}
               collapse={props.collapse}
@@ -239,6 +242,7 @@ export function TestCaseColumn(props: TestCaseColumnProps): React.ReactElement {
 }
 
 function SuiteGroup(props: {
+  colorRules?: readonly ColorRule[];
   entry: SuiteExplorerEntry;
   collapse: SuiteCollapseApi;
   sorting: SuiteTicketSortingApi;
@@ -519,6 +523,7 @@ function SuiteGroup(props: {
                   </button>
                 ) : null}
                 <TestCaseCard
+                  colorRules={props.colorRules}
                   projection={projection}
                   onLinePointerDown={props.onLinePointerDown}
                   getWorkItemHref={props.getWorkItemHref}

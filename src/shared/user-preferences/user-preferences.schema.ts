@@ -1,3 +1,5 @@
+import { sanitizeSetColorRules, type SetColorRulesBySetId } from "./color-rule-preference.js";
+
 export type ThemeModePreference = "system" | "light" | "dark";
 
 /**
@@ -96,6 +98,7 @@ export type UserPreferences = {
   adoContext?: AdoContextPreference;
   setLayouts?: SetLayoutPreferencesBySetId;
   setFilters?: SetFiltersBySetId;
+  setColorRules?: SetColorRulesBySetId;
   updatedAt?: string;
 };
 
@@ -168,6 +171,15 @@ export function sanitizeUserPreferences(value: unknown): UserPreferences {
     // Preserve an explicitly-empty map so a "clear-last-filter" patch can
     // overwrite the current state instead of being treated as "no change".
     next.setFilters = sanitized;
+  }
+
+  if (isPlainRecord(candidate.setColorRules)) {
+    const rules: SetColorRulesBySetId = {};
+    for (const [id, raw] of Object.entries(candidate.setColorRules)) {
+      const value = sanitizeSetColorRules(raw);
+      if (id.trim() && value) rules[id.trim()] = value;
+    }
+    next.setColorRules = rules;
   }
 
   if (typeof candidate.updatedAt === "string") {

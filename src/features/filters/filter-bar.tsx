@@ -36,6 +36,8 @@ export type FilterBarProps = {
   onToggleFacetValue(kind: FilterFacetKind, value: string): void;
   onReplaceFacetValues(kind: FilterFacetKind, values: readonly string[]): void;
   onClear(): void;
+  secondaryAction?: React.ReactNode;
+  secondaryPanel?: React.ReactNode;
 };
 
 const FACET_LABELS: Record<FilterFacetKind, string> = {
@@ -55,6 +57,18 @@ export function FilterBar(props: FilterBarProps): React.ReactElement {
   );
   const activeQuickActions = (props.quickActions ?? []).filter(
     (action) => action.pressed && action.showActiveChip !== false
+  );
+  const filterToggle = (
+    <button
+      type="button"
+      className={`filter-bar-toggle${expanded ? " filter-bar-toggle-active" : ""}`}
+      aria-expanded={expanded}
+      aria-label={`Toggle ${props.ariaLabel} filters`}
+      onClick={() => setExpanded((current) => !current)}
+    >
+      <FilterIcon />
+      {activeCount > 0 ? <span className="filter-bar-toggle-count">{activeCount}</span> : null}
+    </button>
   );
 
   return (
@@ -85,16 +99,12 @@ export function FilterBar(props: FilterBarProps): React.ReactElement {
             </button>
           ) : null}
         </label>
-        <button
-          type="button"
-          className={`filter-bar-toggle${expanded ? " filter-bar-toggle-active" : ""}`}
-          aria-expanded={expanded}
-          aria-label={`Toggle ${props.ariaLabel} filters`}
-          onClick={() => setExpanded((current) => !current)}
-        >
-          <FilterIcon />
-          {activeCount > 0 ? <span className="filter-bar-toggle-count">{activeCount}</span> : null}
-        </button>
+        {props.secondaryAction ? (
+          <div className="filter-bar-toggle-pair">
+            {filterToggle}
+            {props.secondaryAction}
+          </div>
+        ) : filterToggle}
         {props.resultSummary ? (
           <span className="filter-bar-result-summary" role="status">
             {props.resultSummary}
@@ -102,6 +112,7 @@ export function FilterBar(props: FilterBarProps): React.ReactElement {
         ) : null}
       </div>
 
+      {props.secondaryPanel}
       {activeFacetValues.length > 0 || activeQuickActions.length > 0 ? (
         <div className="filter-bar-active-row" aria-label="Active filters">
           {activeQuickActions.map((action) => (

@@ -148,3 +148,16 @@
   --shadow-md: 0 18px 32px rgba(2, 8, 20, 0.5);
   --shadow-lg: 0 24px 44px -12px rgba(132, 44, 195, 0.22);
 }
+
+:root {
+  --color-rule-blue: #2563eb;
+  --color-rule-orange: #c15e0b;
+  --color-rule-green: #168044;
+  --color-rule-violet: #842cc3;
+}
+[data-theme="dark"] {
+  --color-rule-blue: #78a5ff;
+  --color-rule-orange: #ffad64;
+  --color-rule-green: #6fdfa0;
+  --color-rule-violet: #bd7ce9;
+}
