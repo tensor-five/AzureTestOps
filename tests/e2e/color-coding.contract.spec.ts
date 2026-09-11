@@ -79,7 +79,7 @@ test("CC-01/02/03/05/06 separate simple lists append, edit and delete rules", as
   await colored(card(page, 101), "blue"); await colored(card(page, 102), "orange");
   await colored(card(page, 501), null);
   await add(page, "Login", { bug: true, color: "Green" });
-  await colored(card(page, 501), "green"); await colored(card(page, 504), null);
+  await colored(card(page, 501), "green"); await colored(card(page, 504), "green");
   await colored(card(page, 101), "blue");
   await first.getByRole("button", { name: "Delete color rule" }).click();
   await colored(card(page, 101), "orange");

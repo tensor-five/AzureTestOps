@@ -34,6 +34,7 @@ export async function startColorCodingServer() {
   return {
     origin: `http://127.0.0.1:${address.port}`,
     reset: async () => { await adapter.updatePreferences(() => ({})); mutations = 0; },
+    seed: (preferences: Parameters<LowdbUserPreferencesAdapter["mergePreferences"]>[0]) => adapter.mergePreferences(preferences),
     reopenDatabase: () => { adapter = new LowdbUserPreferencesAdapter(path.join(directory, "preferences.json"), "contract-user"); },
     disk: () => readFile(path.join(directory, "preferences.json"), "utf8"),
     mutations: () => mutations,

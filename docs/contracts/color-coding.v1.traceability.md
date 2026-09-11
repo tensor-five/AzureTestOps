@@ -4,7 +4,7 @@ Only `color-coding.v1.html`, verified by `color-coding.v1.sha256`, defines the a
 
 | Requirement | Browser test(s) in `tests/e2e/color-coding.contract.spec.ts` |
 | --- | --- |
-| CC-01 | separate simple lists; lowdb round-trip |
+| CC-01 | separate simple lists; lowdb round-trip. The former exclusion of non-Bug types is superseded by approved contract v2. |
 | CC-02 | separate simple lists; keyboard input (native Tab traversal and select operations) |
 | CC-03 | separate simple lists; State and whole-Tag comparisons (both columns) |
 | CC-04 | all title comparisons and literal matching (both columns) |
@@ -20,6 +20,8 @@ Only `color-coding.v1.html`, verified by `color-coding.v1.sha256`, defines the a
 | CC-14 | icon-only controls (keyboard toggle and hidden controls); narrow column and keyboard input (native Tab traversal and select operations) |
 
 The user-approved CC-14 correction on 2026-09-11 uses native select type-ahead and Tab to commit the selection. It retains the comparison, color, layout and add/delete expectations above. The renewed independent review and exact reviewed hashes are recorded in `color-coding.v1.test-review.md`.
+
+Approved contract v2 supersedes only the v1 restriction that the right-hand list colors Bugs exclusively. The same browser test now preserves v1 list separation while expecting the right-hand rule to color a matching Task, as required by CC2-01.
 
 ## Harness
 

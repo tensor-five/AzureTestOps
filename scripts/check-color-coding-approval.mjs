@@ -1,19 +1,31 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
-// Approved in this task on 2026-09-11, including icon placement beside each filter.
-// Contract edits require renewed user approval, not merely a regenerated checksum.
-const approvedContract = "4e0a188ad1ab5aba9587ef9ef5b4bfe7b4c9e827a0e16b81a675ef5460fbc0ce";
-const contractName = "color-coding.v1.html";
 const digest = value => createHash("sha256").update(value).digest("hex");
-const contract = await readFile(`docs/contracts/${contractName}`);
-const checksum = await readFile("docs/contracts/color-coding.v1.sha256", "utf8");
-if (digest(contract) !== approvedContract || checksum !== `${approvedContract}  ${contractName}\n`) {
-  throw new Error("Color coding contract or checksum differs from the approved artifact.");
+
+// Both contracts were approved on 2026-09-11. V2 supersedes only the explicitly
+// documented V1 scope restriction; regenerated hashes without approval are rejected.
+const approvedContracts = [
+  ["color-coding.v1", "4e0a188ad1ab5aba9587ef9ef5b4bfe7b4c9e827a0e16b81a675ef5460fbc0ce"],
+  ["color-coding.v2", "4e462ba940a2e9dbcb6f557c276fc8402ae1d436d3a675404bd7b5a311d2ad87"]
+];
+for (const [baseName, approvedHash] of approvedContracts) {
+  const contractName = `${baseName}.html`;
+  const contract = await readFile(`docs/contracts/${contractName}`);
+  const checksum = await readFile(`docs/contracts/${baseName}.sha256`, "utf8");
+  if (digest(contract) !== approvedHash || checksum !== `${approvedHash}  ${contractName}\n`) {
+    throw new Error(`Color coding contract or checksum differs from the approved artifact: ${contractName}`);
+  }
 }
-const approvedTestManifest = "6741e58917a29990ee8ef35c68fcf705517e752dfb62f1c3015fc29643841e0c";
-if (digest(await readFile("docs/contracts/color-coding.v1.tests.json")) !== approvedTestManifest) {
-  throw new Error("Color coding test manifest differs from the independently reviewed gate.");
+
+const approvedTestManifests = [
+  ["color-coding.v1.tests.json", "ce4b6e0777f7ab9a3dc1f18e920282310e32e7ff8659a8f11cd3072452fd20ba"],
+  ["color-coding.v2.tests.json", "c881fb84bf893b73a5fb0418add509735b9774fe0c761456a07894813d91f533"]
+];
+for (const [manifestName, approvedHash] of approvedTestManifests) {
+  if (digest(await readFile(`docs/contracts/${manifestName}`)) !== approvedHash) {
+    throw new Error(`Color coding test manifest differs from the independently reviewed gate: ${manifestName}`);
+  }
 }
 await import("./check-frozen-tests.mjs");
-console.log("Verified approved color coding contract.");
+console.log("Verified approved color coding contracts.");
