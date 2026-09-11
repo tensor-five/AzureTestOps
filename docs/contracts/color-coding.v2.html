@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Farbregeln · Vertrag v2</title>
+  <style>
+    :root { color-scheme: light dark; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; --surface: light-dark(#fff,#202124); --surface-soft: light-dark(#f5f7fa,#282a2d); --text: light-dark(#172033,#f4f6f8); --muted: light-dark(#5d6678,#adb5c2); --border: light-dark(#d8dde6,#44484f); --blue: light-dark(#2563eb,#78a5ff); --orange: light-dark(#c15e0b,#ffad64); --green: light-dark(#168044,#6fdfa0); --violet: light-dark(#842cc3,#bd7ce9); --red: light-dark(#c92a2a,#ff7b7b); --teal: light-dark(#0f766e,#5ee0d3); --yellow: light-dark(#a16207,#f4cf65); --gray: light-dark(#64748b,#aeb8c7); }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 32px; color: var(--text); background: light-dark(#eef1f5,#161719); }
+    main { max-width: 1080px; margin: auto; padding: 30px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+    h1, h2 { font-weight: 600; }
+    h1 { margin-top: 0; }
+    .draft { color: var(--muted); }
+    li { margin: 9px 0; line-height: 1.5; }
+    .mock { margin-top: 28px; display: grid; grid-template-columns: minmax(0,.85fr) minmax(0,1.15fr); gap: 16px; }
+    .column { min-width: 0; padding: 14px; background: var(--surface-soft); border: 1px solid var(--border); border-radius: 9px; }
+    .column h3 { margin: 0; font-size: 15px; font-weight: 600; }
+    .toolbar { display: grid; grid-template-columns: 1fr 34px 34px; gap: 7px; margin: 10px 0; }
+    input, select, button { min-height: 34px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; font: inherit; }
+    input, select { min-width: 0; padding: 5px 8px; }
+    button { cursor: pointer; }
+    .icon { font-size: 17px; }
+    .rule { display: grid; grid-template-columns: .8fr 1fr 1.25fr 36px 1fr 34px; gap: 7px; align-items: center; margin-bottom: 10px; }
+    .preview { width: 34px; height: 34px; border: 1px solid var(--border); border-left: 5px solid var(--selected); border-radius: 6px; background: color-mix(in srgb, var(--selected) 10%, var(--surface)); display: grid; place-items: center; font-size: 12px; font-weight: 600; }
+    .delete { font-size: 18px; }
+    .hint { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+    .card { margin-top: 7px; padding: 9px 10px; border: 1px solid var(--border); border-left: 5px solid var(--selected); border-radius: 7px; background: color-mix(in srgb, var(--selected) 10%, var(--surface)); }
+    .card strong { font-size: 13px; }
+    .meta { color: var(--muted); font-size: 12px; margin-top: 4px; }
+    .plain { border-left-color: var(--border); background: var(--surface); }
+    .palette { display: flex; flex-wrap: wrap; gap: 9px 14px; margin: 14px 0 0; }
+    .palette span { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; }
+    .dot { width: 14px; height: 14px; border-radius: 4px; background: var(--c); }
+    @media (max-width: 760px) { body { padding: 12px; } main { padding: 18px; } .mock { grid-template-columns: 1fr; } .rule { grid-template-columns: 1fr 1fr 34px; } .rule input { grid-column: 1 / 3; } .rule .preview { grid-column: 1; } .rule .color { grid-column: 2; } .delete { grid-column: 3; grid-row: 1 / 4; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Farbregeln · Vertrag v2</h1>
+  <p class="draft">11. September 2026 · Vom Nutzer ausdrücklich freigegeben und nach SHA-256 eingefroren · ersetzt Vertrag v1</p>
+  <p>Test Cases und alle Work Items können weiterhin unabhängig voneinander eingefärbt werden. Die Bedienung bleibt bei einer einfachen Regelliste ohne Gruppen und ohne UND-/ODER-Verknüpfungen.</p>
+  <h2>Verbindliches Zielverhalten nach Freigabe</h2>
+  <ol>
+    <li><strong>CC2-01 – Alle Work-Item-Typen:</strong> Die rechte Regelliste heißt „Work Items“ und gilt für jedes Work Item aus der gewählten Query, unabhängig vom Typ. Dazu gehören insbesondere Bugs, Tasks, User Stories, Features, Epics und benutzerdefinierte Typen.</li>
+    <li><strong>CC2-02 – Unabhängige Bereiche:</strong> Test Cases und Work Items besitzen pro Set weiterhin getrennte Regellisten. Eine Änderung in einer Liste verändert die andere nicht.</li>
+    <li><strong>CC2-03 – Bestehende Regeln bleiben erhalten:</strong> Bereits gespeicherte Regeln der bisherigen Bug-Liste werden ohne Datenverlust als Work-Item-Regeln übernommen und gelten danach für alle Work-Item-Typen.</li>
+    <li><strong>CC2-04 – Einfache Regelstruktur:</strong> Eine Regel enthält weiterhin genau ein Feld, einen Vergleich, einen Wert und eine Farbe. Es gibt keine Gruppen, Typauswahl oder verschachtelten Bedingungen. Die erste passende Regel gewinnt.</li>
+    <li><strong>CC2-05 – Vergleiche:</strong> Titel unterstützt „enthält“, „enthält nicht“, „beginnt mit“ und „ist gleich“. Status und Tag unterstützen „ist gleich“. Vergleiche bleiben unabhängig von Groß-/Kleinschreibung; leere Werte treffen nie.</li>
+    <li><strong>CC2-06 – Sichtbare Farbvorschau:</strong> Jede Regelzeile zeigt direkt neben der Farbauswahl eine kompakte Vorschau mit derselben farbigen Seitenkante und demselben dezenten Hintergrundton wie eine eingefärbte Karte. Die Vorschau aktualisiert sich sofort beim Wechsel der Farbe und besitzt einen zugänglichen Textnamen.</li>
+    <li><strong>CC2-07 – Erweiterte Palette:</strong> Zur Auswahl stehen Blau, Orange, Grün, Violett, Rot, Türkis, Gelb und Grau. Alle acht Farben sind in hellem und dunklem Theme klar unterscheidbar und erhalten eine lesbare Kartentönung.</li>
+    <li><strong>CC2-08 – Kartenwirkung:</strong> Eine passende Regel färbt Seitenkante und Hintergrundton der Karte. Typ-Chip, Status, Text, Fokusdarstellung, Suche, Relationen, Reihenfolge und Drag-and-drop bleiben funktional. Die Regelbeschreibung bleibt zusätzlich als Text verfügbar, sodass die Bedeutung nicht nur über Farbe vermittelt wird.</li>
+    <li><strong>CC2-09 – Einklappen und Platzierung:</strong> Die Farbregelbereiche bleiben beim Öffnen eines Sets standardmäßig eingeklappt. Das reine Farbpaletten-Icon bleibt direkt neben dem Filter-Icon auf derselben Höhe. Test-Case- und Work-Item-Bereich lassen sich unabhängig öffnen und schließen.</li>
+    <li><strong>CC2-10 – Persistenz:</strong> Regeln einschließlich neuer Farben werden pro Set über die bestehende LowDB-Nutzerpräferenz gespeichert und nach Neustart vollständig wiederhergestellt; <code>localStorage</code> bleibt nur Fallback.</li>
+    <li><strong>CC2-11 – Responsive und Tastatur:</strong> Vorschau und Farbauswahl passen auch in eine schmale Spalte. Alle Bedienelemente sind per Tastatur erreichbar; die Vorschau selbst erzeugt keinen zusätzlichen Tab-Stopp.</li>
+  </ol>
+  <h2>UI-Vorschau</h2>
+  <div class="mock">
+    <section class="column" aria-label="Test Cases">
+      <h3>Test Cases</h3>
+      <div class="toolbar"><input aria-label="Test Cases suchen" placeholder="Search Test Cases…"><button class="icon" aria-label="Filter öffnen">≡</button><button class="icon" aria-label="Test-Case-Farbregeln öffnen">◉</button></div>
+      <div class="card plain"><strong>#101 · Login prüfen</strong><div class="meta">TC · Ready · Passed</div></div>
+      <div class="card plain"><strong>#102 · Export prüfen</strong><div class="meta">TC · Ready · Passed</div></div>
+    </section>
+    <section class="column" aria-label="Work Items">
+      <h3>Work Items</h3>
+      <div class="toolbar"><input aria-label="Work Items suchen" placeholder="Search Work Items…"><button class="icon" aria-label="Filter öffnen">≡</button><button class="icon" aria-label="Work-Item-Farbregeln schließen">◉</button></div>
+      <div class="rule" style="--selected:var(--teal)">
+        <select aria-label="Feld"><option>Titel</option></select><select aria-label="Vergleich"><option>enthält</option><option>enthält nicht</option></select><input aria-label="Wert" value="Login"><div class="preview" role="img" aria-label="Farbvorschau Türkis">Aa</div><select class="color" aria-label="Farbe"><option>Türkis</option><option>Blau</option><option>Orange</option><option>Grün</option><option>Violett</option><option>Rot</option><option>Gelb</option><option>Grau</option></select><button class="delete" aria-label="Farbregel löschen">×</button>
+      </div>
+      <p class="hint">Die erste passende Regel gewinnt. Titelvergleiche ignorieren Groß-/Kleinschreibung.</p>
+      <div class="card" style="--selected:var(--teal)"><strong>#501 · Login schlägt fehl</strong><div class="meta">BUG · Active</div></div>
+      <div class="card" style="--selected:var(--teal)"><strong>#712 · Login vereinheitlichen</strong><div class="meta">USER STORY · New</div></div>
+      <div class="card" style="--selected:var(--teal)"><strong>#890 · Login-Texte überarbeiten</strong><div class="meta">TASK · Active</div></div>
+      <div class="card plain"><strong>#911 · Export dokumentieren</strong><div class="meta">TASK · Active</div></div>
+    </section>
+  </div>
+  <div class="palette" aria-label="Vorgesehene Farbpalette">
+    <span><i class="dot" style="--c:var(--blue)"></i>Blau</span><span><i class="dot" style="--c:var(--orange)"></i>Orange</span><span><i class="dot" style="--c:var(--green)"></i>Grün</span><span><i class="dot" style="--c:var(--violet)"></i>Violett</span><span><i class="dot" style="--c:var(--red)"></i>Rot</span><span><i class="dot" style="--c:var(--teal)"></i>Türkis</span><span><i class="dot" style="--c:var(--yellow)"></i>Gelb</span><span><i class="dot" style="--c:var(--gray)"></i>Grau</span>
+  </div>
+</main>
+</body>
+</html>
