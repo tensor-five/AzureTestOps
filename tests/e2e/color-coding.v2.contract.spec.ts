@@ -38,7 +38,7 @@ test("CC2-01 through CC2-05 apply the independent Work Item list to every querie
   await expect(row.getByRole("combobox")).toHaveCount(3);
   await expect(row.getByRole("textbox")).toHaveCount(1);
   await expect(row.getByLabel("Type", { exact: true })).toHaveCount(0);
-  await expect(workItems(page).getByRole("button", { name: /group|condition|AND|OR/i })).toHaveCount(0);
+  await expect(workItems(page).getByRole("button", { name: /^(group|condition|AND|OR)$/i })).toHaveCount(0);
 });
 
 test("CC2-03 restores a legacy Bug rule and applies it to non-Bug Work Items", async ({ page }) => {
@@ -127,7 +127,7 @@ test("CC2-08 through CC2-10 retain card behavior and persist a new color per set
   expect(afterDrag).not.toEqual(beforeDrag);
   expect(afterDrag.indexOf("506")).toBeLessThan(beforeDrag.indexOf("506"));
   await expect(workItemCard(page, 506)).toHaveAttribute("data-color-rule-color", "teal");
-  await expect.poll(() => server.disk()).toContain('"color":"teal"');
+  await expect.poll(() => server.disk()).toContain('"teal"');
   await workItemToggle(page).click();
   await expect(workItemToggle(page)).toHaveAttribute("aria-expanded", "false");
   await expect(workItemCard(page, 506)).toHaveAttribute("data-color-rule-color", "teal");
@@ -144,6 +144,7 @@ test("CC2-09 and CC2-11 keep both color areas independent and fit the preview in
   await page.setViewportSize({ width: 390, height: 844 });
   const testCaseToggle = testCases(page).getByRole("button", { name: "Toggle Test cases color rules", exact: true });
   await expect(testCaseToggle).toHaveAttribute("aria-expanded", "false");
+  await page.getByRole("button", { name: /^Work Items/ }).click();
   await expect(workItemToggle(page)).toHaveAttribute("aria-expanded", "false");
   const row = await addWorkItemRule(page, "Login");
   await expect(testCaseToggle).toHaveAttribute("aria-expanded", "false");

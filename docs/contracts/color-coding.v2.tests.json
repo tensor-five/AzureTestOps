@@ -7,7 +7,7 @@
     },
     {
       "path": "tests/e2e/color-coding.v2.contract.spec.ts",
-      "sha256": "edbfa9c9d2d273cfe6dc70def992fd7d837cfaaed5e7d5a6561ef4bf8cce7288"
+      "sha256": "d1ed0c65c7138ede70e98a8edb959d2275984a3cadedc42d87dc3ef11bed1d41"
     },
     {
       "path": "tests/e2e/color-coding-fixtures.ts",

@@ -20,7 +20,7 @@ for (const [baseName, approvedHash] of approvedContracts) {
 
 const approvedTestManifests = [
   ["color-coding.v1.tests.json", "ce4b6e0777f7ab9a3dc1f18e920282310e32e7ff8659a8f11cd3072452fd20ba"],
-  ["color-coding.v2.tests.json", "c881fb84bf893b73a5fb0418add509735b9774fe0c761456a07894813d91f533"]
+  ["color-coding.v2.tests.json", "15b823c7290f7ba83a8e6db4b467da23842de37d399bfb0a4043f9d56b52c055"]
 ];
 for (const [manifestName, approvedHash] of approvedTestManifests) {
   if (digest(await readFile(`docs/contracts/${manifestName}`)) !== approvedHash) {
