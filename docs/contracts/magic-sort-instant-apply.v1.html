@@ -1,0 +1,61 @@
+<article class="contract" aria-labelledby="contract-title">
+  <style>
+    .contract { max-width: 980px; margin: 0 auto; color: #1c1917; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.5; }
+    .contract header { padding: 28px 32px; color: #fff; background: linear-gradient(135deg, #5b1a8a, #842cc3); border-radius: 14px 14px 0 0; }
+    .contract h1 { margin: 0; font-size: 28px; }.contract header p { margin: 8px 0 0; color: #f3e8ff; }
+    .contract main { overflow: hidden; border: 1px solid #d6d3d1; border-top: 0; border-radius: 0 0 14px 14px; background: #fff; }
+    .contract section { padding: 24px 32px; border-top: 1px solid #e7e5e4; }.contract section:first-child { border-top: 0; }
+    .contract h2 { margin: 0 0 12px; color: #5b1a8a; font-size: 18px; }.contract p { margin: 0; }.contract p + p { margin-top: 10px; }
+    .contract .preview { margin-top: 16px; overflow: hidden; border: 1px solid #d6d3d1; border-radius: 10px; background: #f8f8f8; }
+    .contract .preview-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; color: #fff; background: #1c1917; }
+    .contract .preview-bar strong { font-size: 13px; }.contract .magic { display: inline-flex; align-items: center; gap: 7px; padding: 7px 11px; border-radius: 6px; background: #842cc3; font-size: 12px; font-weight: 700; }
+    .contract .flow { display: grid; grid-template-columns: 1fr auto 1fr; gap: 18px; align-items: center; padding: 18px; }
+    .contract .state { padding: 14px; border: 1px solid #d6d3d1; border-radius: 8px; background: #fff; }.contract .state h3 { margin: 0 0 10px; font-size: 13px; }
+    .contract .item { margin-top: 6px; padding: 7px 9px; border: 1px solid #d6d3d1; border-radius: 5px; background: #fff; font-size: 11px; }
+    .contract .arrow { color: #842cc3; text-align: center; font-weight: 700; }.contract .arrow small { display: block; color: #57534e; font-weight: 400; }
+    .contract table { width: 100%; border-collapse: collapse; font-size: 14px; }.contract th, .contract td { padding: 9px; border: 1px solid #d6d3d1; text-align: left; vertical-align: top; }.contract th { color: #4c1d68; background: #f1e7f9; }
+    .contract ul { margin: 0; padding-left: 22px; }.contract li + li { margin-top: 7px; }.contract .meta { color: #57534e; font-size: 13px; }
+    @media (max-width: 680px) { .contract header, .contract section { padding: 20px; }.contract .flow { grid-template-columns: 1fr; }.contract .arrow { transform: rotate(90deg); } }
+  </style>
+  <header><h1 id="contract-title">Vertrag v1: Magic Sort wendet nur das Endlayout an</h1><p>Freigegeben am 11. September 2026</p></header>
+  <main>
+    <section>
+      <h2>Versprechen</h2>
+      <p>Ein Klick auf Magic Sort berechnet weiterhin das vollständige optimale Ergebnis für die aktuelle Ansicht. Die Anwendung zeigt und speichert ausschließlich dieses fertige Endlayout. Es gibt keine sichtbaren oder persistierten Zwischenschritte.</p>
+    </section>
+    <section>
+      <h2>Vorschau des Ablaufs</h2>
+      <div class="preview" aria-label="Magic Sort übernimmt das fertige Layout in einer einzigen Aktualisierung">
+        <div class="preview-bar"><strong>AzureTestOps</strong><span class="magic"><span aria-hidden="true">✦</span> Magic Sort</span></div>
+        <div class="flow">
+          <div class="state"><h3>Vor dem Klick</h3><div class="item">BUG-42 · Export</div><div class="item">BUG-17 · Login</div><div class="item">BUG-31 · Sitzung</div></div>
+          <div class="arrow">→<small>ein Update<br>keine Zwischenstände</small></div>
+          <div class="state"><h3>Sofort nach dem Klick</h3><div class="item">BUG-17 · Login</div><div class="item">BUG-31 · Sitzung</div><div class="item">BUG-42 · Export</div></div>
+        </div>
+      </div>
+    </section>
+    <section>
+      <h2>Verbindliche Anforderungen</h2>
+      <table>
+        <thead><tr><th>ID</th><th>Anforderung</th></tr></thead>
+        <tbody>
+          <tr><td>MSI-01</td><td>Ein bewusster Klick oder eine äquivalente Tastaturauslösung berechnet den vollständigen Magic-Sort-Plan anhand derselben sichtbaren Daten und frisch gemessenen Geometrie wie bisher.</td></tr>
+          <tr><td>MSI-02</td><td>Die Anwendung übernimmt ausschließlich das letzte, fertige Layout des berechneten Plans. Kein vorheriger Optimierungsschritt wird gerendert, an die Layout-Stores übergeben oder persistiert.</td></tr>
+          <tr><td>MSI-03</td><td>Test-Case-Reihenfolgen innerhalb ihrer Suites, Bug-Reihenfolge und gegebenenfalls Bug-Spacer-Positionen wechseln für den Nutzer gemeinsam in einer einzigen Oberflächenaktualisierung auf das Endergebnis.</td></tr>
+          <tr><td>MSI-04</td><td>Die sofortige Übernahme gilt sowohl mit deaktiviertem als auch mit aktiviertem Add Spacer sowie bei aktiven Filtern und eingeklappten Suites.</td></tr>
+          <tr><td>MSI-05</td><td>Optimierungsregeln, Bewertungsmetriken und das resultierende Endlayout bleiben unverändert. Für dieselbe Ausgangslage ist das sofort angezeigte Ergebnis identisch mit dem letzten Schritt des bisherigen Ablaufs.</td></tr>
+          <tr><td>MSI-06</td><td>Die mehrstufige Fortschrittsleiste, der laufende Animationszustand und die 120-ms-Wartezeiten entfallen. Ein kurzer Bestätigungsimpuls am Magic-Sort-Button darf nach der bereits erfolgten Layoutübernahme angezeigt werden und verzögert sie nicht.</td></tr>
+          <tr><td>MSI-07</td><td>Das fertige Layout wird wie bisher als Layout des aktiven Sets gespeichert und nach erneutem Laden wiederhergestellt. Es werden keine Zwischenlayouts gespeichert.</td></tr>
+          <tr><td>MSI-08</td><td>Wenn kein anderes Endlayout entsteht, bleibt die Anordnung unverändert und der Klick wird weiterhin kurz bestätigt. Der zugängliche Status meldet den Abschluss unmittelbar nach der Berechnung.</td></tr>
+          <tr><td>MSI-09</td><td>Nach der Übernahme bleiben keine verzögerten Sortieraktionen aktiv, die spätere Filter-, Set-, Größen- oder manuelle Layoutänderungen überschreiben könnten.</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <section>
+      <h2>Ersetzte Aussagen bestehender Verträge</h2>
+      <p>Dieser Vertrag ersetzt ausschließlich die Aussagen zu schrittweisen Layoutänderungen, laufender Fortschrittsanzeige und gemeinsam animierten Sortierbewegungen aus MS-06, MSF-01 bis MSF-05, MSS-07 und MSCB-04. Alle übrigen Anforderungen dieser Verträge bleiben bestehen.</p>
+    </section>
+    <section><h2>Nicht Teil dieses Vertrags</h2><ul><li>Änderungen am Optimierungsalgorithmus oder seiner Ergebnisqualität.</li><li>Automatisches Sortieren ohne bewusste Nutzeraktion.</li><li>Änderungen an Add Spacer, Filtern, Beziehungen oder Azure-DevOps-Daten.</li><li>Eine Rückgängig-Funktion.</li></ul></section>
+    <section class="meta"><strong>Freigabestatus:</strong> vom Nutzer mit „gut“ freigegeben. Diese Datei ist nach ihrer Prüfsumme eingefroren und die alleinige Referenz für Tests und Umsetzung dieser Änderung.</section>
+  </main>
+</article>
