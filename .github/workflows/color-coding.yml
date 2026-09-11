@@ -1,0 +1,59 @@
+name: Color coding contract
+
+on:
+  pull_request:
+    paths:
+      - src/domain/color-coding/**
+      - src/features/color-coding/**
+      - src/features/filters/**
+      - src/features/relations-view/**
+      - src/shared/user-preferences/**
+      - src/adapters/persistence/settings/**
+      - src/adapters/http/http-user-preferences*
+      - src/app/bootstrap/local-ui-*.css
+      - src/app/bootstrap/user-preferences-shell-status.tsx
+      - src/app/bootstrap/use-user-preferences-bootstrap.ts
+      - docs/contracts/color-coding.*
+      - tests/e2e/color-coding*
+      - scripts/check-color-coding-approval.mjs
+      - .github/workflows/color-coding.yml
+      - package.json
+      - package-lock.json
+  push:
+    branches: [main, Development]
+    paths:
+      - src/domain/color-coding/**
+      - src/features/color-coding/**
+      - src/features/filters/**
+      - src/features/relations-view/**
+      - src/shared/user-preferences/**
+      - src/adapters/persistence/settings/**
+      - src/adapters/http/http-user-preferences*
+      - src/app/bootstrap/local-ui-*.css
+      - src/app/bootstrap/user-preferences-shell-status.tsx
+      - src/app/bootstrap/use-user-preferences-bootstrap.ts
+      - docs/contracts/color-coding.*
+      - tests/e2e/color-coding*
+      - scripts/check-color-coding-approval.mjs
+      - .github/workflows/color-coding.yml
+      - package.json
+      - package-lock.json
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/check-color-coding-approval.mjs
+      - run: npm ci
+      - run: npm run typecheck && npm run check:cycles
+      - run: npm test -- src/domain/color-coding/color-rule.spec.ts
+      - run: npx playwright install chromium
+      - run: npm run test:e2e -- tests/e2e/color-coding.contract.spec.ts

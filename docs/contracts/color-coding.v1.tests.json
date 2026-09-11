@@ -1,0 +1,25 @@
+{
+  "contract": "color-coding.v1.html",
+  "files": [
+    {
+      "path": "tests/e2e/color-coding.contract.spec.ts",
+      "sha256": "1f90a9b836b0fb216ea88f9437f0bfc57593adbf79d813c4f17d6e52e547bd32"
+    },
+    {
+      "path": "tests/e2e/color-coding-fixtures.ts",
+      "sha256": "260227beea12f7c1a1c1c328aa481ac5eb7347d0aceac039682773ac9b14da44"
+    },
+    {
+      "path": "tests/e2e/color-coding-harness.tsx",
+      "sha256": "e6f605d9b710453b4aa1dd188b9fb17ea66ee51deb239dcd7381d1e7d9b6ee5a"
+    },
+    {
+      "path": "tests/e2e/color-coding-server.ts",
+      "sha256": "8914a668ef9aa9cbf9f403c53506dffd93db9bae5330c214518492457e73b9dc"
+    },
+    {
+      "path": "src/domain/color-coding/color-rule.spec.ts",
+      "sha256": "30a079ed8e0db312ddb4559ddc527e44f180b996a2346585c9db7f708125c9d2"
+    }
+  ]
+}
