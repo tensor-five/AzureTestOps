@@ -31,14 +31,12 @@ test("text-filtered single Bug gets spacers, remains aligned on reload, and all 
   await page.getByRole("searchbox", { name: "Search Test cases" }).fill("Dataload");
   await page.getByRole("searchbox", { name: "Search Work items" }).fill("Dataload");
   await page.getByRole("checkbox", { name: "Add Spacer" }).check();
-  await page.getByRole("button", { name: "Magic Sort Debug", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Magic Sort Debug", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Magic Sort", exact: true }).click();
   await expect(page.locator(".relations-view-work-item-spacer").first()).toBeVisible();
   const after = await geometry(page);
-  expect(after.distance, await page.locator("[data-magic-sort-debug-report] pre").innerText()).toBeLessThanOrEqual(after.pitch / 2 + 1);
-  await expect.poll(async () => JSON.parse(await page.locator("[data-magic-sort-debug-report] pre").innerText()).observed.state).toBe("measured");
-  const report = JSON.parse(await page.locator("[data-magic-sort-debug-report] pre").innerText());
-  expect(report.observed.deviations[0].delta).toBeLessThan(1);
+  expect(after.distance).toBeLessThanOrEqual(after.pitch / 2 + 1);
+  await expect(page.locator("[data-magic-sort-debug-report]")).toHaveCount(0);
   const spacerCount = await page.locator(".relations-view-work-item-spacer").count();
   await page.getByRole("button", { name: "Magic Sort", exact: true }).click();
   await expect(page.locator(".relations-view-work-item-spacer")).toHaveCount(spacerCount);

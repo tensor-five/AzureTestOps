@@ -125,10 +125,7 @@ function HydratedAppShell(props: {
       progress: magicSortControl.progress,
       feedbackState: magicSortControl.feedbackState,
       addSpacer: magicSortControl.addSpacer,
-      onAddSpacerChange: magicSortControl.setAddSpacer,
-      isDebugOpen: magicSortControl.isDebugOpen,
-      onDebugToggle: magicSortControl.toggleDebug,
-      debugReport: magicSortControl.debugReport
+      onAddSpacerChange: magicSortControl.setAddSpacer
     };
     return <MagicSortAction {...actionProps} />;
   }, [magicSortControl]);
