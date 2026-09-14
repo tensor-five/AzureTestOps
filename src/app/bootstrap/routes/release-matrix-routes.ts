@@ -20,6 +20,7 @@ export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepository
         const reading = !match[2] && method === 'GET';
         const providedId = req.headers?.['x-matrix-request-id'];
         const requestId = typeof providedId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(providedId) ? providedId : randomUUID();
+        const writeStartedAt = performance.now();
         const diagnostics = reading ? createMatrixReadDiagnostics(requestId, 'server') : undefined;
         const controller = new AbortController();
         const closed = () => { if (!res.writableEnded) { controller.abort(); diagnostics?.finish('aborted'); } };
@@ -76,7 +77,11 @@ export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepository
                 completeResult: (run, result, outcome) => services.execution.completeResult(run, result, outcome),
                 completeRun: run => services.execution.completeRun(run),
             };
-            writeJson(res, 200, await recordMatrixOutcome(body, { ...services, execution }));
+            writeJson(res, 200, await recordMatrixOutcome(body, { ...services, execution, diagnostics: {
+                event: entry => console.info('[release-matrix.write]', {
+                    requestId, side: 'server', ...entry, elapsedMs: Math.round(performance.now() - writeStartedAt),
+                }),
+            } }));
         }
         catch (error) {
             diagnostics?.finish(controller.signal.aborted ? 'aborted' : 'error');
