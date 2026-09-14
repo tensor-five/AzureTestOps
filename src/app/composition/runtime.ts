@@ -1,3 +1,4 @@
+import { WorkItemBackedSuiteMetadataAdapter } from '../../adapters/azure-devops/test-management/work-item-backed-suite-metadata.adapter.js';
 import { createMatrixReadHttpClient } from '../../shared/azure-devops/matrix-read-http-client.js';
 import type { MatrixReadDiagnostics } from '../../shared/diagnostics/matrix-read-diagnostics.js';
 import type { MatrixReadDeps } from "../../application/use-cases/load-release-matrix.use-case.js";
@@ -121,6 +122,7 @@ export function buildRuntime(options: RuntimeOptions = {}): Runtime {
       return {
         testManagement: new AzureTestManagementAdapter(readClient, context),
         testCatalog: new AzureTestCatalogAdapter(readClient, context),
+        suiteMetadata: new WorkItemBackedSuiteMetadataAdapter(new AzureWorkItemHydrationAdapter(readClient, context)),
         testCaseHydration: new WorkItemBackedTestCaseHydrationAdapter(new AzureWorkItemHydrationAdapter(readClient, context)),
         execution: new AzureTestExecutionAdapter(httpClient, context)
       };

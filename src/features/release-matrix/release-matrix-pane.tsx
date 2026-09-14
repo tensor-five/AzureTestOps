@@ -26,6 +26,7 @@ export function ReleaseMatrixPane({ setId, planId, rootSuiteId, contextIdentity 
 
     return <MatrixTooltipProvider><section className="release-matrix-pane" aria-label="Release-Matrix Ansicht">
     <div className="matrix-toolbar"><div><h2>Release-Matrix</h2><p>Testkatalog im Vergleich über Versionen und Umgebungen</p></div><button type="button" onClick={() => setSettings(v => !v)} aria-expanded={settings}>Spalten &amp; Gruppierung</button><button type="button" disabled={model.loading || model.pending.size > 0} onClick={() => void model.reload()}>Matrix aktualisieren</button></div>
+    {config.migratedFrom === 1 && <p className="matrix-migration-notice">Umstieg auf Suite-Tags: Frühere Suite-Zuordnungen werden neu bestimmt; Release-Wurzeln schränken die Quellen nicht mehr ein. Gruppenreihenfolge und eingeklappte Gruppen wurden zurückgesetzt. Die erhaltenen Spaltentags müssen direkt auf den konkreten Suites stehen; Testfall-Tags genügen dafür nicht.</p>}
     <div className="matrix-filters">
       <label>Gruppieren nach<select aria-label="Gruppieren nach" value={config.grouping} onChange={e => update({ grouping: e.target.value as 'suites' | 'tags' })}><option value="suites">Suites</option><option value="tags">Tags</option></select></label>
       <label>Testfall suchen<input aria-label="Testfall suchen" placeholder="ID oder Titel" value={config.search} onChange={e => update({ search: e.target.value })}/></label>
@@ -39,7 +40,7 @@ export function ReleaseMatrixPane({ setId, planId, rootSuiteId, contextIdentity 
     {model.status && <div role="status" className="matrix-success">{model.status}</div>}
     {model.loading && <div role="status">Matrix wird geladen …</div>}
     {settings && snapshot && <MatrixSettings snapshot={snapshot} config={config} update={update}/>}
-    {!columns.length && <div className="matrix-empty">Versionsspalten auswählen: Öffne „Spalten &amp; Gruppierung“ und wähle die Release-Suites.</div>}
+    {!columns.length && <div className="matrix-empty">Versionsspalten auswählen: Öffne „Spalten &amp; Gruppierung“ und trage die Suite-Tags ein.</div>}
     {snapshot && !catalogRows(snapshot, config).length && <div className="matrix-empty">Testkatalog ist leer. Wähle eine Stammsuite mit Testfällen.</div>}
     {snapshot && catalogRows(snapshot, config).length > 0 && !groups.length && <div className="matrix-empty">Keine Testfälle für diese Filter.</div>}
     {snapshot && columns.length > 0 && <MatrixTable

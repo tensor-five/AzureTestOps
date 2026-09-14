@@ -62,6 +62,11 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
         }
     }, [mutationStore, mutation.confirmationRevision, reload]);
     React.useEffect(() => { alive.current = true; void reload(); return () => { alive.current = false; request.current++; activeRead.current?.abort(); }; }, [reload]);
+    React.useEffect(() => {
+        if (config.migratedFrom === 1) matrixPreferenceStore.save(config, { scopeKey: setId });
+        // Persist the idempotently migrated configuration once when this set is mounted.
+        // Further edits already use update() below.
+    }, [setId]);
     const configRef = React.useRef(config);
     const update = React.useCallback((patch: Partial<MatrixConfig>) => {
         const next = { ...configRef.current, ...patch };

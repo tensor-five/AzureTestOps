@@ -50,3 +50,12 @@
 }
 
 .matrix-cell-control[aria-busy="true"]::after { content:"…"; position:absolute; right:var(--space-1); color:var(--color-primary); font-weight:var(--font-bold); }
+
+.matrix-migration-notice {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-muted);
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+}

@@ -35,6 +35,7 @@ on:
       - docs/contracts/release-matrix.*
       - tests/e2e/release-matrix*
       - tests/e2e/release-matrix/**
+      - tests/e2e/release-matrix-v2/**
       - scripts/check-release-matrix-approval.mjs
       - .github/workflows/release-matrix.yml
       - package.json

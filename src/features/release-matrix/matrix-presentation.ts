@@ -1,58 +1,59 @@
 import type { MatrixSnapshot } from '../../application/dto/release-matrix.dto.js';
 import type { MatrixColumn, MatrixConfig } from '../../domain/release-matrix/matrix-config.js';
-import type { TestCaseProjection } from '../../domain/test-management/test-case-projection.js';
-import { buildMatrixSuiteLabels } from './matrix-suite-labels.js';
-export type MatrixGroup = {
-    id: string;
-    name: string;
-    rows: TestCaseProjection[];
-};
+export type MatrixRow = { groupName: string; workItemId: number; title: string; tags: string[] };
+export type MatrixGroup = { id: string; name: string; rows: MatrixRow[] };
 export function descendantIds(snapshot: MatrixSnapshot, root: number): Set<number> {
-    const found = new Set<number>();
-    const queue = [root];
+    const byId = new Set(snapshot.suites.map(s => s.id));
+    const children = new Map<number, number[]>();
+    for (const suite of snapshot.suites) if (suite.parentSuiteId !== null) {
+        const list = children.get(suite.parentSuiteId) ?? []; list.push(suite.id); children.set(suite.parentSuiteId, list);
+    }
+    const found = new Set<number>(), queue = [root];
     while (queue.length) {
         const id = queue.pop()!;
-        if (found.has(id) || !snapshot.suites.some(s => s.id === id))
-            continue;
-        found.add(id);
-        queue.push(...snapshot.suites.filter(s => s.parentSuiteId === id).map(s => s.id));
+        if (found.has(id) || !byId.has(id)) continue;
+        found.add(id); queue.push(...(children.get(id) ?? []));
     }
     return found;
 }
-export const mappingKey = (catalogSuiteId: number, columnId: string): string => `${catalogSuiteId}:${columnId}`;
-export function resolveSource(snapshot: MatrixSnapshot, config: MatrixConfig, suiteId: number, column: MatrixColumn) {
-    const ids = descendantIds(snapshot, column.rootSuiteId);
-    const candidates = snapshot.suites.filter(s => ids.has(s.id));
-    const explicit = config.mappings[mappingKey(suiteId, column.id)];
-    if (explicit)
-        return { suite: candidates.find(s => s.id === explicit), candidates, ambiguous: false };
-    const name = snapshot.suites.find(s => s.id === suiteId)?.name;
-    const matches = candidates.filter(s => s.name === name);
-    const catalogIds = descendantIds(snapshot, config.catalogRootId);
-    if (snapshot.suites.filter(s => catalogIds.has(s.id) && s.name === name).length > 1)
-        return { suite: undefined, candidates, ambiguous: true };
-    return { suite: matches.length === 1 ? matches[0] : undefined, candidates, ambiguous: matches.length > 1 };
+export const mappingKey = (name: string, columnId: string): string => JSON.stringify([name, columnId]);
+export const matrixRowKey = (row: MatrixRow): string => JSON.stringify([row.groupName, row.workItemId]);
+const normalizedTag = (tag: string) => tag.trim().toLocaleLowerCase();
+export function resolveSource(snapshot: MatrixSnapshot, config: MatrixConfig, name: string, column: MatrixColumn) {
+    const tag = normalizedTag(column.tag);
+    const tagged = tag && snapshot.planId === config.planId ? [...new Map(snapshot.suites.filter(s => s.tags.some(t => normalizedTag(t) === tag)).map(s => [s.id, s])).values()] : [];
+    const candidates = tagged.filter(s => s.name === name);
+    const explicit = config.mappings[mappingKey(name, column.id)];
+    const suite = explicit ? tagged.find(s => s.id === explicit) : candidates.length === 1 ? candidates[0] : undefined;
+    const ambiguous = !explicit && candidates.length > 1;
+    const reason = !tag ? 'Suite-Tag auswählen.' : suite ? '' : explicit ? 'Gespeicherte Suite-Zuordnung ist ungültig. Bitte erneut auswählen.'
+        : ambiguous ? 'Suite zuordnen: mehrere gleichnamige Suites mit diesem Suite-Tag.' : 'Suite fehlt für diesen Suite-Tag.';
+    return { suite, candidates, ambiguous, reason };
 }
-export function catalogRows(snapshot: MatrixSnapshot, config: MatrixConfig): TestCaseProjection[] {
+/** Display identity only: every outcome remains on its original physical projection. */
+export function catalogRows(snapshot: MatrixSnapshot, config: MatrixConfig): MatrixRow[] {
     const ids = descendantIds(snapshot, config.catalogRootId);
-    return snapshot.projections.filter(p => ids.has(p.suiteId));
-}
-export function catalogSuiteLabels(snapshot: MatrixSnapshot, config: MatrixConfig): Map<number, string> {
-    const ids = descendantIds(snapshot, config.catalogRootId);
-    return buildMatrixSuiteLabels(snapshot.suites.filter(suite => ids.has(suite.id)), config.catalogRootId);
+    const names = new Map(snapshot.suites.map(s => [s.id, s.name]));
+    const rows = new Map<string, MatrixRow>();
+    for (const projection of snapshot.projections) {
+        const name = names.get(projection.suiteId);
+        if (!ids.has(projection.suiteId) || name === undefined) continue;
+        const row = { groupName: name, workItemId: projection.workItemId, title: projection.title, tags: projection.tags };
+        if (!rows.has(matrixRowKey(row))) rows.set(matrixRowKey(row), row);
+    }
+    return [...rows.values()];
 }
 export function matrixGroups(snapshot: MatrixSnapshot, config: MatrixConfig): MatrixGroup[] {
     const memberIds = new Set(snapshot.projections.filter(p => String(p.suiteId) === config.suiteFilter).map(p => p.workItemId));
-    const tag = (t: string) => t.toLocaleLowerCase();
-    const rows = catalogRows(snapshot, config).filter(p => (!config.search || `${p.workItemId} ${p.title}`.toLocaleLowerCase().includes(config.search.toLocaleLowerCase())) && (!config.tagFilter || p.tags.some(t => tag(t) === tag(config.tagFilter))) && (!config.suiteFilter || memberIds.has(p.workItemId)))
-        .sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }) || a.workItemId - b.workItemId || a.suiteId - b.suiteId);
+    const rows = catalogRows(snapshot, config).filter(p => (!config.search || `${p.workItemId} ${p.title}`.toLocaleLowerCase().includes(config.search.toLocaleLowerCase())) && (!config.tagFilter || p.tags.some(t => normalizedTag(t) === normalizedTag(config.tagFilter))) && (!config.suiteFilter || memberIds.has(p.workItemId)))
+        .sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }) || a.workItemId - b.workItemId || a.groupName.localeCompare(b.groupName));
     if (config.grouping === 'tags') {
-        const groups = config.tags.map(t => ({ id: `tag:${t.toLowerCase()}`, name: t, rows: rows.filter(p => p.tags.some(pt => tag(pt) === tag(t))) }));
-        groups.push({ id: 'untagged', name: 'Ohne Gruppierungs-Tag', rows: rows.filter(p => !p.tags.some(pt => config.tags.some(t => tag(t) === tag(pt)))) });
+        const groups = config.tags.map(t => ({ id: `tag:${normalizedTag(t)}`, name: t, rows: rows.filter(p => p.tags.some(pt => normalizedTag(pt) === normalizedTag(t))) }));
+        groups.push({ id: 'untagged', name: 'Ohne Gruppierungs-Tag', rows: rows.filter(p => !p.tags.some(pt => config.tags.some(t => normalizedTag(t) === normalizedTag(pt)))) });
         return groups.filter(g => g.rows.length);
     }
-    const labels = catalogSuiteLabels(snapshot, config);
-    const groups = snapshot.suites.map(s => ({ id: String(s.id), name: labels.get(s.id) ?? s.name, rows: rows.filter(p => p.suiteId === s.id) })).filter(g => g.rows.length);
-    const rank = (id: string) => { const i = config.groupOrder.indexOf(id); return i < 0 ? Infinity : i; };
+    const names = [...new Set(rows.map(row => row.groupName))].sort((a, b) => a.localeCompare(b));
+    const groups = names.map(name => ({ id: name, name, rows: rows.filter(row => row.groupName === name) }));
+    const rank = (id: string) => { const index = config.groupOrder.indexOf(id); return index < 0 ? Infinity : index; };
     return groups.sort((a, b) => rank(a.id) - rank(b.id));
 }

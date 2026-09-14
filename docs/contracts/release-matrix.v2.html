@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Release-Matrix · Vertrag v2 · Entwurf</title>
+  <style>
+    :root { color-scheme:light dark; font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:light-dark(#1c1917,#fafaf9); background:light-dark(#f8f8f8,#0c0a09); }
+    body { margin:0; padding:24px; }
+    main { max-width:1180px; margin:auto; }
+    .contract-copy { max-width:920px; margin:0 auto 32px; line-height:1.6; }
+    .contract-copy h1 { margin-bottom:8px; }
+    .contract-copy h2 { margin-top:28px; font-size:1.15rem; }
+    .contract-copy li { margin:12px 0; }
+    .contract-copy .status { color:light-dark(#92400e,#f7d696); }
+    .contract-copy a { color:light-dark(#842cc3,#bd7ce9); }
+    @media(max-width:600px) { body { padding:12px; } }
+  </style>
+</head>
+<body>
+<main>
+  <section class="contract-copy">
+    <h1>Release-Matrix · Vertrag v2 · Entwurf</h1>
+    <p class="status"><strong>ENTWURF · noch nicht freigegeben</strong> · 14. September 2026 · Neue Suite-Tag-Ausrichtung auf Basis des unveränderten Vertrags v1</p>
+    <p><strong>Versprechen:</strong> AzureTestOps erhält eine zusätzliche Ansicht, in der dieselben Testfälle fachlich gruppiert als Zeilen und ausgewählte Releases als Spalten erscheinen. Eine Zeile steht einmal für einen exakten fachlichen Suite-Namen und eine Testfall-ID. Jede Spalte wählt ihre konkrete Suite über diesen Namen und einen vollständigen Tag auf dem Suite-Work-Item. Innerhalb dieser Suite verwendet jede Ergebniszelle das bereits bestehende Testfall-/Ergebnis-Matching. Die bestehende Zuordnungsansicht bleibt funktional unverändert.</p>
+    <p>Dieser vollständige Entwurf beschreibt alle 20 Anforderungen der nächsten Version. Die neue Quellzuordnung und Zeilenbildung werden erst nach ausdrücklicher Freigabe umgesetzt; die bestehende Funktion bleibt bis dahin unverändert. Vorschauwerte, Testfallnamen und Tags sind ausschließlich illustrative Entwurfsdaten und werden weder als Produktdaten übernommen noch nach Azure geschrieben.</p>
+    <h2>1. Navigation und Erscheinungsbild</h2>
+    <ul>
+      <li><strong>RM-01 – Zwei Ansichten:</strong> Die Navigationsleiste bietet „Zuordnung“ und „Release-Matrix“. Die aktive Ansicht ist erkennbar. Ein Wechsel verändert weder Azure-Daten noch die vorhandenen Set-Einstellungen oder das Layout der Zuordnung.</li>
+      <li><strong>RM-02 – Bestehendes Design:</strong> Header, Footer, Schriften, Größen, Farben und Bedienelemente folgen dem vorhandenen AzureGanttOps-Token-System. Light-/Dark-Theme und die bestehenden globalen Set-/Kontextfunktionen bleiben erhalten. Die Vorschau konkretisiert die Matrix; die dargestellte Zuordnung ist nur schematisch und ersetzt nicht deren bestehendes Design.</li>
+    </ul>
+    <h2>2. Testkatalog und fachliche Gruppen</h2>
+    <ul>
+      <li><strong>RM-03 – Katalogbasis und eindeutige Zeilen:</strong> Eine frei gewählte feste Stammsuite einschließlich ihres gesamten Unterbaums bestimmt den vollständigen Testkatalog. Auch die Wurzel des gesamten Plans ist erlaubt. Aus den tatsächlichen Testfall-Mitgliedschaften entstehen logische Zeilen mit dem Schlüssel <strong>exakter fachlicher Suite-Name + Testfall-ID</strong>. Mehrere Suites gleichen Namens mit demselben Testfall erzeugen innerhalb des Katalogs nur eine Zeile, auch wenn sie zu verschiedenen Releases gehören. Beispielsweise erscheint #201 unter „Regression“ einmal für alle Releases, unter „Data Import“ aber als eigene weitere Zeile. Unterschiedliche Namen bleiben getrennt; Groß-/Kleinschreibung und der vollständige Suite-Name sind für die Namensgleichheit maßgeblich. Ein Testfall, der ausschließlich außerhalb des Katalogs vorkommt, erzeugt keine zusätzliche Zeile. Die Katalogzeile bleibt sichtbar, wenn keine gewählte Spalte eine passende Quelle oder Mitgliedschaft besitzt. Das Zusammenfassen betrifft ausschließlich die Anzeige; physische Suites, Mitgliedschaften, Testpunkte und Ergebnisse bleiben unverändert.</li>
+      <li><strong>RM-04 – Optionale Darstellung nach eigener Testfall-Tag-Liste:</strong> Der Nutzer legt selbst eine geordnete Liste vollständiger <strong>Tags auf Testfällen</strong> fest und kann Einträge hinzufügen, entfernen und umordnen. Im Modus „Eigene Tag-Liste“ werden die bereits durch RM-03 bestimmten logischen Zeilen unter diesen Tag-Überschriften angeordnet. Die Tag-Liste ersetzt weder den Stammkatalog noch die Suite-Tag-Auswahl einer Versionsspalte. Verschiedene fachliche Suite-Namen desselben Testfalls bleiben auch in derselben Tag-Gruppe getrennte, mit ihrem fachlichen Suite-Namen beschriftete Zeilen. Nur die gewählte Liste erzeugt Tag-Gruppen; Tags ohne Treffer erzeugen keine leere Gruppe. Vergleiche ignorieren Groß-/Kleinschreibung und äußere Leerzeichen; leere und doppelte Einträge erzeugen keine zusätzlichen Gruppen. Zeilen ohne passenden Listen-Tag erscheinen unter „Ohne Gruppierungs-Tag“. Im Standardmodus „Gleichnamige Suites“ stammen die Gruppenüberschriften aus den exakten fachlichen Suite-Namen; die Tag-Liste beeinflusst dort die Gruppierung nicht und bleibt gespeichert.</li>
+      <li><strong>RM-05 – Fachliche Gruppen über Releases:</strong> Eine Vergleichsgruppe steht für einen exakten fachlichen Suite-Namen, beispielsweise „Regression“. Darunter erscheint jeder Testfall aus dieser Gruppe einmal; die Ergebnisse der Releases stehen nebeneinander in derselben Zeile. Pro Gruppe und Spalte wird genau eine konkrete Ergebnis-Suite gemäß RM-07/RM-20 ausgewählt. Gleichnamige Suites mit unterschiedlichen Spaltentags sind reguläre Quellen verschiedener Releases und verursachen allein keine Mehrdeutigkeit. Verschiedene physische Suites und Testpunkte bleiben getrennt. Eine Änderung an #201 in „Regression“ für „2.1.0-Test“ verändert weder #201 in „Data Import“ noch dessen unabhängigen Testpunkt in einem anderen Release. Trägt dieselbe konkrete Suite mehrere Spaltentags, können mehrere Spalten denselben physischen Testpunkt anzeigen; dessen bestätigte Änderung erscheint in genau diesen Anzeigen gemeinsam. Es gibt keine gemeinsame Ergebnisaggregation über die physisch verschiedenen Release-Suites.</li>
+      <li><strong>RM-06 – Reihenfolge und wiederholte Darstellung:</strong> Die Standardreihenfolge der fachlichen Gruppen ist alphabetisch nach dem vollständigen fachlichen Suite-Namen. Der Nutzer kann Gruppen und Versionsspalten manuell anordnen; innerhalb einer Gruppe gilt alphabetische Reihenfolge nach Titel, bei gleichem Titel nach Testfall-ID. Im Testfall-Tag-Modus gilt die eigene Tag-Reihenfolge; Zeilen mit demselben Testfall, aber verschiedenen fachlichen Suite-Namen bleiben unterscheidbar beschriftet. Eine logische Zeile kann aufgrund mehrerer passender Testfall-Tags in mehreren Tag-Gruppen erscheinen. Diese wiederholten Anzeigen derselben Gruppe/Spalte/Testfall-Zelle zeigen denselben bestätigten Zustand. Jede Änderung adressiert dennoch ausschließlich die konkrete ausgewählte Suite-Projektion und deren Testpunkt. Es werden dadurch keine zusätzlichen Runs für weitere Anzeigen und keine Änderungen an unabhängigen Testpunkten erzeugt.</li>
+    </ul>
+    <h2>3. Releases und Ergebniszellen</h2>
+    <ul>
+      <li><strong>RM-07 – Versionsspalten über Tags der konkreten Suites:</strong> Jede Spalte besitzt einen Anzeigenamen, eine Umgebungsbeschriftung und genau einen vollständigen <strong>Suite-Tag</strong>, beispielsweise „2.1.0-Test“. Dieser Tag wird direkt aus dem Tag-Feld des jeweiligen konkreten Release-Suite-Work-Items gelesen. Im Plan und Projekt des aktiven Sets werden alle zugänglichen Suites als Quellen betrachtet, auch außerhalb des gewählten Stammkatalogs. Automatische Kandidaten sind ausschließlich Suites mit dem exakt gleichen fachlichen Namen und dem vollständigen Spaltentag. Der Tagvergleich ignoriert Groß-/Kleinschreibung und äußere Leerzeichen; Teilstrings zählen nicht. Ein Suite-Tag kann beliebig viele verschieden benannte fachliche Suites und eine Suite mehrere vollständige Tags besitzen. <strong>Eine Release-Wurzel muss nicht gewählt werden.</strong> Tags auf Testfällen, die Query-Definition einer Suite und Tags von Eltern-Suites wählen keine Ergebnisquelle aus; es gibt keine Vererbung. Es wird kein festes Tag-Format vorausgesetzt. Versionen in unterschiedlichen Umgebungen erhalten getrennte Spalten; Spalten können ausgewählt und angeordnet werden. Ein leerer Spaltentag fordert zur Tag-Auswahl auf und wählt keine Quelle. Die identifizierte Suite-ID bleibt die Grundlage des unveränderten Ergebnis-Matchings.</li>
+      <li><strong>RM-08 – Unverändertes Ergebnis-Matching:</strong> Der aktuelle Ergebnis-Aggregator und seine Fallbacks bleiben unverändert. Nach der Suite-Auswahl gemäß RM-07/RM-20 liest jede Zelle die vorhandene Projektion für genau diese Suite-ID und die Testfall-ID ihrer logischen Zeile. Suite-Tags bestimmen ausschließlich die Quell-Suite; sie führen keine alternative Suche nach Testfällen, Runs oder Resultaten und keine neue Konfigurationsauswahl ein. Für denselben Testfall in derselben physischen Suite stimmen Matrix und Zuordnung nach Aktualisierung überein.</li>
+      <li><strong>RM-09 – Fehlende Quellen, Mitgliedschaften und Ladefehler:</strong> Existiert nach erfolgreichem Laden keine fachlich gleichnamige Suite mit dem vollständigen Spaltentag, erscheint „?“ mit Tooltip „Suite fehlt für diesen Suite-Tag“. Existiert eine konkrete Quelle, aber der Testfall gehört laut erfolgreich geladener Mitgliedschaft nicht zu ihr, erscheint der ungefüllte Mittelpunkt „·“ mit Tooltip „Nicht in dieser Suite“. Beides besitzt kein Ergebnis-Dropdown und unterscheidet sich vom grauen „NotRun“-Strich. Bei mehreren passenden Quellen gilt RM-20. Erklärungen sind auch per Tastaturfokus und auf Touch-Geräten per Antippen erreichbar. <strong>Fehler beim Laden der Suite-Tags, der Suites oder ihrer Mitgliedschaften sind Ladefehler, keine leeren Tags und keine fehlenden Quellen.</strong> Bei einem Initialfehler erscheint ein verständlicher Fehler statt scheinbar leerer Ergebnisse; bei einem Aktualisierungsfehler ist ein weiter angezeigter alter Stand als veraltet erkennbar und bleibt bis zu einem erfolgreichen Read gegen Änderungen gesperrt.</li>
+      <li><strong>RM-10 – Kompakte Outcome-Chips wie in der Zuordnung:</strong> Ergebniszellen zeigen ausschließlich die bestehende Kurzkennzeichnung und Chip-Darstellung aus der Zuordnungsansicht: ✓ für Passed, ✗ für Failed, ■ für Blocked, N/A für NotApplicable und — für NotRun. Farben, Hintergründe, Rahmen, Rundung, Schrift und Chip-Größe werden aus der bestehenden Darstellung übernommen; insbesondere wird kein eigenes rot/grün/violett-Farbschema eingeführt. Der aktuelle Referenz-Chip ist 18 px hoch, mindestens 22 px breit und verwendet 12 px Schrift. Unbekannte Werte verwenden dieselbe Kurzform wie die bestehende Ansicht (bis zu drei Großbuchstaben). Der vollständige originale Outcome-Wert steht im Tooltip beim Hover und Tastaturfokus sowie im zugänglichen Namen. Die Vorschau demonstriert vier Outcomes; diese Beispiele legen die schreibbare Werteliste nicht fest.</li>
+    </ul>
+    <h2>4. Manuelles Setzen in Azure</h2>
+    <ul>
+      <li><strong>RM-11 – Änderung aus dem Status-Chip:</strong> Ein Klick auf den kompakten Status öffnet die Outcome-Auswahl für einen vorhandenen, eindeutig adressierbaren Testfall in der fachlichen Suite der gewählten Version/Umgebung. Im geöffneten Dropdown stehen die erlaubten Outcomes vollständig ausgeschrieben; im geschlossenen Zustand bleibt ausschließlich der Chip sichtbar. Tastaturbedienung und Fokuskennzeichnung bleiben möglich, auf Touch-Geräten öffnet Antippen die beschriftete Auswahl. Die Änderung adressiert genau das zu dieser Suite-Projektion gehörende Schreibziel; Suite- und Testpunktkontext werden beibehalten. Die Anwendung überträgt die Änderung nicht auf unabhängige Testpunkte desselben Testfalls, anderer fachlicher Gruppen oder Releases. Wiederholte Anzeigen desselben konkreten Testpunkts erhalten gemäß RM-05/RM-06 gemeinsam den bestätigten Zustand. Andere Testfälle, Suites, Tags, Work-Item-Status und Relationen werden nicht verändert.</li>
+      <li><strong>RM-12 – Nachvollziehbarer Schreibzustand:</strong> Während eines laufenden Speicherns ist die betroffene Zelle gegen weitere Auswahl gesperrt und zeigt den laufenden Vorgang. Anschließend wird über den bestehenden Lesepfad aktualisiert. Erfolg wird erst angezeigt, wenn der neue Wert bestätigt ist. Bei Schreib- oder Aktualisierungsfehlern erscheint ein verständlicher Fehler; ein alter Wert darf nicht als neu bestätigtes Ergebnis erscheinen. Ein erfolgreicher Write mit fehlgeschlagener Bestätigung wird ausdrücklich als noch nicht verifiziert angezeigt.</li>
+      <li><strong>RM-13 – Fehlendes oder mehrdeutiges Schreibziel:</strong> Fehlt ein geeignetes Schreibziel oder lässt sich die Auswahl nicht eindeutig derselben dargestellten Zelle zuordnen, bleibt die Änderung gesperrt und erhält einen verständlichen Grund. Die vorhandene Auswahl-/Aggregationslogik wird dafür nicht stillschweigend geändert. Ein schreibbares Vorkommen benötigt genau einen Testpunkt für diesen Testfall in der konkreten Suite. Bei mehreren Testpunkten bleibt die Zelle mit Erklärung schreibgeschützt; es gibt keine neue Konfigurations-Auswahl oder -Aggregation. Ein noch ungetesteter Fall mit genau einem Testpunkt kann seinen ersten Durchlauf erhalten.</li>
+      <li><strong>RM-14 – Neuer Testdurchlauf:</strong> Jede manuelle Änderung erzeugt einen neuen manuellen Testdurchlauf für genau den adressierten Testpunkt. Frühere Runs und Resultate werden nicht korrigiert oder gelöscht. Schreibbare Ziel-Outcomes sind Passed, Failed, Blocked, NotApplicable und Inconclusive. NotRun und weitere gelesene Werte bleiben sichtbar, sind aber keine manuellen Ziel-Outcomes; ein Zurücksetzen auf ungetestet ist nicht enthalten. Der neue Run und sein Resultat werden abgeschlossen und über den unveränderten Lesepfad zurückgelesen. Erst wenn neuer Run, Outcome und Suite/Testfall bestätigt sind, gilt die Änderung als verifiziert. Gleichzeitige oder veraltete Auswahl für dieselbe Zelle darf keine anderen Ziele überschreiben. Nach einem Fehler nach Run-Erzeugung wird dessen Existenz mitgeteilt, damit kein verdeckter Wiederholungs-Write erfolgt. Es wird kein allein lokal gespeicherter Outcome eingeführt.</li>
+    </ul>
+    <h2>5. Zustand, Bedienbarkeit und Abgrenzung</h2>
+    <ul>
+      <li><strong>RM-15 – Persistenz und Umstieg von v1:</strong> Es gibt eine versionierte Matrix-Konfiguration pro bestehendem Set: Stammsuite, Darstellungsmodus, eigene Testfall-Tag-Liste, logische Vergleichsgruppen, explizite Suite-Zuordnungen je Gruppe und Spalte, Versionsspalten mit Suite-Tags und Reihenfolge, Filter sowie Gruppenzustand. Sie wird über das bestehende LowDB-Präferenzmuster mit Sanitizing und Patch-Erzeugung gespeichert und nach Neustart wiederhergestellt. Beim Umstieg von v1 bleiben Stammsuite, Darstellungsmodus, Spaltennamen, Umgebungsbeschriftungen, vollständige Spaltentags, Sichtbarkeit, Spaltenreihenfolge, Testfall-Tag-Liste und Filter erhalten. Ein bisheriger Spaltentag wird zum Suite-Tag; seine bisherige Verwendung auf Testfällen genügt nicht für eine Quelle. Alte Release-Wurzeln beschränken die Quellen nicht mehr. <strong>Alte explizite Zuordnungen physischer Katalog-Suites werden nicht stillschweigend auf die neuen Namensgruppen übertragen.</strong> Die Suite-Auswahl wird nach den neuen Regeln neu bestimmt und ein verständlicher Umstiegshinweis nennt diese Änderung sowie gegebenenfalls erforderliche neue Zuordnungen. Alte physische Gruppenreihenfolgen und Einklappzustände werden beim Umstieg auf Namensgruppen neu initialisiert: Gruppen beginnen in der Standardreihenfolge und aufgeklappt. Der Umstiegshinweis benennt diesen Reset ausdrücklich; der Nutzer kann die Reihenfolge und eingeklappten Gruppen danach neu festlegen. Andere Set- und Zuordnungseinstellungen bleiben erhalten. Ergebnisse und laufende Speicher-/Ladezustände werden nicht als Nutzerpräferenz persistiert.</li>
+      <li><strong>RM-16 – Schmale Versionsspalten:</strong> Versionsspalten sind kompakt, in der Vorschau circa 76 px breit, und wachsen nicht auf die Breite eines ausgeschriebenen Outcomes oder auf den verfügbaren Leerraum. Version und Umgebung stehen im Kopf auf getrennten Zeilen; der vollständige kombinierte Tag wird dort nicht zusätzlich wiederholt. Längere Beschriftungen bleiben durch Umbruch zugänglich. Die Testfallspalte behält Platz für ID und Titel. Bei vielen Releases kann die Matrix horizontal scrollen; Testfallspalte und Spaltenköpfe bleiben beim entsprechenden Scrollen sichtbar. Der sichtbare Chip bleibt klein, seine Bedienfläche ist ausreichend groß (Vorschau 32 px, auf Touch-Geräten 44 px). Tooltip und geöffnetes Dropdown verändern die Spaltenbreite nicht und werden nicht am Tabellenrand abgeschnitten. Gruppen und Dropdowns sind per Tastatur bedienbar und zugänglich beschriftet. Bedeutung wird nie nur über Farbe vermittelt. Ohne gewählte Releases erscheint eine verständliche Aufforderung zur Spaltenauswahl; ein leerer Testkatalog wird ausdrücklich als leer dargestellt.</li>
+      <li><strong>RM-17 – Scope und bestehende Funktionen:</strong> Version 2 verändert die Anzeigeidentität der Zeilen und die Auswahl der Quell-Suites. Sie verändert weder das bestehende Testfall-/Ergebnis-Matching noch die Zuordnungsansicht, Query-Definitionen oder Tags in Azure. Die bereits vorhandene manuelle Outcome-Schreibfunktion erzeugt weiterhin neue Runs gemäß RM-11 bis RM-14. Das Lesen der Tags konkreter Suite-Work-Items gehört zum Umfang; eine Pflege dieser Tags in der Matrix ist nicht enthalten. Automatisches Erstellen von Releases, neue Konfigurationsaggregation, historische Momentaufnahmen des Katalogs, Excel-Export und Massenänderungen sind nicht enthalten. Die Matrix zeigt den aktuellen Datenstand vorhandener Suites; der Vergleich bleibt auf den Plan und Projektkontext des aktiven Sets begrenzt.</li>
+      <li><strong>RM-18 – Testsuite- und Testfall-Tag-Filter:</strong> Der Nutzer kann Testfälle nach ihrer tatsächlichen direkten Mitgliedschaft in einer gewählten Testsuite und unabhängig davon nach einem vollständigen vorhandenen <strong>Testfall-Tag</strong> filtern. „Alle Testsuites“ beziehungsweise „Alle Tags“ hebt den jeweiligen Filter auf. Filtertypen werden mit UND kombiniert; Tagvergleiche ignorieren Groß-/Kleinschreibung und äußere Leerzeichen. Die Suite-Auswahl umfasst die im Plan zugänglichen Suites. Diese Filter verändern weder Versionsspalten noch die Auswahl ihrer Quell-Suites. Fehlende Filterdaten werden als Lade-/Fehlerzustand angezeigt, nicht als leerer Trefferbestand.</li>
+      <li><strong>RM-19 – Suche und Filterwirkung auf logische Zeilen:</strong> Zusätzlich gibt es eine Suche nach ID oder Titel; sie vergleicht enthaltenen Text unabhängig von Groß-/Kleinschreibung. Die drei Filter ermitteln passende Testfall-IDs vor der Gruppierung. Ein Treffer bleibt in jeder seiner unterschiedlichen fachlichen Namensgruppen innerhalb des Katalogs sichtbar, dort jeweils genau einmal pro Testfall-ID. Der Suite-Filter beantwortet „Kommt der Testfall in dieser Suite vor?“ und wählt keine Ergebnisquelle. Im Testfall-Tag-Modus kann dieselbe logische Zeile in mehreren Tag-Gruppen dargestellt werden; unterschiedliche fachliche Namen bleiben getrennt. Gruppen ohne Treffer werden ausgeblendet. Bei null Treffern erscheint „Keine Testfälle für diese Filter“. Leere Filter zeigen wieder den gesamten logischen Katalog. Mehrfachauswahl innerhalb eines Filters und weitere Filter sind nicht enthalten.</li>
+      <li><strong>RM-20 – Eindeutige und stabile Suite-Auswahl:</strong> Ohne gespeicherte explizite Zuordnung wird für jede fachliche Namensgruppe und Spalte planweit nach exaktem Suite-Namen und vollständigem Suite-Tag gesucht. <strong>Nur mehrere verschiedene physische Suites mit demselben fachlichen Namen und demselben Spaltentag sind mehrdeutig.</strong> Derselbe physische Suite-Datensatz wird nicht mehrfach als Kandidat gezählt. Wiederholte Namen im Stammkatalog oder Suites gleichen Namens mit anderen Tags blockieren eine eindeutige Quelle nicht. Bei Mehrdeutigkeit zeigt die betroffene Zelle „Suite zuordnen“, besitzt kein Outcome-Dropdown und bleibt schreibgeschützt. Die Konfiguration zeigt die Kandidaten mit vollständigem Planpfad, Suite-ID und passendem Suite-Tag; der Nutzer wählt eine konkrete Kandidaten-Suite. Es gibt keine unscharfe Namenssuche und keine Zusammenführung mehrerer Quellen zu einem Outcome. Die aktuelle automatische oder explizite Quellzuordnung ist in der Konfiguration einsehbar. Explizite v2-Zuordnungen verwenden stabile Suite-IDs und bleiben bei Umbenennung der gewählten Quell-Suite erhalten, solange diese im selben Plan weiterhin den Spaltentag trägt. Entfernen der Suite, Entfernen dieses Tags oder Wechsel in einen anderen Plan macht die Zuordnung ungültig; eine andere namensgleiche Suite ersetzt sie nicht automatisch. Die Zelle erklärt die ungültige Zuordnung und erfordert eine erneute Auswahl. Die Namensregel dient bei einer bereits gespeicherten gültigen expliziten ID nicht als nachträglicher Umbenennungsfilter.</li>
+    </ul>
+    <h2>Vorgeschlagener Umfang von v2</h2>
+    <p>Die bereits vorhandene Matrix wird auf Suite-Tags und logische Namensgruppen umgestellt. Der Stammkatalog bleibt führend und darf den ganzen Plan umfassen. Ergebnisquellen werden unabhängig davon im selben Plan gesucht. Testfall-Tags dienen der Darstellung und Filterung, Suite-Tags der Quellwahl. Die bisherigen Set-, Layout- und Zuordnungseinstellungen bleiben erhalten; RM-15 beschreibt den notwendigen Umstieg der Matrix-Einstellungen.</p>
+    <h2>Befund aus dem aktuellen Repository</h2>
+    <p>Die Release-Matrix ist bereits implementiert. Das vorhandene Read Model enthält Testfall-ID, Suite-ID, Testfall-Tags, Outcome, Testpunkt, Konfiguration, Run- und Resultat-ID. Der bestehende Aggregator und seine Testpunkt-Fallbacks werden weiterverwendet. Die manuelle Schreibfunktion existiert bereits: <code>record-matrix-outcome.use-case.ts</code> erzeugt neue Runs über den Execution-Port und bestätigt deren Ergebnisse durch erneutes Lesen. Neu ist in v2 die Suite-Tag-basierte Quellwahl mit logischen Zeilen; diese fachliche Änderung darf erst nach Freigabe dieses Entwurfs umgesetzt werden.</p>
+    <p>Geprüfte Referenzen: <code>src/features/release-matrix/matrix-presentation.ts</code>, <code>src/application/use-cases/load-release-matrix.use-case.ts</code>, <code>src/application/use-cases/record-matrix-outcome.use-case.ts</code> und <code>src/domain/test-management/outcome-aggregator.ts</code>. Die bestehende kompakte Statusdarstellung aus <code>src/domain/test-management/outcome-display.ts</code>, <code>src/app/bootstrap/local-ui-relations.css</code> und dem Token-System bleibt maßgeblich. Diese technischen Verweise dienen der Einordnung; nach Freigabe sind die Anforderungen dieses HTML-Artefakts die fachliche Prüfgrundlage.</p>
+    <h2>Vertragsprozess</h2>
+    <p><strong>Dieser Entwurf ist noch nicht freigegeben.</strong> Vertrag v1 und seine eingefrorenen Tests bleiben unverändert. Erst nach ausdrücklicher Freigabe wird das finale v2-Artefakt separat versioniert und mit SHA-256 eingefroren. Danach folgen ausschließlich Tests und Test-Harness mit vollständiger Traceability und unabhängigem Review gegen v2. Erst nach bestandenem Test-Gate wird Produktcode angepasst. Die folgende interaktive Vorschau erläutert das Verhalten mit ausschließlich illustrativen Beispieldaten; sie schreibt keine Azure-Daten und ist keine Implementierung.</p>
+  </section>
+
+  <div id="release-matrix-concept" aria-label="AzureTestOps Release-Matrix Entwurf">
+  <style>
+    #release-matrix-concept { color-scheme:light dark; --font-body:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-display:var(--font-body); --text-xs:.75rem; --text-sm:.875rem; --text-base:1rem; --color-primary:#842cc3; --color-primary-dark:#5b1a8a; --color-bg:light-dark(#ffffff,#0c0a09); --color-surface:light-dark(#ffffff,#1c1917); --color-bg-muted:light-dark(#f8f8f8,#292524); --color-text:light-dark(#1c1917,#fafaf9); --color-text-secondary:light-dark(#57534e,#a8a29e); --color-border:light-dark(#d6d3d1,#44403c); --color-border-subtle:light-dark(#e7e5e4,#292524); --color-tab-active-bg:light-dark(#f1e7f9,#32203f); --color-tab-active-text:light-dark(#4c1d68,#f3e8ff); --color-success-fg:light-dark(#168044,#6fdfa0); --color-danger:light-dark(#c92a2a,#ff7b7b); --color-warning-text:light-dark(#92400e,#f7d696); --space-1:.25rem; --space-2:.5rem; --space-3:.75rem; --space-4:1rem; --space-6:1.5rem; --radius-sm:.5rem; --radius-md:.625rem; color:var(--color-text); font:400 var(--text-sm)/1.5 var(--font-body); }
+    #release-matrix-concept * { box-sizing:border-box; }
+    #release-matrix-concept { --color-secondary:#87f3a4; --color-border-strong:light-dark(#bfbab5,#57534e); --color-surface-elevated:light-dark(#ffffff,#1f1b1a); --color-warning-border:light-dark(#f59e0b,#d79a2b); --color-warning-bg:light-dark(#fef3c7,#3c2d0d); --space-4-5:1.125rem; --space-5-5:1.375rem; --radius-pill:999px; --font-bold:700; --tracking-wide:.025em; --matrix-column-width:76px; }
+    #release-matrix-concept .rm-shell { background:var(--color-bg); }
+    #release-matrix-concept .rm-header { display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); flex-wrap:wrap; padding:var(--space-3) var(--space-4); border-bottom:1px solid var(--color-border-subtle); background:var(--color-surface); }
+    #release-matrix-concept .rm-brand { font-family:var(--font-display); font-size:1.35rem; font-weight:900; }
+    #release-matrix-concept .rm-nav { display:flex; align-items:center; gap:var(--space-1); }
+    #release-matrix-concept button, #release-matrix-concept select, #release-matrix-concept input[type="search"], #release-matrix-concept textarea { font:inherit; color:var(--color-text); background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-sm); padding:var(--space-2) var(--space-3); }
+    #release-matrix-concept .rm-tag-editor { display:flex; align-items:end; flex-wrap:wrap; gap:var(--space-3); margin-bottom:var(--space-4); }
+    #release-matrix-concept .rm-tag-editor label { display:grid; gap:var(--space-1); }
+    #release-matrix-concept textarea { max-width:100%; width:280px; }
+    #release-matrix-concept button, #release-matrix-concept select { cursor:pointer; }
+    #release-matrix-concept .rm-filters { display:flex; gap:var(--space-3); flex-wrap:wrap; align-items:end; margin-bottom:var(--space-4); }
+    #release-matrix-concept .rm-filters label { display:grid; gap:var(--space-1); font-size:var(--text-xs); min-width:0; }
+    #release-matrix-concept .rm-filters input, #release-matrix-concept .rm-filters select { max-width:100%; min-width:0; }
+    #release-matrix-concept .rm-nav button { border-color:transparent; }
+    #release-matrix-concept .rm-nav button[aria-pressed="true"] { background:var(--color-tab-active-bg); color:var(--color-tab-active-text); }
+    #release-matrix-concept .rm-context { color:var(--color-text-secondary); font-size:var(--text-xs); }
+    #release-matrix-concept .rm-content { padding:var(--space-4); }
+    #release-matrix-concept .rm-toolbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--space-3); margin-bottom:var(--space-4); }
+    #release-matrix-concept h2 { font-size:1.125rem; font-weight:500; margin:0; }
+    #release-matrix-concept .rm-subtitle { color:var(--color-text-secondary); font-size:var(--text-xs); }
+    #release-matrix-concept .rm-table-scroll { overflow-x:auto; }
+    #release-matrix-concept table { border-collapse:separate; border-spacing:0; width:100%; min-width:690px; }
+    #release-matrix-concept th, #release-matrix-concept td { padding:var(--space-3); border-bottom:1px solid var(--color-border-subtle); text-align:left; font-weight:400; }
+    #release-matrix-concept thead th { background:var(--color-bg-muted); font-weight:500; min-width:145px; }
+    #release-matrix-concept thead th:first-child { width:43%; min-width:250px; }
+    #release-matrix-concept .rm-id { color:var(--color-text-secondary); font-size:var(--text-xs); margin-right:var(--space-2); }
+    #release-matrix-concept .rm-group th { background:var(--color-bg-muted); padding:var(--space-2) var(--space-3); }
+    #release-matrix-concept .rm-group button { padding:var(--space-1) 0; background:transparent; border:none; font-weight:500; }
+    #release-matrix-concept .rm-group small { margin-left:var(--space-3); color:var(--color-text-secondary); font-size:var(--text-xs); }
+    #release-matrix-concept table.rm-matrix { width:auto; min-width:0; table-layout:fixed; }
+    #release-matrix-concept .rm-matrix thead th:first-child { width:340px; min-width:260px; }
+    #release-matrix-concept .rm-matrix [data-col] { width:var(--matrix-column-width); min-width:var(--matrix-column-width); max-width:var(--matrix-column-width); text-align:center; padding:var(--space-1) var(--space-2); }
+    #release-matrix-concept .rm-matrix thead [data-col] { font-size:var(--text-xs); }
+    #release-matrix-concept .rm-matrix thead .rm-subtitle { overflow-wrap:anywhere; }
+    #release-matrix-concept .rm-status-control { position:relative; display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:var(--radius-sm); vertical-align:middle; }
+    #release-matrix-concept .rm-status-control:focus-within { outline:2px solid var(--color-primary); outline-offset:2px; }
+    #release-matrix-concept .rm-outcome-chip { display:inline-flex; align-items:center; justify-content:center; flex:none; height:var(--space-4-5); min-width:var(--space-5-5); padding:0 var(--space-2); border:1px solid var(--color-border-strong); border-radius:var(--radius-pill); background:var(--color-bg-muted); color:var(--color-text); font-size:var(--text-xs); font-weight:var(--font-bold); letter-spacing:var(--tracking-wide); line-height:1; text-transform:uppercase; }
+    #release-matrix-concept .rm-outcome-chip[data-outcome="Passed"] { border-color:color-mix(in srgb,var(--color-secondary) 70%,var(--color-border-strong)); background:color-mix(in srgb,var(--color-secondary) 22%,var(--color-surface-elevated)); color:var(--color-text); }
+    #release-matrix-concept .rm-outcome-chip[data-outcome="Failed"] { border-color:var(--color-warning-border); background:var(--color-warning-bg); color:var(--color-warning-text); }
+    #release-matrix-concept .rm-outcome-chip[data-outcome="Blocked"] { border-color:color-mix(in srgb,var(--color-primary) 55%,var(--color-border-strong)); background:color-mix(in srgb,var(--color-primary) 12%,var(--color-surface-elevated)); color:var(--color-text); }
+    #release-matrix-concept select.rm-outcome { position:absolute; inset:0; width:100%; height:100%; padding:0; opacity:0; cursor:pointer; }
+    #release-matrix-concept button.rm-empty-status { width:32px; height:32px; padding:0; border:0; background:transparent; color:var(--color-text-secondary); font-size:var(--text-xs); cursor:help; }
+    #release-matrix-concept .rm-absent { font-size:var(--text-xs); color:var(--color-text-secondary); }
+    #release-matrix-concept .rm-legend { display:flex; gap:var(--space-4); flex-wrap:wrap; padding:var(--space-3) 0; color:var(--color-text-secondary); font-size:var(--text-xs); }
+    #release-matrix-concept .rm-feedback { min-height:32px; padding:var(--space-2) 0; color:var(--color-tab-active-text); font-size:var(--text-xs); }
+    #release-matrix-concept .rm-config { background:var(--color-bg-muted); padding:var(--space-4); border:1px solid var(--color-border-subtle); border-radius:var(--radius-md); margin-bottom:var(--space-4); }
+    #release-matrix-concept .rm-config th, #release-matrix-concept .rm-config td { padding:var(--space-2); font-size:var(--text-xs); }
+    #release-matrix-concept .rm-config h2 { margin-bottom:var(--space-2); }
+    #release-matrix-concept .rm-footer { padding:var(--space-2) var(--space-4); border-top:1px solid var(--color-border); color:var(--color-text-secondary); text-align:center; font-size:var(--text-xs); }
+    #release-matrix-concept .rm-preview-label { color:var(--color-text-secondary); padding:var(--space-2) 0; font-size:var(--text-xs); }
+    #release-matrix-concept .rm-relations { display:grid; grid-template-columns:1fr 1fr; gap:var(--space-6); }
+    #release-matrix-concept .rm-relation-item { padding:var(--space-3); border:1px solid var(--color-border); border-radius:var(--radius-sm); margin-top:var(--space-3); background:var(--color-surface); }
+    #release-matrix-concept [hidden] { display:none !important; }
+    #release-matrix-concept[data-compact="true"] td { padding-top:var(--space-2); padding-bottom:var(--space-2); }
+    @media(max-width:600px) { #release-matrix-concept .rm-header { align-items:flex-start; } #release-matrix-concept .rm-nav { flex-wrap:wrap; } #release-matrix-concept .rm-content { padding:var(--space-2); } #release-matrix-concept .rm-relations { grid-template-columns:1fr; } }
+    @media(pointer:coarse) { #release-matrix-concept button, #release-matrix-concept .rm-outcome { min-height:44px; } #release-matrix-concept .rm-status-control, #release-matrix-concept button.rm-empty-status { width:44px; height:44px; } }
+  </style>
+  <style>
+    #release-matrix-concept input[type="text"] { font:inherit; color:var(--color-text); background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-sm); padding:var(--space-2); width:100%; min-width:120px; }
+    #release-matrix-concept .rm-config-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--space-3); margin:var(--space-3) 0; }
+    #release-matrix-concept .rm-config-grid fieldset { min-width:0; border:1px solid var(--color-border); border-radius:var(--radius-sm); padding:var(--space-3); }
+    #release-matrix-concept .rm-config-grid label { display:grid; gap:var(--space-1); margin-bottom:var(--space-2); font-size:var(--text-xs); }
+    #release-matrix-concept .rm-config select { max-width:100%; }
+    #release-matrix-concept .rm-source { display:grid; gap:var(--space-1); font-size:var(--text-xs); }
+    #release-matrix-concept .rm-source small { color:var(--color-text-secondary); }
+    #release-matrix-concept .rm-source select { width:100%; max-width:280px; font-size:var(--text-xs); }
+    #release-matrix-concept .rm-source-table { table-layout:fixed; min-width:800px; }
+    #release-matrix-concept .rm-source-table th:first-child { width:18%; min-width:120px; }
+    #release-matrix-concept .rm-source-table td { vertical-align:top; overflow-wrap:anywhere; }
+    #release-matrix-concept .rm-demo-control { display:flex; flex-wrap:wrap; gap:var(--space-3); align-items:center; padding:var(--space-2) 0; color:var(--color-text-secondary); font-size:var(--text-xs); }
+    #release-matrix-concept .rm-scroll-viewport { overflow:auto; max-height:440px; }
+    #release-matrix-concept .rm-matrix thead th { position:sticky; top:0; z-index:3; }
+    #release-matrix-concept .rm-matrix tr>th:first-child { position:sticky; left:0; z-index:2; background:var(--color-surface); }
+    #release-matrix-concept .rm-matrix thead th:first-child { z-index:4; background:var(--color-bg-muted); }
+    #release-matrix-concept .rm-matrix .rm-group th { background:var(--color-bg-muted); }
+    #release-matrix-concept .rm-matrix thead [data-col] { overflow-wrap:anywhere; }
+    #release-matrix-concept .rm-matrix .rm-group small { display:inline; }
+    #release-matrix-concept button:focus-visible, #release-matrix-concept select:focus-visible, #release-matrix-concept input:focus-visible { outline:2px solid var(--color-primary); outline-offset:2px; }
+    @media(max-width:700px) { #release-matrix-concept .rm-config-grid { grid-template-columns:1fr; } #release-matrix-concept .rm-matrix thead th:first-child { min-width:230px; } }
+  </style>
+  <div class="rm-preview-label">INTERAKTIVER ENTWURF · Beispieldaten · alle Änderungen gelten ausschließlich in dieser Vorschau</div>
+  <div class="rm-shell">
+    <header class="rm-header"><span class="rm-brand">AzureTestOps</span><nav class="rm-nav" aria-label="Ansicht"><button type="button" data-view="relations" aria-pressed="false">Zuordnung</button><button type="button" data-view="matrix" aria-pressed="true">Release-Matrix</button></nav><span class="rm-context">Set · Releasevergleich</span></header>
+    <div class="rm-content">
+      <section data-panel="matrix" aria-label="Release-Matrix">
+        <div class="rm-toolbar"><div><h2>Tests im Versionsvergleich</h2><div class="rm-subtitle" id="rm-group-description"></div></div><button type="button" id="rm-config-button" aria-expanded="false" aria-controls="rm-config-panel">Spalten &amp; Gruppierung</button></div>
+        <section class="rm-config" id="rm-config-panel" hidden aria-label="Matrix konfigurieren">
+          <h2>Katalog &amp; Versionsspalten</h2>
+          <label>Stammsuite <select id="rm-catalog"><option value="plan">Gesamter Plan · #1</option><option value="catalog">Plan &gt; Testkatalog · #10</option></select></label>
+          <p class="rm-subtitle">Die Stammsuite bestimmt die Zeilen. Ergebnisquellen werden im ganzen Plan über fachlichen Namen + Suite-Tag ausgewählt.</p>
+          <div class="rm-config-grid" id="rm-columns"></div>
+          <h2>Konkrete Quellen je Vergleichsgruppe</h2>
+          <p class="rm-subtitle">Exakter Name + vollständiger Suite-Tag. Pfad und ID zeigen die konkrete Quelle. Bei Konflikten eine Suite auswählen.</p>
+          <div class="rm-table-scroll"><table class="rm-source-table" aria-label="Konkrete Quell-Suites"><thead id="rm-sources-head"></thead><tbody id="rm-sources"></tbody></table></div>
+          <p class="rm-subtitle">Bestandsumstieg v1 → v2: Spalten und Tags bleiben erhalten. Frühere Release-Wurzeln gelten nicht mehr für die Quellwahl; alte explizite Zuordnungen und physische Gruppenzustände werden mit Hinweis neu initialisiert.</p>
+        </section>
+        <div class="rm-filters" aria-label="Testkatalog filtern">
+          <label>Gruppieren nach<select id="rm-group-mode"><option value="suites">Gleichnamigen Suites</option><option value="tags">Eigener Testfall-Tag-Liste</option></select></label>
+          <label>Testfall<input type="search" id="rm-search" placeholder="ID oder Titel"></label>
+          <label>In Testsuite<select id="rm-suite-filter"><option value="">Alle Testsuites</option></select></label>
+          <label>Testfall-Tag<select id="rm-tag-filter"><option value="">Alle Tags</option><option>Regression</option><option>Data Import</option><option>2.1.0-Test</option></select></label>
+        </div>
+        <div class="rm-tag-editor" id="rm-tag-editor" hidden><label>Meine Testfall-Tags · ein Tag pro Zeile<textarea id="rm-group-tags" rows="3">Regression
+Data Import</textarea></label><button type="button" id="rm-apply-tags">Tag-Liste anwenden</button></div>
+        <div class="rm-table-scroll rm-scroll-viewport"><table class="rm-matrix" aria-label="Testergebnisse nach fachlicher Gruppe, Testfall und Release"><thead id="rm-matrix-head"></thead><tbody id="rm-rows"></tbody></table></div>
+        <div id="rm-empty" hidden></div>
+        <div class="rm-legend"><span>✓ Passed</span><span>✗ Failed</span><span>■ Blocked</span><span>— NotRun</span><span>· Nicht in Suite</span><span>? Quelle fehlt / zuordnen</span></div>
+        <div class="rm-feedback" role="status" aria-live="polite">#201 erscheint einmal unter Regression und einmal unter Data Import – mit getrennten Ergebnissen.</div>
+        <div class="rm-demo-control"><strong>Vorschau-Szenarien:</strong><label><input type="checkbox" id="rm-conflict"> Zweite „Regression“-Suite mit Tag „2.1.0-Test“</label><label><input type="checkbox" id="rm-shared-source"> Suite #51 trägt zusätzlich „2.1.0-Pilot“</label></div>
+      </section>
+      <section data-panel="relations" aria-label="Zuordnungsansicht, schematisch" hidden><div class="rm-toolbar"><h2>Zuordnung</h2><span class="rm-subtitle">Bestehende Ansicht · hier nur schematisch</span></div><div class="rm-relations"><div>Test Cases<div class="rm-relation-item">#201 · CSV-Datei importieren<div class="rm-subtitle">Regression · Ergebnis aus konkreter Suite</div></div></div><div>Work Items<div class="rm-relation-item">#701 · Importvalidierung · Active</div></div></div></section>
+    </div>
+    <footer class="rm-footer">An Open Source Project by Christian Betz @ TensorFive GmbH</footer>
+  </div>
+  <script>
+  (() => {
+    const root=document.getElementById('release-matrix-concept');
+    const q=selector=>root.querySelector(selector);
+    const el=(tag,text,cls)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(cls)node.className=cls;return node;};
+    const equalTag=(a,b)=>a.trim().toLocaleLowerCase()===b.trim().toLocaleLowerCase();
+    const cases=new Map([[101,{title:'Anmelden mit gültigen Zugangsdaten',tags:['Regression']}],[103,{title:'Anmeldung mit zweitem Faktor',tags:['Regression']}],[201,{title:'CSV-Datei importieren',tags:['Regression','Data Import','2.1.0-Test']}],[202,{title:'Fehlerhafte Importzeilen zurückweisen',tags:['Data Import']}],[203,{title:'Neues Importformat prüfen',tags:['Data Import']}],[301,{title:'Datenexport prüfen',tags:[]}]]);
+    const suites=[
+      {id:11,name:'Regression',path:'Plan > Testkatalog > Regression',tags:[],members:{101:'NotRun',103:'NotRun',201:'NotRun'},catalog:true},
+      {id:12,name:'Data Import',path:'Plan > Testkatalog > Data Import',tags:[],members:{201:'NotRun',202:'NotRun',203:'NotRun'},catalog:true},
+      {id:13,name:'Allgemein',path:'Plan > Testkatalog > Allgemein',tags:[],members:{301:'NotRun'},catalog:true},
+      {id:41,name:'Regression',path:'Plan > Release 2.0.0 > Test > Regression',tags:['2.0.0-Test'],members:{101:'Passed',201:'Passed'}},
+      {id:42,name:'Data Import',path:'Plan > Release 2.0.0 > Test > Data Import',tags:['2.0.0-Test'],members:{201:'Passed',202:'Failed'}},
+      {id:43,name:'Allgemein',path:'Plan > Release 2.0.0 > Test > Allgemein',tags:['2.0.0-Test'],members:{301:'Passed'}},
+      {id:51,name:'Regression',path:'Plan > Release 2.1.0 > Test > Regression',tags:['2.1.0-Test'],members:{101:'Passed',103:'Passed',201:'Failed'}},
+      {id:52,name:'Data Import',path:'Plan > Release 2.1.0 > Test > Data Import',tags:['2.1.0-Test'],members:{201:'Passed',202:'Passed'}},
+      {id:53,name:'Allgemein',path:'Plan > Release 2.1.0 > Test > Allgemein',tags:['2.1.0-Test'],members:{}},
+      {id:61,name:'Regression',path:'Plan > Release 2.1.0 > Abnahme > Regression',tags:['2.1.0-Abnahme'],members:{101:'Passed',103:'Blocked',201:'NotRun'}},
+      {id:62,name:'Data Import',path:'Plan > Release 2.1.0 > Abnahme > Data Import',tags:['2.1.0-Abnahme'],members:{201:'Passed',202:'NotRun',203:'NotRun'}},
+      {id:71,name:'Regression',path:'Plan > Zweiter Testzweig > Regression',tags:['2.1.0-Test'],members:{101:'Failed',103:'NotRun',201:'Passed'},conflict:true}
+    ];
+    const columns=[{name:'2.0.0',environment:'Test',tag:'2.0.0-Test',visible:true},{name:'2.1.0',environment:'Test',tag:'2.1.0-Test',visible:true},{name:'2.1.0',environment:'Abnahme',tag:'2.1.0-Abnahme',visible:true}];
+    const symbols={Passed:'✓',Failed:'✗',Blocked:'■',NotApplicable:'N/A',Inconclusive:'INC',NotRun:'—'};
+    const writable=['Passed','Failed','Blocked','NotApplicable','Inconclusive'];
+    const mappings=new Map(),collapsed=new Set();let selectedTags=['Regression','Data Import'];
+    const activeSuites=()=>suites.filter(s=>!s.conflict||q('#rm-conflict').checked);
+    const suiteTags=s=>s.id===51&&q('#rm-shared-source').checked?[...s.tags,'2.1.0-Pilot']:s.tags;
+    const sourceKey=(name,index)=>JSON.stringify([name,index]);
+    function resolve(name,index){
+      const col=columns[index],tag=col.tag.trim();
+      if(!tag)return {candidates:[],reason:'Suite-Tag auswählen'};
+      const tagged=activeSuites().filter(s=>suiteTags(s).some(t=>equalTag(t,tag)));
+      const candidates=tagged.filter(s=>s.name===name),explicit=mappings.get(sourceKey(name,index));
+      if(explicit){const suite=tagged.find(s=>s.id===explicit);return {suite,candidates,reason:suite?'':'Gespeicherte Suite-Zuordnung ungültig. Bitte neu auswählen.'};}
+      return {suite:candidates.length===1?candidates[0]:undefined,candidates,reason:candidates.length>1?'Suite zuordnen: mehrere gleichnamige Suites mit diesem Suite-Tag.':candidates.length===0?'Suite fehlt für diesen Suite-Tag':''};
+    }
+    function catalog(){return activeSuites().filter(s=>q('#rm-catalog').value==='plan'||s.catalog);}
+    function logicalRows(){const rows=new Map();for(const suite of catalog())for(const id of Object.keys(suite.members)){const key=JSON.stringify([suite.name,Number(id)]);if(!rows.has(key))rows.set(key,{id:Number(id),group:suite.name,...cases.get(Number(id))});}return [...rows.values()].sort((a,b)=>a.title.localeCompare(b.title)||a.id-b.id||a.group.localeCompare(b.group));}
+    const describeSource=(suite,index)=>suite.path+' · Suite #'+suite.id+' · Suite-Tag: '+columns[index].tag.trim();
+    function renderColumns(){
+      q('#rm-columns').replaceChildren();
+      columns.forEach((col,index)=>{const field=el('fieldset'),legend=el('legend','Spalte '+(index+1));field.append(legend);
+        for(const [key,labelText] of [['name','Anzeigename'],['environment','Umgebung'],['tag','Suite-Tag']]){const label=el('label',labelText),input=el('input');input.type='text';input.value=col[key];input.setAttribute('aria-label',labelText+' '+(index+1));input.addEventListener('input',()=>{col[key]=input.value;render();});label.append(input);field.append(label);}
+        const visible=el('label',' Anzeigen'),checkbox=el('input');checkbox.type='checkbox';checkbox.checked=col.visible;checkbox.setAttribute('aria-label','Spalte '+(index+1)+' anzeigen');checkbox.addEventListener('change',()=>{col.visible=checkbox.checked;render();});visible.prepend(checkbox);field.append(visible);q('#rm-columns').append(field);
+      });
+    }
+    function renderSources(names){
+      const head=el('tr');head.append(el('th','Fachliche Gruppe'));columns.forEach(col=>head.append(el('th',col.name+' · '+col.environment)));q('#rm-sources-head').replaceChildren(head);q('#rm-sources').replaceChildren();
+      for(const name of names){const tr=el('tr');tr.append(el('th',name));columns.forEach((col,index)=>{const td=el('td'),box=el('div',undefined,'rm-source'),source=resolve(name,index);
+        box.append(el('span',source.suite?source.suite.path:source.reason));
+        if(source.suite)box.append(el('small','Suite #'+source.suite.id+' · Suite-Tag: '+col.tag.trim()));
+        const select=el('select');select.setAttribute('aria-label','Suite für '+name+' / Spalte '+(index+1));const automatic=el('option','Automatisch'+(source.candidates.length>1?' · mehrdeutig':''));automatic.value='';select.append(automatic);
+        for(const candidate of source.candidates){const option=el('option',describeSource(candidate,index));option.value=candidate.id;select.append(option);}
+        const explicit=mappings.get(sourceKey(name,index));if(explicit&&!source.candidates.some(s=>s.id===explicit)){const option=el('option','Gespeicherte Suite #'+explicit+(source.suite?'':' · ungültig'));option.value=explicit;select.append(option);}select.value=explicit||'';
+        select.addEventListener('change',()=>{const key=sourceKey(name,index);if(select.value)mappings.set(key,Number(select.value));else mappings.delete(key);render();});box.append(select);td.append(box);tr.append(td);
+      });q('#rm-sources').append(tr);}
+    }
+    function render(){
+      const all=logicalRows(),names=[...new Set(all.map(r=>r.group))].sort((a,b)=>a.localeCompare(b));renderSources(names);
+      q('#rm-group-description').textContent=all.length+' Zeilen · '+names.length+' fachliche Gruppen · '+(q('#rm-catalog').value==='plan'?'Gesamter Plan':'Testkatalog');
+      const tagMode=q('#rm-group-mode').value==='tags';q('#rm-tag-editor').hidden=!tagMode;
+      const search=q('#rm-search').value.trim().toLocaleLowerCase(),filterTag=q('#rm-tag-filter').value,filterSuite=q('#rm-suite-filter').value;
+      const matched=all.filter(row=>(!search||(row.id+' '+row.title).toLocaleLowerCase().includes(search))&&(!filterTag||row.tags.some(t=>equalTag(t,filterTag)))&&(!filterSuite||activeSuites().some(s=>String(s.id)===filterSuite&&Object.hasOwn(s.members,row.id))));
+      const sections=tagMode?[...selectedTags.map(name=>({name,key:'tag:'+name.toLocaleLowerCase(),rows:matched.filter(row=>row.tags.some(t=>equalTag(t,name)))})),{name:'Ohne Gruppierungs-Tag',key:'no-tag',rows:matched.filter(row=>!selectedTags.some(t=>row.tags.some(value=>equalTag(t,value))))}]:names.map(name=>({name,key:'suite:'+name,rows:matched.filter(row=>row.group===name)}));
+      const head=el('tr');head.append(el('th','Testfall'));columns.forEach((col,index)=>{if(!col.visible)return;const th=el('th',col.name);th.dataset.col=index;th.append(el('div',col.environment,'rm-subtitle'));head.append(th);});q('#rm-matrix-head').replaceChildren(head);q('#rm-rows').replaceChildren();
+      const visible=columns.filter(c=>c.visible).length;
+      for(const section of sections){if(!section.rows.length||!visible)continue;const tr=el('tr',undefined,'rm-group'),th=el('th'),button=el('button',(collapsed.has(section.key)?'▸ ':'▾ ')+section.name+' · '+section.rows.length);button.type='button';button.setAttribute('aria-expanded',String(!collapsed.has(section.key)));button.addEventListener('click',()=>{if(collapsed.has(section.key))collapsed.delete(section.key);else collapsed.add(section.key);render();});th.colSpan=visible+1;th.append(button,el('small',tagMode?'Testfall-Tag':'Fachliche Gruppe'));tr.append(th);q('#rm-rows').append(tr);if(collapsed.has(section.key))continue;
+        for(const row of section.rows){const tr=el('tr');tr.dataset.logicalRow=JSON.stringify([row.group,row.id]);const name=el('th');name.scope='row';name.append(el('span','#'+row.id,'rm-id'),document.createTextNode(row.title));if(tagMode)name.append(el('div',row.group,'rm-subtitle'));tr.append(name);
+          columns.forEach((col,index)=>{if(!col.visible)return;const td=el('td');td.dataset.col=index;const source=resolve(row.group,index),outcome=source.suite?.members[row.id];
+            if(!source.suite||outcome===undefined){const reason=source.suite?'Nicht in dieser Suite':source.reason,info=el('button',source.suite?'·':'?','rm-empty-status');info.type='button';info.dataset.tooltip=reason;info.setAttribute('aria-label',row.group+' · #'+row.id+' · '+col.name+' '+col.environment+' · '+reason);info.addEventListener('click',()=>{q('.rm-feedback').textContent=reason;if(!source.suite&&source.candidates.length>1){q('#rm-config-panel').hidden=false;q('#rm-config-button').setAttribute('aria-expanded','true');}});td.append(info);}
+            else {const context=row.group+' · #'+row.id+' · '+describeSource(source.suite,index),control=el('span',undefined,'rm-status-control'),chip=el('span',symbols[outcome]||outcome.slice(0,3).toUpperCase(),'rm-outcome-chip');chip.dataset.outcome=outcome;chip.setAttribute('aria-hidden','true');const select=el('select',undefined,'rm-outcome');select.dataset.tooltip=outcome+' · '+describeSource(source.suite,index);select.setAttribute('aria-label',context+' · '+outcome+' · Outcome ändern (nur Vorschau)');select.dataset.point=source.suite.id+':'+row.id;
+              for(const value of [...new Set([outcome,...writable])]){const option=el('option',value);option.value=value;option.disabled=!writable.includes(value);select.append(option);}select.value=outcome;
+              select.addEventListener('change',()=>{source.suite.members[row.id]=select.value;root.querySelectorAll('select[data-point]').forEach(peer=>{if(peer.dataset.point!==select.dataset.point)return;if(![...peer.options].some(o=>o.value===select.value)){const option=el('option',select.value);option.value=select.value;peer.append(option);}peer.value=select.value;peer.previousElementSibling.textContent=symbols[select.value];peer.previousElementSibling.dataset.outcome=select.value;peer.dataset.tooltip=peer.dataset.tooltip.replace(/^[^·]+/,select.value+' ');peer.setAttribute('aria-label',peer.getAttribute('aria-label').replace(/ · (Passed|Failed|Blocked|NotApplicable|Inconclusive|NotRun) · Outcome/, ' · '+select.value+' · Outcome'));});q('.rm-feedback').textContent='Nur Vorschau: '+row.group+' · #'+row.id+' · Suite #'+source.suite.id+' → '+select.value+'. Alle Anzeigen dieses konkreten Testpunkts sind aktualisiert.';});control.append(chip,select);td.append(control);
+            }tr.append(td);
+          });q('#rm-rows').append(tr);
+        }
+      }
+      q('#rm-empty').hidden=visible>0&&matched.length>0;q('#rm-empty').textContent=!visible?'Bitte Versionsspalten auswählen.':!all.length?'Der Testkatalog ist leer.':'Keine Testfälle für diese Filter.';
+    }
+    for(const suite of suites){if(suite.conflict)continue;const option=el('option',suite.path+' (#'+suite.id+')');option.value=suite.id;q('#rm-suite-filter').append(option);}
+    for(const id of ['rm-search','rm-tag-filter','rm-suite-filter','rm-group-mode','rm-catalog'])q('#'+id).addEventListener(id==='rm-search'?'input':'change',render);
+    q('#rm-apply-tags').addEventListener('click',()=>{selectedTags=q('#rm-group-tags').value.split(/\r?\n/).map(t=>t.trim()).filter(Boolean).filter((t,index,values)=>values.findIndex(v=>equalTag(v,t))===index);render();});
+    q('#rm-config-button').addEventListener('click',event=>{const panel=q('#rm-config-panel');panel.hidden=!panel.hidden;event.currentTarget.setAttribute('aria-expanded',String(!panel.hidden));});
+    q('#rm-conflict').addEventListener('change',()=>{render();q('.rm-feedback').textContent=q('#rm-conflict').checked?'Vorschau: Regression hat jetzt zwei Suites mit 2.1.0-Test. Nur diese Gruppe/Spalte muss zugeordnet werden.':'Vorschau: Konfliktquelle entfernt. Eine zuvor explizit gewählte entfernte Quelle bleibt als ungültig erkennbar.';});
+    q('#rm-shared-source').addEventListener('change',()=>{columns[2].tag=q('#rm-shared-source').checked?'2.1.0-Pilot':'2.1.0-Abnahme';columns[2].environment=q('#rm-shared-source').checked?'Pilot':'Abnahme';renderColumns();render();q('.rm-feedback').textContent=q('#rm-shared-source').checked?'Vorschau: Suite #51 trägt Test und Pilot. Regression zeigt in diesen beiden Spalten denselben konkreten Testpunkt.':'Vorschau: Dritte Spalte zeigt wieder Abnahme.';});
+    root.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>{root.querySelectorAll('[data-view]').forEach(nav=>nav.setAttribute('aria-pressed',String(nav===button)));root.querySelectorAll('[data-panel]').forEach(panel=>panel.hidden=panel.dataset.panel!==button.dataset.view);}));
+    renderColumns();render();
+  })();
+  </script>
+<style>
+  #contract-outcome-tooltip { position:absolute; z-index:1000; max-width:240px; padding:6px 10px; border:1px solid light-dark(#d6d3d1,#44403c); border-radius:6px; color:light-dark(#1c1917,#fafaf9); background:light-dark(#ffffff,#1f1b1a); box-shadow:0 2px 8px light-dark(#0002,#0006); font:12px/1.5 system-ui,sans-serif; pointer-events:none; }
+</style>
+<div id="contract-outcome-tooltip" role="tooltip" hidden></div>
+<script>
+  (() => {
+    const preview = document.getElementById('release-matrix-concept');
+    const tooltip = document.getElementById('contract-outcome-tooltip');
+    let active = null;
+    function hide() { tooltip.hidden = true; active = null; }
+    function show(target) {
+      if (!target || !preview.contains(target)) return;
+      active = target;
+      tooltip.textContent = target.dataset.tooltip;
+      tooltip.hidden = false;
+      const box = target.getBoundingClientRect();
+      const bounds = tooltip.getBoundingClientRect();
+      const left = Math.max(8, Math.min(box.left + box.width / 2 - bounds.width / 2, document.documentElement.clientWidth - bounds.width - 8));
+      const top = box.bottom + bounds.height + 8 > innerHeight ? Math.max(8, box.top - bounds.height - 6) : box.bottom + 6;
+      tooltip.style.left = (left + scrollX) + 'px';
+      tooltip.style.top = (top + scrollY) + 'px';
+    }
+    preview.addEventListener('mouseover', event => { const target = event.target.closest('[data-tooltip]'); if (target) show(target); });
+    preview.addEventListener('mouseout', event => { if (event.target.closest('[data-tooltip]')) hide(); });
+    preview.addEventListener('focusin', event => { const target = event.target.closest('[data-tooltip]'); if (target) show(target); });
+    preview.addEventListener('focusout', hide);
+    preview.addEventListener('change', event => { if (active === event.target) show(active); });
+    preview.addEventListener('pointerdown', hide);
+    document.addEventListener('keydown', event => { if (event.key === 'Escape') hide(); });
+    document.addEventListener('scroll', hide, true);
+    window.addEventListener('resize', hide);
+  })();
+</script>
+</div>
+</main>
+</body>
+</html>

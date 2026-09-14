@@ -1,0 +1,21 @@
+{
+  "contract": "release-matrix.v2.html",
+  "files": [
+    {
+      "path": "tests/e2e/release-matrix-v2.contract.spec.ts",
+      "sha256": "80c150486ae23fb35de0ec40dc5bfc576b5c22ff1e19bc7d3afc591e756c4915"
+    },
+    {
+      "path": "tests/e2e/release-matrix-v2.sources.spec.ts",
+      "sha256": "0a9051deb472f59d69ba307df9fcf791433e3b10327f384b550e3ff8425640e3"
+    },
+    {
+      "path": "tests/e2e/release-matrix-v2/server.ts",
+      "sha256": "41acee1fec4b901e949218d7ab3d8658d97c2cc44d622ce067465932f1951abc"
+    },
+    {
+      "path": "tests/e2e/release-matrix-v2/azure-fixture.ts",
+      "sha256": "aa5f7e8b77ef5ce4e7af594edc79be04d613c089c0c6aa646838fc0a55218718"
+    }
+  ]
+}
