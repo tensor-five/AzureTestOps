@@ -1,52 +1,66 @@
 import { describe, it, expect } from 'vitest';
-import { emptyMatrixConfig } from '../../domain/release-matrix/matrix-config.js';
-import type { MatrixSnapshot } from '../../application/dto/release-matrix.dto.js';
-import type { TestCaseProjection } from '../../domain/test-management/test-case-projection.js';
-import { catalogRows, matrixGroups, resolveSource, descendantIds } from './matrix-presentation.js';
-const suite = (id: number, name: string, parentSuiteId: number | null) => ({ id, name, parentSuiteId, path: name, depth: 0, suiteType: 'StaticTestSuite', tags: id >= 20 ? ['v-test'] : [] });
-const row = (suiteId: number, workItemId: number, title: string, tags: string[] = []): TestCaseProjection => ({ suiteId, workItemId, title, tags, suitePath: 'Catalog', state: 'Ready', workItemType: 'Test Case', assignedTo: null, areaPath: null, priority: null, relatedIds: [], testPointId: null, configurationId: null, configurationName: null, lastOutcome: 'NotRun', lastRunId: null, lastResultId: null, lastResultCompletedDate: null });
-function fixture() {
-    const snapshot: MatrixSnapshot = { contextIdentity: 'https://dev.azure.com/contract-org/contract-project', planId: 1, suites: [suite(10, 'Catalog', null), suite(11, 'Regression', 10), suite(12, 'Import', 10), suite(20, 'Release', null), suite(21, 'Regression', 20), suite(22, 'Regression', 20)], projections: [row(11, 100, 'CSV', ['Regression', 'Import']), row(12, 100, 'CSV', ['Regression', 'Import']), row(12, 200, 'Empty'), row(21, 100, 'CSV', ['Regression'])], pointCounts: {} };
-    const column = { id: 'release', name: 'Version', environment: 'Test', rootSuiteId: 20, tag: 'v-test', visible: true };
-    const config = { ...emptyMatrixConfig(1, 10), columns: [column] };
-    return { snapshot, column, config };
-}
-describe('Matrix presentation preserves physical sources', () => {
-    it('retains full catalog occurrences and duplicates only presentation in tag mode', () => {
-        const { snapshot, config } = fixture();
-        expect(catalogRows(snapshot, config).map(p => p.groupName)).toEqual(['Regression', 'Import', 'Import']);
-        const groups = matrixGroups(snapshot, { ...config, grouping: 'tags', tags: ['Import', 'Regression'] });
-        expect(groups.map(g => g.rows.length)).toEqual([2, 2, 1]);
-        expect(groups[0].rows.map(p => p.groupName)).toEqual(['Import', 'Regression']);
+import { matrixHierarchyFixture, matrixSuite, matrixProjection } from '../../../tests/fixtures/matrix-hierarchy.js';
+import { catalogRows, matrixGroups, resolveSource, descendantIds, mappingKey, matrixRowKey, versionTitle } from './matrix-presentation.js';
+const context={environment:'TST',content:'Regression'};
+describe('Hierarchical matrix presentation',()=>{
+    it('deduplicates across versions while preserving different environments and contents',()=>{
+        const {snapshot,config}=matrixHierarchyFixture();
+        expect(catalogRows(snapshot,config).map(matrixRowKey)).toEqual(['["TST","Regression",100]','["TST","Import",100]','["TST","Import",200]','["ACC","Regression",100]']);
+        expect(matrixGroups(snapshot,config).map(g=>[g.name,g.rows.length])).toEqual([['ACC',1],['TST',3]]);
+        expect(matrixGroups(snapshot,{...config,grouping:'content'}).map(g=>[g.name,g.rows.length])).toEqual([['Import',2],['Regression',2]]);
     });
-    it('filters direct membership by ID while retaining catalog occurrences', () => {
-        const { snapshot, config } = fixture();
-        expect(matrixGroups(snapshot, { ...config, suiteFilter: '21', tagFilter: 'regression', search: 'cSv' }).flatMap(g => g.rows).map(p => p.groupName)).toEqual(['Import', 'Regression']);
-        expect(matrixGroups(snapshot, { ...config, suiteFilter: '20' })).toEqual([]);
+    it('uses direct membership and full normalized case tags without changing sources',()=>{
+        const {snapshot,config,column}=matrixHierarchyFixture();
+        const filtered={...config,suiteFilter:'32',tagFilter:' regression ',search:'cSv'};
+        expect(matrixGroups(snapshot,filtered).flatMap(g=>g.rows)).toHaveLength(3);
+        expect(matrixGroups(snapshot,{...config,suiteFilter:'30'})).toEqual([]);
+        expect(matrixGroups(snapshot,{...config,tagFilter:'Regress'})).toEqual([]);
+        expect(resolveSource(snapshot,filtered,context,column).suite?.id).toBe(32);
     });
-    it('requires an explicit suite on ambiguity and never replaces an invalid ID with a name match', () => {
-        const { snapshot, config, column } = fixture();
-        expect(resolveSource(snapshot, config, 'Regression', column).ambiguous).toBe(true);
-        config.mappings = { [JSON.stringify(['Regression','release'])]: 21 };
-        snapshot.suites.find(s => s.id === 21)!.name = 'Renamed';
-        expect(resolveSource(snapshot, config, 'Regression', column).suite?.id).toBe(21);
-        snapshot.suites.find(s => s.id === 21)!.tags = [];
-        expect(resolveSource(snapshot, config, 'Regression', column).suite).toBeUndefined();
+    it('resolves only direct children under the selected version',()=>{
+        const {snapshot,config,column}=matrixHierarchyFixture();
+        expect(resolveSource(snapshot,config,context,column).suite?.id).toBe(32);
+        snapshot.suites.push(matrixSuite(50,'Wrapper',31));snapshot.suites.find(s=>s.id===32)!.parentSuiteId=50;
+        expect(resolveSource(snapshot,config,context,column).reason).toContain('Inhaltliche Suite fehlt');
+        snapshot.suites.find(s=>s.id===31)!.parentSuiteId=10;
+        expect(resolveSource(snapshot,config,context,column).reason).toContain('Umgebungs-Suite fehlt');
     });
-    it('does not fuzzy-match names and safely traverses corrupt cycles', () => {
-        const { snapshot, config, column } = fixture();
-        snapshot.suites = snapshot.suites.filter(s => s.id !== 22);
-        snapshot.suites.find(s => s.id === 21)!.name = 'Regression extra';
-        expect(resolveSource(snapshot, config, 'Regression', column).suite).toBeUndefined();
-        snapshot.suites.find(s => s.id === 10)!.parentSuiteId = 11;
-        expect([...descendantIds(snapshot, 10)].sort()).toEqual([10, 11, 12]);
+    it.each([[31,'tst'],[32,'regression'],[32,'Regression extra']] as const)('uses exact complete names for %s', (id,name)=>{
+        const {snapshot,config,column}=matrixHierarchyFixture();snapshot.suites.find(s=>s.id===id)!.name=name;
+        expect(resolveSource(snapshot,config,context,column).suite).toBeUndefined();
     });
-    it('sorts equal titles by numeric ID and honors only suite order in suite mode', () => {
-        const { snapshot, config } = fixture();
-        snapshot.projections.push(row(11, 2, 'CSV'));
-        config.groupOrder = ['Import', 'Regression'];
-        const groups = matrixGroups(snapshot, config);
-        expect(groups.map(g => g.id)).toEqual(['Import', 'Regression']);
-        expect(groups[1].rows.map(p => p.workItemId)).toEqual([2, 100]);
+    it('requires concrete selection on duplicate paths and never substitutes invalid saved mappings',()=>{
+        const {snapshot,config,column}=matrixHierarchyFixture();snapshot.suites.push(matrixSuite(33,'Regression',31));
+        expect(resolveSource(snapshot,config,context,column).ambiguous).toBe(true);
+        config.mappings[mappingKey(context,column.id)]=33;
+        expect(resolveSource(snapshot,config,context,column).suite?.id).toBe(33);
+        snapshot.suites.find(s=>s.id===33)!.parentSuiteId=21;
+        expect(resolveSource(snapshot,config,context,column).suite).toBeUndefined();
+        expect(resolveSource(snapshot,config,context,column).reason).toContain('ungültig');
+    });
+    it('deduplicates physical records before detecting ambiguity and preserves version identity through rename',()=>{
+        const {snapshot,config,column}=matrixHierarchyFixture();snapshot.suites.push({...snapshot.suites.find(s=>s.id===32)!});
+        expect(resolveSource(snapshot,config,context,column).candidates).toHaveLength(1);
+        snapshot.suites.find(s=>s.id===30)!.name='Renamed version';
+        expect(versionTitle(snapshot,column)).toBe('Renamed version');
+        expect(resolveSource(snapshot,config,context,column).suite?.id).toBe(32);
+        expect(resolveSource(snapshot,{...config,planId:2},context,column).suite).toBeUndefined();
+        expect(resolveSource(snapshot,config,context,{...column,versionSuiteId:0}).reason).toContain('auswählen');
+        snapshot.suites=snapshot.suites.filter(s=>s.id!==30);
+        expect(versionTitle(snapshot,column)).toContain('ungültig');
+        expect(resolveSource(snapshot,config,context,column).reason).toContain('ungültig');
+    });
+    it('retains separate grouping orders and sorts equal titles by numeric case ID',()=>{
+        const {snapshot,config}=matrixHierarchyFixture();snapshot.projections.push(matrixProjection(22,2));
+        config.groupOrderByMode.environment=['TST','ACC'];config.groupOrderByMode.content=['Regression','Import'];
+        const groups=matrixGroups(snapshot,config);expect(groups.map(g=>g.id)).toEqual(['TST','ACC']);
+        expect(groups[0].rows.map(r=>r.workItemId)).toEqual([2,100,100,200]);
+        expect(matrixGroups(snapshot,{...config,grouping:'content'}).map(g=>g.id)).toEqual(['Regression','Import']);
+    });
+    it('handles incomplete ancestor chains and protects traversal against cycles',()=>{
+        const {snapshot,config}=matrixHierarchyFixture();snapshot.projections.push(matrixProjection(1,300));
+        expect(catalogRows(snapshot,config)).toHaveLength(4);
+        snapshot.suites.find(s=>s.id===10)!.parentSuiteId=22;
+        expect(descendantIds(snapshot,10).size).toBe(10);
     });
 });

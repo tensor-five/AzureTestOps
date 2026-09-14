@@ -1,7 +1,7 @@
 import * as React from 'react';
 import type { MatrixSnapshot, MatrixWrite } from '../../application/dto/release-matrix.dto.js';
 import type { MatrixConfig } from '../../domain/release-matrix/matrix-config.js';
-import { type MatrixGroup, resolveSource, mappingKey, matrixGroups, matrixRowKey } from './matrix-presentation.js';
+import { type MatrixGroup, resolveSource, mappingKey, matrixGroups, matrixRowKey, versionTitle } from './matrix-presentation.js';
 import { MatrixCell } from './matrix-cell.js';
 import { moveVisibleMatrixGroup } from './matrix-group-order.js';
 
@@ -10,23 +10,23 @@ type MatrixTableProps = {
   config: MatrixConfig;
   groups: MatrixGroup[];
   pending: Set<string>;
+  blocked?: Set<string>;
   stale?: boolean;
   update(patch: Partial<MatrixConfig>): void;
   record(input: MatrixWrite): Promise<void>;
   onConfigure(): void;
 };
 
-export function MatrixTable({ snapshot, config, groups, pending, stale, update, record, onConfigure }: MatrixTableProps) {
+export function MatrixTable({ snapshot, config, groups, pending, blocked, stale, update, record, onConfigure }: MatrixTableProps) {
   const columns = config.columns.filter(column => column.visible);
-  const collapseField = config.grouping === 'tags' ? 'collapsedTags' : 'collapsed';
-  const collapsedGroups = config[collapseField] ?? [];
+  const collapsedGroups = config.collapsedByMode[config.grouping];
   // Resolve once per suite/column, not once per cell in potentially large catalogs.
   const sources = React.useMemo(() => {
-    const names = new Set(groups.flatMap(group => group.rows.map(row => row.groupName)));
+    const contexts = new Map(groups.flatMap(group => group.rows.map(row => [mappingKey(row,''),row] as const)));
     const result = new Map<string, ReturnType<typeof resolveSource>>();
-    for (const name of names) {
+    for (const row of contexts.values()) {
       for (const column of config.columns) {
-        result.set(mappingKey(name, column.id), resolveSource(snapshot, config, name, column));
+        result.set(mappingKey(row, column.id), resolveSource(snapshot, config, row, column));
       }
     }
     return result;
@@ -37,8 +37,8 @@ export function MatrixTable({ snapshot, config, groups, pending, stale, update, 
   );
   const moveGroup = (index: number, direction: number) => {
     const allGroups = matrixGroups(snapshot, { ...config, search: '', tagFilter: '', suiteFilter: '' });
-    const order = [...new Set([...config.groupOrder, ...allGroups.map(group => group.id)])];
-    update({ groupOrder: moveVisibleMatrixGroup(order, groups.map(group => group.id), groups[index].id, direction) });
+    const order = [...new Set([...config.groupOrderByMode[config.grouping], ...allGroups.map(group => group.id)])];
+    update({ groupOrderByMode: {...config.groupOrderByMode,[config.grouping]: moveVisibleMatrixGroup(order, groups.map(group => group.id), groups[index].id, direction)} });
   };
 
   return (
@@ -52,9 +52,9 @@ export function MatrixTable({ snapshot, config, groups, pending, stale, update, 
           <tr>
             <th scope="col">Testfall</th>
             {columns.map(column => (
-              <th key={column.id} scope="col" title={column.tag}
-                aria-label={`${column.name}${column.environment ? ' ' + column.environment : ''}`}>
-                <span>{column.name}</span>{column.environment && <small>{column.environment}</small>}
+              <th key={column.id} scope="col" title={versionTitle(snapshot,column)}
+                aria-label={versionTitle(snapshot,column)}>
+                <span>{versionTitle(snapshot,column)}</span>
               </th>
             ))}
           </tr>
@@ -68,17 +68,17 @@ export function MatrixTable({ snapshot, config, groups, pending, stale, update, 
                   <div>
                     <button type="button" aria-expanded={!collapsed}
                       aria-label={`Gruppe ${group.name} ${collapsed ? 'aufklappen' : 'einklappen'}`}
-                      onClick={() => update({ [collapseField]: collapsed
+                      onClick={() => update({ collapsedByMode: {...config.collapsedByMode,[config.grouping]: collapsed
                         ? collapsedGroups.filter(id => id !== group.id)
-                        : [...collapsedGroups, group.id] })}>
+                        : [...collapsedGroups, group.id]} })}>
                       {collapsed ? '▸' : '▾'} {group.name} <span>({group.rows.length})</span>
                     </button>
-                    {config.grouping === 'suites' && <>
+                    <>
                       <button type="button" aria-label={`Gruppe ${group.name} nach oben`}
                         disabled={index === 0} onClick={() => moveGroup(index, -1)}>↑</button>
                       <button type="button" aria-label={`Gruppe ${group.name} nach unten`}
                         disabled={index === groups.length - 1} onClick={() => moveGroup(index, 1)}>↓</button>
-                    </>}
+                    </>
                   </div>
                 </th>
               </tr>
@@ -86,18 +86,18 @@ export function MatrixTable({ snapshot, config, groups, pending, stale, update, 
                 <tr key={matrixRowKey(row)} data-matrix-row={matrixRowKey(row)}>
                   <th scope="row">
                     <span className="matrix-case-id">#{row.workItemId}</span> {row.title}
-                    {config.grouping === 'tags' && <small>{row.groupName}</small>}
+                    <small>{config.grouping === 'environment' ? row.content : row.environment}</small>
                   </th>
                   {columns.map(column => {
-                    const source = sources.get(mappingKey(row.groupName, column.id))!;
+                    const source = sources.get(mappingKey(row, column.id))!;
                     const key = `${source.suite?.id}:${row.workItemId}`;
                     const projection = projections.get(key);
                     return (
                       <td key={column.id} data-matrix-column={column.id}>
                         <MatrixCell projection={projection} pointCount={snapshot.pointCounts[key] ?? 0}
                           pending={pending.has(key)} missingSuite={!source.suite} ambiguous={source.ambiguous} missingSuiteReason={source.reason}
-                          sourceDescription={source.suite ? `${source.suite.path} · Suite #${source.suite.id} · Suite-Tag: ${column.tag.trim()}` : undefined}
-                          readOnlyReason={stale ? 'Angezeigter Stand veraltet. Bitte die Matrix vor weiteren Änderungen aktualisieren.' : undefined}
+                          sourceDescription={source.suite ? `${source.suite.path} · Suite #${source.suite.id}` : undefined}
+                          readOnlyReason={stale ? 'Angezeigter Stand veraltet. Bitte die Matrix vor weiteren Änderungen aktualisieren.' : blocked?.has(key) ? 'Der angelegte Durchlauf ist nicht bestätigt. Bitte diesen Durchlauf in Azure prüfen.' : undefined}
                           onConfigure={onConfigure}
                           onChange={outcome => {
                             if (projection?.testPointId) void record({

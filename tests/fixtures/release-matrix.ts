@@ -1,4 +1,3 @@
-import { WorkItemBackedSuiteMetadataAdapter } from '../../src/adapters/azure-devops/test-management/work-item-backed-suite-metadata.adapter.js';
 import { makeAzureFixture } from '../e2e/release-matrix-v2/azure-fixture.js';
 import { AzureTestManagementAdapter } from '../../src/adapters/azure-devops/test-management/azure-test-management.adapter.js';
 import { AzureTestExecutionAdapter } from '../../src/adapters/azure-devops/test-management/azure-test-execution.adapter.js';
@@ -7,5 +6,5 @@ import { AzureWorkItemHydrationAdapter } from '../../src/adapters/azure-devops/w
 import { WorkItemBackedTestCaseHydrationAdapter } from '../../src/adapters/azure-devops/test-management/work-item-backed-test-case-hydration.adapter.js';
 export function matrixTestServices() {
   const azure=makeAzureFixture();const context={organization:'contract-org',project:'contract-project'};
-  return {azure,services:{suiteMetadata:new WorkItemBackedSuiteMetadataAdapter(new AzureWorkItemHydrationAdapter(azure.client,context)),testManagement:new AzureTestManagementAdapter(azure.client,context),testCatalog:new AzureTestCatalogAdapter(azure.client,context),testCaseHydration:new WorkItemBackedTestCaseHydrationAdapter(new AzureWorkItemHydrationAdapter(azure.client,context)),execution:new AzureTestExecutionAdapter(azure.client,context)}};
+  return {azure,services:{testManagement:new AzureTestManagementAdapter(azure.client,context),testCatalog:new AzureTestCatalogAdapter(azure.client,context),testCaseHydration:new WorkItemBackedTestCaseHydrationAdapter(new AzureWorkItemHydrationAdapter(azure.client,context)),execution:new AzureTestExecutionAdapter(azure.client,context)}};
 }

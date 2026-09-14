@@ -40,6 +40,7 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
                 store = getMatrixMutationStore(port, setId, value.planId, value.contextIdentity);
             } while (alive.current && version === request.current && store.getSnapshot().confirmationRevision > readStartedAt);
             if (alive.current && version === request.current) {
+                store.reconcile(value, readStartedAt);
                 setSnapshot(value);
                 setError('');
                 observed.current = { store, revision: store.getSnapshot().confirmationRevision };
@@ -63,7 +64,7 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
     }, [mutationStore, mutation.confirmationRevision, reload]);
     React.useEffect(() => { alive.current = true; void reload(); return () => { alive.current = false; request.current++; activeRead.current?.abort(); }; }, [reload]);
     React.useEffect(() => {
-        if (config.migratedFrom === 1) matrixPreferenceStore.save(config, { scopeKey: setId });
+        if (config.migratedFrom) matrixPreferenceStore.save(config, { scopeKey: setId });
         // Persist the idempotently migrated configuration once when this set is mounted.
         // Further edits already use update() below.
     }, [setId]);
@@ -82,5 +83,5 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
     const mutationError = mutation.error && !snapshot ? `${mutation.error} Azure-Kontext: ${contextIdentity}.` : mutation.error;
     const staleMessage = stale ? 'Die angezeigte Matrix ist veraltet. Weitere Änderungen sind bis zum erfolgreichen Aktualisieren gesperrt.' : '';
     return { config, update, snapshot, stale, error: [error, mutationError, staleMessage].filter(Boolean).join(' '),
-        status: mutation.status, loading, pending: mutation.pending, record, reload };
+        status: mutation.status, loading, pending: mutation.pending, blocked: mutation.blocked, record, reload };
 }

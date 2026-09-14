@@ -1,6 +1,5 @@
-import type { TestSuiteMetadataPort } from '../ports/test-suite-metadata.port.js';
 import type { MatrixReadDiagnostics } from '../../shared/diagnostics/matrix-read-diagnostics.js';
-import type { MatrixData } from '../dto/release-matrix.dto.js';
+import type { MatrixData, MatrixResultEvidence } from '../dto/release-matrix.dto.js';
 import type { TestCatalogPort } from '../ports/test-catalog.port.js';
 import type { TestPoint } from '../../domain/test-management/test-point.js';
 import { flattenSuiteTree, type TestSuiteNode } from '../../domain/test-management/test-suite-tree.js';
@@ -8,7 +7,6 @@ import { loadTestCaseProjections, type LoadTestCaseProjectionsDeps } from './loa
 import { createMatrixReadSession } from './matrix-read-session.js';
 export type MatrixReadDeps = LoadTestCaseProjectionsDeps & {
     testCatalog: TestCatalogPort;
-    suiteMetadata: TestSuiteMetadataPort;
 };
 /** Reuses the existing suite/result aggregation without altering its matching rules. */
 export async function loadReleaseMatrix(planId: number, deps: MatrixReadDeps, options: { signal?: AbortSignal; diagnostics?: MatrixReadDiagnostics } = {}): Promise<MatrixData> {
@@ -19,6 +17,8 @@ export async function loadReleaseMatrix(planId: number, deps: MatrixReadDeps, op
     options.diagnostics?.progress({ planId, catalogSuiteCount: catalog.length, candidateRootCount: roots.length, missingParentCount: roots.length, duplicateCatalogSuiteIdCount: catalog.length - ids.size });
     let skippedOverlappingRoots = 0, overlappingSuiteCount = 0;
     const points = new Map<number, TestPoint[]>();
+    const completedRunIds = new Set<number>();
+    const rawResults = new Map<string, MatrixResultEvidence>();
     const session = createMatrixReadSession(deps, options);
     const read = session.testManagement;
     // The flat catalog can omit parent IDs. Resolve its candidates against the actual tree
@@ -37,18 +37,25 @@ export async function loadReleaseMatrix(planId: number, deps: MatrixReadDeps, op
         trees.set(tree.id, tree);
     }
     options.diagnostics?.progress({ canonicalRootCount: trees.size, skippedOverlappingRoots, overlappingSuiteCount });
-    const loadTags = () => deps.suiteMetadata.loadSuiteTags([...discovered]);
-    const suiteTags = await (options.diagnostics ? options.diagnostics.measure('suiteTags', { planId }, loadTags) : loadTags());
-    for (const id of discovered) if (!suiteTags.has(id)) throw new Error(`Suite-Tags unvollständig: Suite #${id} fehlt.`);
+    for (const id of ids) if (!discovered.has(id))
+        throw new Error(`Suite-Baum unvollständig: Suite #${id} fehlt in der geladenen Hierarchie.`);
     const snapshot: MatrixData = { planId, suites: [], projections: [], pointCounts: {} };
     const suiteTypes = new Map(catalog.map(suite => [suite.id, suite.suiteType]));
     for (const root of trees.values()) {
         const loaded = await loadTestCaseProjections({ planId, rootSuiteId: root.id }, { ...session, testManagement: {
                 loadSuiteTree: (p, s) => read.loadSuiteTree(p, s), listTestCasesInSuite: (p, s) => read.listTestCasesInSuite(p, s),
-                listRunsForPlan: p => read.listRunsForPlan(p), loadResultsForRun: r => read.loadResultsForRun(r),
+                listRunsForPlan: async p => {
+                    const runs = await read.listRunsForPlan(p);
+                    for (const run of runs) if (run.state === 'Completed') completedRunIds.add(run.runId);
+                    return runs;
+                }, loadResultsForRun: async runId => {
+                    const results = await read.loadResultsForRun(runId);
+                    for (const result of results) rawResults.set(`${result.runId}:${result.resultId}`, result);
+                    return results;
+                },
                 loadPointsForSuite: async (p, s) => { const result = await read.loadPointsForSuite(p, s); points.set(s, result); return result; }
             } });
-        snapshot.suites.push(...flattenSuiteTree(loaded.suiteTree).map(s => ({ ...s, suiteType: suiteTypes.get(s.id) ?? null, tags: suiteTags.get(s.id)! })));
+        snapshot.suites.push(...flattenSuiteTree(loaded.suiteTree).map(s => ({ ...s, suiteType: suiteTypes.get(s.id) ?? null })));
         snapshot.projections.push(...loaded.projections);
     }
     const canonicalSuites = new Map<number, MatrixData['suites'][number]>();
@@ -58,9 +65,13 @@ export async function loadReleaseMatrix(planId: number, deps: MatrixReadDeps, op
     }
     options.diagnostics?.progress({ suiteCount: canonicalSuites.size, duplicateSuiteIdCount: snapshot.suites.length - canonicalSuites.size });
     snapshot.suites = [...canonicalSuites.values()];
+    snapshot.completedRunIds = [...completedRunIds];
     snapshot.projections = [...new Map(snapshot.projections.map(p => [`${p.suiteId}:${p.workItemId}`, {
         ...p, suitePath: canonicalSuites.get(p.suiteId)?.path ?? p.suitePath,
     }])).values()];
+    // Only current run/case evidence is needed by the client; do not transmit the full run history.
+    const currentResults = new Set(snapshot.projections.map(p => `${p.lastRunId}:${p.workItemId}`));
+    snapshot.resultEvidence = [...rawResults.values()].filter(result => currentResults.has(`${result.runId}:${result.workItemId}`));
     for (const [suiteId, list] of points)
         for (const point of list) {
             const key = `${suiteId}:${point.workItemId}`;

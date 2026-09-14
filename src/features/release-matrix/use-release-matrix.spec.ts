@@ -6,6 +6,7 @@ import { loadReleaseMatrix } from '../../application/use-cases/load-release-matr
 import { matrixTestServices } from '../../../tests/fixtures/release-matrix.js';
 import { useReleaseMatrix } from './use-release-matrix.js';
 import { matrixPreferenceStore } from './matrix-preference-store.js';
+import { ApiError } from '../../application/dto/api-error.js';
 
 vi.mock('./matrix-preference-store.js', () => ({ matrixPreferenceStore: { load: () => null, save: vi.fn() } }));
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
@@ -30,10 +31,30 @@ async function fixture() {
     return { port, snapshot, confirmed, mount, resolve: () => {
         liveSnapshot = { ...snapshot, projections: snapshot.projections.map(p => p.suiteId === 21 && p.workItemId === 201 ? confirmed.projection : p) };
         resolve(confirmed);
-    }, reject: () => reject(new Error('Durchlauf 100 wurde angelegt, Ergebnis nicht bestätigt.')) };
+    }, reject: () => reject(new ApiError(500,'MATRIX_RUN_UNCONFIRMED','Durchlauf 100 wurde angelegt, Ergebnis nicht bestätigt.',{runId:100})) };
 }
 
 describe('Release matrix navigation during writes', () => {
+    it('releases an unconfirmed run only after successful reload confirms that point, including after remount',async()=>{
+        const f=await fixture(),first=await f.mount();let write!:Promise<void>;
+        act(()=>{write=first.result.current.record(input);});await act(async()=>{f.reject();await write;});
+        expect(first.result.current.blocked.has('21:201')).toBe(true);
+        f.port.load.mockRejectedValueOnce(new Error('Read failed'));
+        await act(()=>first.result.current.reload());expect(first.result.current.blocked.has('21:201')).toBe(true);
+        const partial={...f.snapshot,projections:[{...f.confirmed.projection,lastResultCompletedDate:null}]};
+        f.port.load.mockResolvedValueOnce(partial);
+        await act(()=>first.result.current.reload());expect(first.result.current.blocked.has('21:201')).toBe(true);
+        f.port.load.mockResolvedValueOnce({...f.snapshot,completedRunIds:[1],projections:[f.confirmed.projection]});
+        await act(()=>first.result.current.reload());expect(first.result.current.blocked.has('21:201')).toBe(true);
+        first.unmount();f.port.load.mockResolvedValue({...f.snapshot,completedRunIds:[100],
+            resultEvidence:[{resultId:1000,runId:100,suiteId:null,workItemId:201,pointId:21201,outcome:'Passed',completedDate:'2026-09-02T10:00:00Z'}],
+            projections:[{...f.confirmed.projection,lastResultCompletedDate:null}]});
+        const returned=await f.mount();
+        expect(returned.result.current.blocked.size).toBe(0);
+        expect(returned.result.current.error).toBe('');expect(returned.result.current.status).toContain('100');
+        expect(returned.result.current.snapshot?.projections[0].lastRunId).toBe(100);
+        expect(f.port.record).toHaveBeenCalledTimes(1);expect(matrixPreferenceStore.save).not.toHaveBeenCalled();
+    });
     it.each(['success', 'failure'] as const)('ends loading when a confirmation refresh replaces a foreground read (%s)', async outcome => {
         const f = await fixture();
         const hook = await f.mount();

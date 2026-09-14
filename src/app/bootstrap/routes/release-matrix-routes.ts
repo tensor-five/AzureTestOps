@@ -5,6 +5,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { AdoRuntime } from '../../composition/runtime.js';
 import type { SetRepositoryPort } from '../../../application/ports/set-repository.port.js';
 import type { MatrixWrite } from '../../../application/dto/release-matrix.dto.js';
+import type { TestExecutionPort } from '../../../application/ports/test-execution.port.js';
 import { loadReleaseMatrix } from '../../../application/use-cases/load-release-matrix.use-case.js';
 import { recordMatrixOutcome } from '../../../application/use-cases/record-matrix-outcome.use-case.js';
 import { readBody, parseJsonBody, writeJson } from './route-helpers.js';
@@ -15,6 +16,7 @@ export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepository
         if (!match)
             return false;
         let lock: string | null = null;
+        let createdRunId: number | null = null;
         const reading = !match[2] && method === 'GET';
         const providedId = req.headers?.['x-matrix-request-id'];
         const requestId = typeof providedId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(providedId) ? providedId : randomUUID();
@@ -65,12 +67,21 @@ export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepository
             }
             pending.add(key);
             lock = key;
-            writeJson(res, 200, await recordMatrixOutcome(body, services));
+            // Preserve the existing use case while exposing whether a failed write already created a run.
+            const execution: TestExecutionPort = {
+                createManualRun: async (plan, point) => {
+                    createdRunId = await services.execution.createManualRun(plan, point);
+                    return createdRunId;
+                },
+                completeResult: (run, result, outcome) => services.execution.completeResult(run, result, outcome),
+                completeRun: run => services.execution.completeRun(run),
+            };
+            writeJson(res, 200, await recordMatrixOutcome(body, { ...services, execution }));
         }
         catch (error) {
             diagnostics?.finish(controller.signal.aborted ? 'aborted' : 'error');
             if (controller.signal.aborted) return true;
-            writeJson(res, 500, { message: error instanceof Error ? error.message : 'Release-Matrix konnte nicht geladen oder gespeichert werden.' });
+            writeJson(res, 500, { ...(createdRunId !== null ? {code:'MATRIX_RUN_UNCONFIRMED',details:{runId:createdRunId}} : {}), message: error instanceof Error ? error.message : 'Release-Matrix konnte nicht geladen oder gespeichert werden.' });
         }
         finally {
             res.removeListener?.('close', closed);
