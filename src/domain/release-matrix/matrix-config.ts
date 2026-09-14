@@ -8,6 +8,10 @@ export type MatrixConfig = {
     planId: number;
     catalogRootId: number;
     grouping: MatrixGrouping;
+    /** Absent in older v3 preferences; those keep separate environment rows. */
+    separateEnvironments?: boolean;
+    /** Physical source per content, case and column in the combined view only. */
+    combinedMappings?: Record<string, number>;
     columns: MatrixColumn[];
     mappings: Record<string, number>;
     groupOrderByMode: MatrixGroupState;
@@ -19,7 +23,7 @@ export type MatrixConfig = {
 export const manualOutcomes = ['Passed', 'Failed', 'Blocked', 'NotApplicable', 'Inconclusive'] as const;
 export type ManualOutcome = typeof manualOutcomes[number];
 export function emptyMatrixConfig(planId: number, catalogRootId: number): MatrixConfig {
-    return { version: 3, planId, catalogRootId, grouping: 'environment', columns: [], mappings: {},
+    return { version: 3, planId, catalogRootId, grouping: 'environment', separateEnvironments: true, combinedMappings: {}, columns: [], mappings: {},
         groupOrderByMode: { environment: [], content: [] }, collapsedByMode: { environment: [], content: [] },
         search: '', tagFilter: '', suiteFilter: '' };
 }
@@ -44,9 +48,13 @@ export function sanitizeMatrixConfig(raw: unknown): MatrixConfig | null {
     const mappings: Record<string, number> = {};
     if (!legacy && record(raw.mappings)) for (const [key,id] of Object.entries(raw.mappings))
         if (positive(id)) Object.defineProperty(mappings,key,{value:id,enumerable:true});
+    const combinedMappings: Record<string, number> = {};
+    if (!legacy && record(raw.combinedMappings)) for (const [key,id] of Object.entries(raw.combinedMappings))
+        if (positive(id)) Object.defineProperty(combinedMappings,key,{value:id,enumerable:true});
     const migratedFrom = legacy ? (raw.version === 2 ? 2 : 1) : raw.migratedFrom;
     return { version:3, ...(migratedFrom===1||migratedFrom===2?{migratedFrom}:{}), planId:raw.planId,catalogRootId:raw.catalogRootId,
         grouping:!legacy&&raw.grouping==='content'?'content':'environment',columns:[...columns.values()],mappings,
+        separateEnvironments:legacy||raw.separateEnvironments!==false,combinedMappings,
         groupOrderByMode:groupState(legacy?null:raw.groupOrderByMode),collapsedByMode:groupState(legacy?null:raw.collapsedByMode),
         search:string(raw.search),tagFilter:string(raw.tagFilter),suiteFilter:string(raw.suiteFilter)};
 }
