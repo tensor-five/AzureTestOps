@@ -3,7 +3,7 @@
   "files": [
     {
       "path": "tests/e2e/release-matrix-v2.contract.spec.ts",
-      "sha256": "80c150486ae23fb35de0ec40dc5bfc576b5c22ff1e19bc7d3afc591e756c4915"
+      "sha256": "c10f9ba85e00d4345cdd129cd01fd4839294fc3e7f5dc12c08226ec4441e0ee6"
     },
     {
       "path": "tests/e2e/release-matrix-v2.sources.spec.ts",

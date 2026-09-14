@@ -140,7 +140,7 @@ test('V2-C16 RM01 RM12 RM14 locks identical copies and isolates a pending write 
 });
 test('V2-C17 RM01 RM02 RM07 RM15 restores every matrix preference after runtime restart without altering other sets',async({page})=>{
   const preserved={setLayouts:{'matrix-set':{hideEmptySuites:true,positions:{'tc:101:21':{x:14,y:28}}}},setFilters:{'matrix-set':{testCases:{titleQuery:'Anmelden'}}}};
-  await server.patch(preserved);await open(page);await page.getByLabel('Tag',{exact:true}).selectOption('Regression');await page.getByLabel('Testfall suchen',{exact:true}).fill('201');await page.getByLabel('In Testsuite',{exact:true}).selectOption('21');
+  await server.patch(preserved);await page.reload();await open(page);await page.getByLabel('Tag',{exact:true}).selectOption('Regression');await page.getByLabel('Testfall suchen',{exact:true}).fill('201');await page.getByLabel('In Testsuite',{exact:true}).selectOption('21');
   await page.getByRole('button',{name:'Spalten & Gruppierung',exact:true}).click();await page.getByLabel('Stammsuite',{exact:true}).selectOption('11');await page.getByLabel('Spaltenname 1',{exact:true}).fill('Release A');await page.getByLabel('Umgebung 1',{exact:true}).fill('Testsystem');await page.getByLabel('Spalte 2 anzeigen',{exact:true}).uncheck();
   await expect.poll(()=>server.disk()).toContain('Testsystem');await page.evaluate(()=>localStorage.clear());await page.goto('about:blank');await server.restart();await page.goto(server.origin);await open(page);
   await expect(page.getByLabel('Tag',{exact:true})).toHaveValue('Regression');await expect(page.getByLabel('In Testsuite',{exact:true})).toHaveValue('21');await expect(page.getByLabel('Testfall suchen',{exact:true})).toHaveValue('201');
