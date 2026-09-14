@@ -9,6 +9,7 @@ on:
       - src/application/ports/test-management.port.ts
       - playwright.config.ts
       - playwright.v4.config.ts
+      - playwright.matrix-layout.config.ts
       - scripts/check-frozen-tests.mjs
       - src/application/**/release-matrix*
       - src/application/**/load-release-matrix*
