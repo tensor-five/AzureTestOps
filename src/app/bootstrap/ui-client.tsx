@@ -1,3 +1,5 @@
+import { ReleaseMatrixPane } from "../../features/release-matrix/release-matrix-pane.js";
+import { buildAdoBaseUrl } from "../../shared/azure-devops/azure-rest-client.js";
 import * as React from "react";
 import { createRoot } from "react-dom/client";
 
@@ -84,6 +86,7 @@ function HydratedAppShell(props: {
       props.preferenceSyncStatus.loadError !== null
     )
   );
+  const [view, setView] = React.useState<"matching" | "matrix">("matching");
   const [isSetManagerOpen, setSetManagerOpen] = React.useState(false);
   const [magicSortControl, setMagicSortControl] = React.useState<MagicSortController | null>(null);
 
@@ -96,6 +99,11 @@ function HydratedAppShell(props: {
   const preflightStatus = useAuthPreflight();
   const setManagement = useSetManagement();
   const adoContextState = useAdoContext();
+  const activeSet = setManagement.sets.find(set => set.id === setManagement.activeSetId);
+  const matrixOrganization = activeSet?.organization ?? adoContextState.context?.organization;
+  const matrixProject = activeSet?.project ?? adoContextState.context?.project;
+  const matrixContextIdentity = matrixOrganization && matrixProject
+    ? buildAdoBaseUrl({ organization: matrixOrganization, project: matrixProject }).toLowerCase() : undefined;
   const ports = useClientPorts();
   const { state: snapshotState, refresh: refreshSnapshot } = useActiveSetSnapshot(
     setManagement.activeSetId
@@ -170,8 +178,12 @@ function HydratedAppShell(props: {
         preflightStatus={preflightStatus}
         themeMode={themeMode}
         onToggleTheme={handleThemeToggle}
-        refreshControl={refreshControl}
-        magicSortAction={magicSortAction}
+        refreshControl={view === "matching" ? refreshControl : null}
+        magicSortAction={view === "matching" ? magicSortAction : null}
+        viewSwitcher={<nav aria-label="Ansichten" className="matrix-navigation">
+          <button type="button" aria-pressed={view === "matching"} onClick={() => setView("matching")}>Zuordnung</button>
+          <button type="button" aria-pressed={view === "matrix"} onClick={() => setView("matrix")}>Release-Matrix</button>
+        </nav>}
         setSwitcher={
           <SetDropdown
             sets={setManagement.sets}
@@ -184,7 +196,9 @@ function HydratedAppShell(props: {
       />
       <PreferenceSyncError status={props.preferenceSyncStatus} />
       <div className="ui-shell-content">
+        <div hidden={view !== "matching"}>
         <RelationsPane
+          isVisible={view === "matching"}
           setId={setManagement.activeSetId}
           snapshot={snapshotState.snapshot}
           isLoading={snapshotState.isLoading}
@@ -193,7 +207,14 @@ function HydratedAppShell(props: {
           getWorkItemHref={getWorkItemHref}
           getSuiteHref={getSuiteHref}
           onMagicSortControlChange={handleMagicSortControlChange}
-        />
+        /></div>
+        {view === "matrix" && (setManagement.activeSetId ? <ReleaseMatrixPane
+          key={JSON.stringify([setManagement.activeSetId, activeSet?.planId, matrixContextIdentity])}
+          setId={setManagement.activeSetId}
+          planId={Number(activeSet?.planId)}
+          rootSuiteId={Number(activeSet?.rootSuiteId)}
+          contextIdentity={matrixContextIdentity}
+        /> : <p>Wähle ein Set für die Release-Matrix.</p>)}
       </div>
       <AppFooter />
 

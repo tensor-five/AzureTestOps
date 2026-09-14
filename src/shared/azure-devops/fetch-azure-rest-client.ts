@@ -58,6 +58,10 @@ export class FetchAzureRestClient implements AzureRestHttpClient {
     return this.send(url, "GET");
   }
 
+  public async post(url: string, body: unknown): Promise<AzureHttpResponse> {
+    return this.send(url, "POST", body, {"content-type":"application/json"});
+  }
+
   public async patch(
     url: string,
     body: unknown,
@@ -68,7 +72,7 @@ export class FetchAzureRestClient implements AzureRestHttpClient {
 
   private async send(
     url: string,
-    method: "GET" | "PATCH",
+    method: "GET" | "PATCH" | "POST",
     body?: unknown,
     extraHeaders?: Record<string, string>
   ): Promise<AzureHttpResponse> {
@@ -77,7 +81,7 @@ export class FetchAzureRestClient implements AzureRestHttpClient {
       ...(extraHeaders ?? {})
     };
 
-    if (method === "PATCH") {
+    if (method === "PATCH" || method === "POST") {
       headers["content-type"] = headers["content-type"] ?? "application/json-patch+json";
     }
 
@@ -87,7 +91,7 @@ export class FetchAzureRestClient implements AzureRestHttpClient {
     }
 
     const init: { method: string; headers: Record<string, string>; body?: string } = { method, headers };
-    if (method === "PATCH") {
+    if (method === "PATCH" || method === "POST") {
       init.body = typeof body === "string" ? body : JSON.stringify(body ?? []);
     }
 

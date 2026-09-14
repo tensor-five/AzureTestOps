@@ -1,3 +1,4 @@
+import { HttpReleaseMatrixAdapter } from "../../adapters/http/http-release-matrix.adapter.js";
 import { AzureWorkItemDeepLinkAdapter } from "../../adapters/azure-devops/work-items/azure-work-item-deep-link.adapter.js";
 import { AzureTestSuiteDeepLinkAdapter } from "../../adapters/azure-devops/test-management/azure-test-suite-deep-link.adapter.js";
 import type { ClientPorts } from "../../application/ports/client/client-ports.js";
@@ -28,6 +29,7 @@ export function buildBrowserClientPorts(): ClientPorts {
   installUserPreferencesPort(userPreferences);
 
   return {
+    releaseMatrix: new HttpReleaseMatrixAdapter(),
     activeSetSnapshot: new SseActiveSetSnapshotAdapter(),
     adoContext: new HttpAdoContextAdapter(),
     authPreflight: new HttpAuthPreflightAdapter(),

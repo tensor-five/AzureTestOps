@@ -1,3 +1,4 @@
+import { sanitizeMatrixConfig, type MatrixConfig } from "../../domain/release-matrix/matrix-config.js";
 import { sanitizeSetColorRules, type SetColorRulesBySetId } from "./color-rule-preference.js";
 
 export type ThemeModePreference = "system" | "light" | "dark";
@@ -99,6 +100,7 @@ export type UserPreferences = {
   setLayouts?: SetLayoutPreferencesBySetId;
   setFilters?: SetFiltersBySetId;
   setColorRules?: SetColorRulesBySetId;
+  setReleaseMatrices?: Record<string, MatrixConfig>;
   updatedAt?: string;
 };
 
@@ -180,6 +182,15 @@ export function sanitizeUserPreferences(value: unknown): UserPreferences {
       if (id.trim() && value) rules[id.trim()] = value;
     }
     next.setColorRules = rules;
+  }
+
+  if (isPlainRecord(candidate.setReleaseMatrices)) {
+    const matrices: Record<string, MatrixConfig> = {};
+    for (const [id, raw] of Object.entries(candidate.setReleaseMatrices)) {
+      const value = sanitizeMatrixConfig(raw);
+      if (id.trim() && value) matrices[id.trim()] = value;
+    }
+    next.setReleaseMatrices = matrices;
   }
 
   if (typeof candidate.updatedAt === "string") {

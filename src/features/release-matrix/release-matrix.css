@@ -1,0 +1,52 @@
+.matrix-navigation { display:flex; gap:var(--space-1); }
+.matrix-navigation button[aria-pressed="true"] { background:var(--color-tab-active-bg); color:var(--color-tab-active-text); border-color:var(--color-primary); }
+.release-matrix-pane { display:flex; flex-direction:column; gap:var(--space-3); min-height:0; min-width:0; width:100%; padding:var(--space-4); box-sizing:border-box; color:var(--color-text); }
+.release-matrix-pane button,.matrix-navigation button { color:var(--color-text); background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:var(--space-2) var(--space-3); font:inherit; cursor:pointer; }
+.release-matrix-pane button:disabled { opacity:.45; cursor:default; }
+.release-matrix-pane :focus-visible,.matrix-navigation :focus-visible { outline:2px solid var(--color-primary); outline-offset:2px; }
+.matrix-toolbar,.matrix-filters,.matrix-tag-editor { display:flex; align-items:center; gap:var(--space-3); flex-wrap:wrap; }
+.matrix-toolbar>div { margin-right:auto; }
+.matrix-toolbar h2 { font-size:var(--text-lg); margin:0; }
+.matrix-toolbar p,.matrix-settings p { color:var(--color-text-secondary); margin:var(--space-1) 0; }
+.matrix-filters label,.matrix-settings label,.matrix-tag-editor label { display:flex; flex-direction:column; gap:var(--space-1); min-width:0; font-size:var(--text-sm); }
+.matrix-filters input,.matrix-filters select,.matrix-settings input:not([type=checkbox]),.matrix-settings select,.matrix-tag-editor textarea { color:var(--color-text); background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:var(--space-2); font:inherit; max-width:100%; box-sizing:border-box; }
+.matrix-filters label { flex:1; min-width:140px; }
+.matrix-filters select { width:100%; }
+.matrix-settings { flex-shrink:0; max-height:45vh; overflow:auto; border:1px solid var(--color-border); border-radius:var(--radius-lg); padding:var(--space-3); background:var(--color-bg-muted); }
+.matrix-column-settings { display:flex; gap:var(--space-3); overflow:auto; padding:var(--space-2) 0; }
+.matrix-column-settings fieldset { flex:0 0 270px; min-width:0; display:flex; flex-direction:column; gap:var(--space-2); border:1px solid var(--color-border); border-radius:var(--radius-md); }
+.matrix-column-settings fieldset>div { display:flex; gap:var(--space-1); }
+.matrix-column-settings label:has(input[type=checkbox]) { flex-direction:row; }
+.matrix-error { color:var(--color-danger); padding:var(--space-2); }
+.matrix-success { color:var(--color-success-fg); padding:var(--space-2); }
+.matrix-empty { padding:var(--space-5); color:var(--color-text-secondary); background:var(--color-bg-muted); border-radius:var(--radius-md); }
+.matrix-scroll { overflow:auto; min-height:0; min-width:0; max-width:100%; max-height:max(calc(var(--space-4) * 12),60dvh); flex:1 1 auto; border:1px solid var(--color-border); border-radius:var(--radius-lg); }
+.matrix-scroll table { border-collapse:separate; border-spacing:0; table-layout:fixed; width:max-content; min-width:0; font-size:var(--text-sm); }
+.matrix-title-col { width:350px; }
+.matrix-status-col { width:76px; }
+.matrix-scroll th,.matrix-scroll td { border-right:1px solid var(--color-border-subtle); border-bottom:1px solid var(--color-border-subtle); box-sizing:border-box; }
+.matrix-scroll thead th { position:sticky; top:0; z-index:3; width:76px; min-width:76px; max-width:76px; padding:var(--space-3) var(--space-1); background:var(--color-bg-muted); text-align:center; overflow-wrap:anywhere; }
+.matrix-scroll th small { display:block; font-weight:normal; color:var(--color-text-secondary); margin-top:var(--space-1); line-height:1.4; }
+.matrix-scroll thead th:first-child { left:0; z-index:4; width:350px; min-width:350px; text-align:left; padding:var(--space-3); }
+.matrix-scroll th[scope=row] { position:sticky; left:0; z-index:2; background:var(--color-surface); text-align:left; padding:var(--space-2) var(--space-3); width:350px; min-width:350px; max-width:350px; overflow-wrap:anywhere; font-weight:normal; }
+.matrix-case-id { color:var(--color-text-muted); font-variant-numeric:tabular-nums; }
+.matrix-scroll td { width:76px; min-width:76px; max-width:76px; padding:0; text-align:center; background:var(--color-surface); }
+.matrix-group-row th { padding:0; text-align:left; background:var(--color-bg-muted); }
+.matrix-group-row th>div { position:sticky; left:0; width:350px; display:flex; align-items:center; min-height:38px; }
+.matrix-group-row button { border:0; background:transparent; padding:var(--space-2); }
+.matrix-group-row button:first-child { flex:1; text-align:left; font-weight:600; }
+.matrix-group-row span { color:var(--color-text-secondary); font-weight:normal; }
+.matrix-cell-control { position:relative; display:flex; align-items:center; justify-content:center; min-height:44px; width:100%; }
+.matrix-cell-control select { position:absolute; inset:0; width:100%; height:100%; min-height:44px; opacity:0; cursor:pointer; }
+.matrix-cell-control:focus-within { outline:2px solid var(--color-primary); outline-offset:-3px; }
+.matrix-cell-control button { border:0; background:transparent; width:100%; min-height:44px; font-size:var(--text-lg); }
+.matrix-tooltip { position:fixed; z-index:10000; pointer-events:none; box-sizing:border-box; width:max-content; max-width:min(320px,calc(100vw - 16px)); border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--color-surface-elevated); color:var(--color-text); box-shadow:0 4px 16px var(--color-overlay-scrim); font-size:var(--text-sm); padding:var(--space-2) var(--space-3); overflow-wrap:anywhere; }
+@media(max-width:600px) {
+  .release-matrix-pane { padding:var(--space-2); }
+  .matrix-toolbar { gap:var(--space-2); }
+  .matrix-title-col,.matrix-scroll thead th:first-child,.matrix-scroll th[scope=row],.matrix-group-row th>div { width:210px; min-width:210px; max-width:210px; }
+  .ui-shell-header-actions { flex-wrap:wrap; min-width:0; }
+  .matrix-filters label { min-width:120px; }
+}
+
+.matrix-cell-control[aria-busy="true"]::after { content:"…"; position:absolute; right:var(--space-1); color:var(--color-primary); font-weight:var(--font-bold); }

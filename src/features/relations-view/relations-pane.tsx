@@ -38,6 +38,7 @@ import { positionsFromSpacerLayout, projectVisibleSpacerLayout } from "./work-it
 const NO_VISIBLE_LINES: ReadonlySet<string> = new Set();
 
 export type RelationsPaneProps = {
+  isVisible?: boolean;
   setId: string | null;
   snapshot: ActiveSetSnapshot | null;
   isLoading: boolean;
@@ -250,7 +251,7 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
     addSpacer: spacerOption.addSpacer,
     setAddSpacer: spacerOption.setAddSpacer
   }), [magicSort, spacerOption.addSpacer, spacerOption.setAddSpacer]);
-  const magicSortAvailable = props.hasActiveSet && props.snapshot !== null && props.error === null;
+  const magicSortAvailable = props.isVisible !== false && props.hasActiveSet && props.snapshot !== null && props.error === null;
 
   React.useEffect(() => {
     props.onMagicSortControlChange?.(magicSortAvailable ? magicSortControl : null);
@@ -263,7 +264,7 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
 
   const drawing = useLineDrawing({
     containerRef,
-    enabled: true,
+    enabled: props.isVisible !== false,
     onConnect: (sourceItemKey, targetItemKey) => {
       const link = resolvePairFromItemKeys(sourceItemKey, targetItemKey);
       if (link) {
@@ -287,10 +288,11 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
     () => new Set()
   );
   const handleVisibleLineIdsChange = React.useCallback((next: ReadonlySet<string>) => {
+    if (props.isVisible === false) return;
     setRenderedLineIds((current) => sameStringSet(current, next) ? current : next);
-  }, []);
+  }, [props.isVisible]);
   const selection = useLineSelection({
-    enabled: true,
+    enabled: props.isVisible !== false,
     visibleLineIds:
       props.hasActiveSet && !props.error && props.snapshot
         ? renderedLineIds

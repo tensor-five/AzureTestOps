@@ -37,7 +37,8 @@
     "secrets:scan": "node ./scripts/secret-scan.mjs",
     "secrets:scan:staged": "node ./scripts/secret-scan.mjs --staged",
     "quality:gate": "npm run typecheck && npm run check:cycles && npm test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:coverage": "npm test -- --coverage --coverage.reporter=text-summary --coverage.reporter=json-summary --coverage.thresholds.lines=80 --coverage.thresholds.statements=80 --coverage.thresholds.functions=80"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
@@ -46,6 +47,7 @@
     "@types/node": "^22.13.11",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@vitest/coverage-v8": "^4.1.5",
     "esbuild": "^0.27.3",
     "husky": "^9.1.7",
     "jsdom": "^28.1.0",

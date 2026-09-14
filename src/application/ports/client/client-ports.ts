@@ -1,3 +1,4 @@
+import type { ReleaseMatrixClientPort } from "./release-matrix-client.port.js";
 import type { ActiveSetSnapshotClientPort } from "./active-set-snapshot-client.port.js";
 import type { AdoContextClientPort } from "./ado-context-client.port.js";
 import type { AuthPreflightClientPort } from "./auth-preflight-client.port.js";
@@ -16,6 +17,7 @@ import type { WorkItemDeepLinkClientPort } from "./work-item-deep-link-client.po
  * via injectable deps), so individual hooks never reach for global imports.
  */
 export type ClientPorts = {
+  releaseMatrix?: ReleaseMatrixClientPort;
   activeSetSnapshot: ActiveSetSnapshotClientPort;
   adoContext: AdoContextClientPort;
   authPreflight: AuthPreflightClientPort;

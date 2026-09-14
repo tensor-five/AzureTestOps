@@ -13,6 +13,7 @@ export type AzureHttpResponse = {
 
 export interface AzureRestHttpClient {
   get(url: string): Promise<AzureHttpResponse>;
+  post?(url: string, body: unknown): Promise<AzureHttpResponse>;
   patch?(
     url: string,
     body: unknown,

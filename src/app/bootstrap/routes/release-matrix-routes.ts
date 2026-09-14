@@ -1,0 +1,67 @@
+import { buildAdoBaseUrl } from "../../../shared/azure-devops/azure-rest-client.js";
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { AdoRuntime } from '../../composition/runtime.js';
+import type { SetRepositoryPort } from '../../../application/ports/set-repository.port.js';
+import type { MatrixWrite } from '../../../application/dto/release-matrix.dto.js';
+import { loadReleaseMatrix } from '../../../application/use-cases/load-release-matrix.use-case.js';
+import { recordMatrixOutcome } from '../../../application/use-cases/record-matrix-outcome.use-case.js';
+import { readBody, parseJsonBody, writeJson } from './route-helpers.js';
+export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepositoryPort) {
+    const pending = new Set<string>();
+    return async (method: string, pathname: string, req: IncomingMessage, res: ServerResponse): Promise<boolean> => {
+        const match = pathname.match(/^\/phase2\/sets\/([^/]+)\/release-matrix(\/outcomes)?$/);
+        if (!match)
+            return false;
+        let lock: string | null = null;
+        try {
+            if (method !== (match[2] ? 'POST' : 'GET')) {
+                writeJson(res, 405, { message: 'Methode nicht erlaubt.' });
+                return true;
+            }
+            const body = match[2] ? parseJsonBody(await readBody(req)) as MatrixWrite | null : null;
+            const set = await sets.getById(decodeURIComponent(match[1]));
+            if (!set) {
+                writeJson(res, 404, { message: 'Set nicht gefunden.' });
+                return true;
+            }
+            const planId = Number(set.planId);
+            if (!Number.isSafeInteger(planId) || planId <= 0)
+                throw new Error('Ungültiger Testplan.');
+            // Capture one immutable context; a concurrent set switch must not retarget this request.
+            const fallback = await ado.resolveContext();
+            const context = Object.freeze({ organization: set.organization ?? fallback.organization, project: set.project ?? fallback.project });
+            const contextIdentity = buildAdoBaseUrl(context).toLowerCase();
+            if (!ado.matrixServices)
+                throw new Error('Release-Matrix ist in dieser Laufzeit nicht verfügbar.');
+            if (!match[2]) {
+                writeJson(res, 200, { ...await loadReleaseMatrix(planId, ado.matrixServices(context)), contextIdentity });
+                return true;
+            }
+            if (!body || body.planId !== planId) {
+                writeJson(res, 400, { message: 'Testplan stimmt nicht mit dem Set überein.' });
+                return true;
+            }
+            if (body.contextIdentity !== contextIdentity) {
+                writeJson(res, 409, { message: 'Der Azure-Kontext hat sich seit dem Laden der Matrix geändert. Bitte die Matrix aktualisieren; es wurde kein Durchlauf erzeugt.' });
+                return true;
+            }
+            const services = ado.matrixServices(context);
+            const key = JSON.stringify([contextIdentity, planId, body.pointId]);
+            if (pending.has(key)) {
+                writeJson(res, 409, { message: 'Für diesen Testpunkt wird bereits ein Durchlauf gespeichert.' });
+                return true;
+            }
+            pending.add(key);
+            lock = key;
+            writeJson(res, 200, await recordMatrixOutcome(body, services));
+        }
+        catch (error) {
+            writeJson(res, 500, { message: error instanceof Error ? error.message : 'Release-Matrix konnte nicht geladen oder gespeichert werden.' });
+        }
+        finally {
+            if (lock)
+                pending.delete(lock);
+        }
+        return true;
+    };
+}

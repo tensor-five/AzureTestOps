@@ -10,7 +10,9 @@ on:
       - playwright.config.ts
       - scripts/check-frozen-tests.mjs
       - src/application/**/release-matrix*
-      - src/application/**/record-test-outcome*
+      - src/application/**/load-release-matrix*
+      - src/application/ports/test-execution.port.ts
+      - src/application/**/record-matrix-outcome*
       - src/application/ports/client/client-ports.ts
       - src/adapters/azure-devops/test-management/**
       - src/adapters/http/http-release-matrix*
@@ -21,10 +23,12 @@ on:
       - src/app/composition/**
       - src/app/bootstrap/http-server.ts
       - src/app/bootstrap/ui-client.tsx
+      - src/app/bootstrap/ui-client-matrix-navigation.spec.tsx
       - src/app/bootstrap/routes/release-matrix*
       - src/app/bootstrap/local-ui*.css
       - src/features/navigation/**
       - src/features/relations-view/test-case-card.tsx
+      - src/features/relations-view/relations-pane.tsx
       - docs/contracts/release-matrix.*
       - tests/e2e/release-matrix*
       - tests/e2e/release-matrix/**
@@ -50,6 +54,6 @@ jobs:
           node-version: 22
       - run: node scripts/check-release-matrix-approval.mjs
       - run: npm ci
-      - run: npm run typecheck && npm run check:cycles && npm test
+      - run: npm run typecheck && npm run check:cycles && npm run test:coverage
       - run: npx playwright install chromium
-      - run: npm run test:e2e -- tests/e2e/release-matrix.contract.spec.ts
+      - run: npm run test:e2e -- tests/e2e/release-matrix
