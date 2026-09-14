@@ -11,14 +11,14 @@ test.beforeEach(async ({ page }) => { await server.reset(); await page.goto(serv
 test('V4-B01 RM3-05 RM3-10 grouping shows opposite row context in a separate column', async ({ page }) => {
     await open(page);
     const rowKeys = await page.locator('[data-matrix-row]').evaluateAll(elements => elements.map(e => e.getAttribute('data-matrix-row')).sort());
-    await expect(page.getByRole('table').getByRole('columnheader')).toHaveText(['Testfall', 'Inhalt', '2.1.0', '2.2.0']);
+    await expect(page.getByRole('table').getByRole('columnheader')).toHaveText(['ID', 'Titel', 'Inhalt', '2.1.0', '2.2.0']);
     await expect(rows(page, 'TST', 'Regression', 201).getByRole('cell', { name: 'Regression', exact: true })).toBeVisible();
     await expect(rows(page, 'TST', 'Regression', 201).getByRole('rowheader')).not.toContainText('Regression');
     await expect(page.getByRole('button', { name: 'Gruppe TST einklappen', exact: true })).toBeVisible();
     const mode = page.getByLabel('Gruppieren nach', { exact: true });
     await expect(mode.locator('option')).toHaveText(['Umgebung', 'Inhalt']);
     await mode.selectOption('content');
-    await expect(page.getByRole('table').getByRole('columnheader')).toHaveText(['Testfall', 'Umgebung', '2.1.0', '2.2.0']);
+    await expect(page.getByRole('table').getByRole('columnheader')).toHaveText(['ID', 'Titel', 'Umgebung', '2.1.0', '2.2.0']);
     for (const environment of ['TST', 'ACC']) {
         const row = rows(page, environment, 'Regression', 201);
         await expect(row.getByRole('cell', { name: environment, exact: true })).toBeVisible();
@@ -30,7 +30,7 @@ test('V4-B01 RM3-05 RM3-10 grouping shows opposite row context in a separate col
     await expect(outcome(page, 'ACC', 'Regression', 101)).toHaveValue('Blocked');
     await expect(page.getByLabel('Gruppierungs-Tags', { exact: true })).toHaveCount(0);
     await mode.selectOption('environment');
-    await expect(page.getByRole('table').getByRole('columnheader')).toHaveText(['Testfall', 'Inhalt', '2.1.0', '2.2.0']);
+    await expect(page.getByRole('table').getByRole('columnheader')).toHaveText(['ID', 'Titel', 'Inhalt', '2.1.0', '2.2.0']);
     await expect(rows(page, 'TST', 'Regression', 201).getByRole('cell', { name: 'Regression', exact: true })).toBeVisible();
     await expect(rows(page, 'TST', 'Regression', 201).getByRole('rowheader')).not.toContainText('Regression');
     expect(server.azure().writes).toEqual([]);
@@ -43,13 +43,13 @@ test('V4-B02 RM3-01 RM3-13 version selection, visibility and order persist by ID
     await page.getByLabel('Versions-Suite 3', { exact: true }).selectOption('40');
     await page.getByRole('button', { name: 'Spalte 3 nach links', exact: true }).click();
     await page.getByLabel('Spalte 3 anzeigen', { exact: true }).uncheck();
-    await expect(page.getByRole('table').getByRole('columnheader')).toHaveText(['Testfall','Inhalt','2.1.0','2.0.0']);
+    await expect(page.getByRole('table').getByRole('columnheader')).toHaveText(['ID','Titel','Inhalt','2.1.0','2.0.0']);
     await expect.poll(async () => JSON.parse(await server.disk()).users.contract.setReleaseMatrices['matrix-set'].columns.map((c: any) => [c.versionSuiteId, c.visible])).toEqual([[20,true],[40,true],[30,false]]);
     await page.evaluate(() => localStorage.clear()); await page.goto('about:blank'); await server.restart(); await page.goto(server.origin); await open(page);
-    await expect(page.getByRole('table').getByRole('columnheader')).toHaveText(['Testfall','Inhalt','2.1.0','2.0.0']);
+    await expect(page.getByRole('table').getByRole('columnheader')).toHaveText(['ID','Titel','Inhalt','2.1.0','2.0.0']);
     await settings(page).click(); await expect(page.getByLabel('Versions-Suite 3', { exact: true })).toHaveValue('30');
     await page.getByLabel('Spalte 3 anzeigen', { exact: true }).check();
-    await expect(page.getByRole('table').getByRole('columnheader')).toHaveText(['Testfall','Inhalt','2.1.0','2.0.0','2.2.0']);
+    await expect(page.getByRole('table').getByRole('columnheader')).toHaveText(['ID','Titel','Inhalt','2.1.0','2.0.0','2.2.0']);
 });
 
 test('V4-B03 RM3-09 a write targets one physical content point and preserves other versions, environments and contents', async ({ page }) => {
@@ -142,7 +142,7 @@ test('V4-B08 RM3-10 exact case-tag, direct-membership and search filters never c
     await expect(page.locator('[data-matrix-row]')).toHaveCount(4);
     await expect(outcome(page, 'TST', 'Regression', 201)).toHaveValue('Failed');
     await expect(outcome(page, 'TST', 'Regression', 201, 'v22')).toHaveValue('Passed');
-    await expect(page.getByRole('table').getByRole('columnheader')).toHaveText(['Testfall','Inhalt','2.1.0','2.2.0']);
+    await expect(page.getByRole('table').getByRole('columnheader')).toHaveText(['ID','Titel','Inhalt','2.1.0','2.2.0']);
     await page.getByLabel('In Testsuite', { exact: true }).selectOption('30');
     await expect(page.locator('[data-matrix-row]')).toHaveCount(0); // Parent contains no direct members.
     await page.getByRole('button', { name: 'Filter zurücksetzen', exact: true }).click();

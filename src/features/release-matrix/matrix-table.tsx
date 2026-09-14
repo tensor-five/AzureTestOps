@@ -54,14 +54,16 @@ export function MatrixTable({ snapshot, config, groups, pending, blocked, stale,
     <div className="matrix-scroll" data-matrix-scroll="">
       <table aria-label="Release-Matrix" style={tableStyle}>
         <colgroup>
+          <col className="matrix-id-col" />
           <col className="matrix-title-col" />
           {!combined && <col className="matrix-context-col" />}
           {columns.map(column => <col key={column.id} className="matrix-status-col" />)}
         </colgroup>
         <thead>
           <tr>
-            <th scope="col" className="matrix-title-header" aria-label="Testfall">
-              Testfall
+            <th scope="col" className="matrix-id-header" aria-label="Testfall" aria-description="ID des Testfalls">ID</th>
+            <th scope="col" className="matrix-title-header">
+              Titel
               <span className="matrix-title-resize-handle" {...titleColumn.handleProps} />
             </th>
             {!combined && <th scope="col" className="matrix-context-cell">{grouping === 'environment' ? 'Inhalt' : 'Umgebung'}</th>}
@@ -78,7 +80,7 @@ export function MatrixTable({ snapshot, config, groups, pending, blocked, stale,
           return (
             <tbody key={group.id}>
               <tr className="matrix-group-row" data-matrix-group={group.id}>
-                <th colSpan={columns.length + (combined ? 1 : 2)} scope="rowgroup">
+                <th colSpan={columns.length + (combined ? 2 : 3)} scope="rowgroup">
                   <div>
                     <button type="button" aria-expanded={!collapsed}
                       aria-label={`Gruppe ${group.name} ${collapsed ? 'aufklappen' : 'einklappen'}`}
@@ -98,9 +100,8 @@ export function MatrixTable({ snapshot, config, groups, pending, blocked, stale,
               </tr>
               {!collapsed && group.rows.map(row => (
                 <tr key={matrixRowKey(row)} data-matrix-row={matrixRowKey(row)}>
-                  <th scope="row" className="matrix-case-title" title={`#${row.workItemId} ${row.title}`}>
-                    <span className="matrix-case-id">#{row.workItemId}</span> {row.title}
-                  </th>
+                  <td className="matrix-case-id-cell" aria-label={`Testfall-ID ${row.workItemId}`}>#{row.workItemId}</td>
+                  <th scope="row" className="matrix-case-title" title={`#${row.workItemId} ${row.title}`}>{row.title}</th>
                   {!combined && <td className="matrix-context-cell">{grouping === 'environment' ? row.content : row.environment}</td>}
                   {columns.map(column => {
                     const source = sources.get(sourceKey(row, column.id))!;

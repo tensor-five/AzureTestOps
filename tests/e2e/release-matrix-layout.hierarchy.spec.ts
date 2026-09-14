@@ -10,7 +10,7 @@ test.beforeEach(async ({ page }) => { await server.reset(); await page.goto(serv
 
 test('V4-H01 RM4-01 RM4-03 selected versions union direct content rows independently of the retired catalog', async ({ page }) => {
     await open(page);
-    await expect(page.getByRole('table').getByRole('columnheader')).toHaveText(['Testfall', 'Inhalt', '2.1.0', '2.2.0']);
+    await expect(page.getByRole('table').getByRole('columnheader')).toHaveText(['ID', 'Titel', 'Inhalt', '2.1.0', '2.2.0']);
     const expected = [
         ...[101,201,103,302,304].map(id => ['TST','Regression',id]),
         ...[201,202,203,999].map(id => ['TST','Data Import',id]),

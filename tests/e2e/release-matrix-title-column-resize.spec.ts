@@ -25,12 +25,18 @@ test('resizes every sticky title surface on desktop', async ({ page }) => {
 
   await expect(handle).toHaveAttribute('aria-valuenow', '600');
   await expect.poll(async () => JSON.parse(await server.disk()).users.contract.setReleaseMatrices['matrix-set'].testCaseColumnWidth).toBe(600);
-  const widths = await page.evaluate(() => [
-    document.querySelector<HTMLElement>('.matrix-title-header')!.getBoundingClientRect().width,
-    document.querySelector<HTMLElement>('.matrix-case-title')!.getBoundingClientRect().width,
-    document.querySelector<HTMLElement>('.matrix-group-row th > div')!.getBoundingClientRect().width
-  ]);
-  for (const width of widths) expect(Math.abs(width - 600)).toBeLessThan(1);
+  const widths = await page.evaluate(() => ({
+    idHeader: document.querySelector<HTMLElement>('.matrix-id-header')!.getBoundingClientRect().width,
+    idCell: document.querySelector<HTMLElement>('.matrix-case-id-cell')!.getBoundingClientRect().width,
+    titleHeader: document.querySelector<HTMLElement>('.matrix-title-header')!.getBoundingClientRect().width,
+    titleCell: document.querySelector<HTMLElement>('.matrix-case-title')!.getBoundingClientRect().width,
+    group: document.querySelector<HTMLElement>('.matrix-group-row th > div')!.getBoundingClientRect().width
+  }));
+  expect(Math.abs(widths.idHeader - 96)).toBeLessThan(1);
+  expect(Math.abs(widths.idCell - 96)).toBeLessThan(1);
+  expect(Math.abs(widths.titleHeader - 600)).toBeLessThan(1);
+  expect(Math.abs(widths.titleCell - 600)).toBeLessThan(1);
+  expect(Math.abs(widths.group - 696)).toBeLessThan(1);
   expect(await page.locator('.matrix-case-title').first().evaluate(element => getComputedStyle(element).whiteSpace)).toBe('nowrap');
   expect(server.azure().writes).toEqual([]);
 });
@@ -43,12 +49,18 @@ test('caps the sticky title column and disables resizing on a touch viewport', a
     await page.goto(server.origin);
     await open(page);
     await expect(page.getByRole('separator', { name: 'Breite der Testfallspalte ändern' })).toHaveCount(0);
-    const widths = await page.evaluate(() => [
-      document.querySelector<HTMLElement>('.matrix-title-header')!.getBoundingClientRect().width,
-      document.querySelector<HTMLElement>('.matrix-case-title')!.getBoundingClientRect().width,
-      document.querySelector<HTMLElement>('.matrix-group-row th > div')!.getBoundingClientRect().width
-    ]);
-    for (const width of widths) expect(Math.abs(width - 210)).toBeLessThan(1);
+    const widths = await page.evaluate(() => ({
+      idHeader: document.querySelector<HTMLElement>('.matrix-id-header')!.getBoundingClientRect().width,
+      idCell: document.querySelector<HTMLElement>('.matrix-case-id-cell')!.getBoundingClientRect().width,
+      titleHeader: document.querySelector<HTMLElement>('.matrix-title-header')!.getBoundingClientRect().width,
+      titleCell: document.querySelector<HTMLElement>('.matrix-case-title')!.getBoundingClientRect().width,
+      group: document.querySelector<HTMLElement>('.matrix-group-row th > div')!.getBoundingClientRect().width
+    }));
+    expect(Math.abs(widths.idHeader - 96)).toBeLessThan(1);
+    expect(Math.abs(widths.idCell - 96)).toBeLessThan(1);
+    expect(Math.abs(widths.titleHeader - 112)).toBeLessThan(1);
+    expect(Math.abs(widths.titleCell - 112)).toBeLessThan(1);
+    expect(Math.abs(widths.group - 208)).toBeLessThan(1);
     const scroll = page.locator('[data-matrix-scroll]');
     expect(await scroll.evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true);
     await outcome(page, 'TST', 'Regression', 201).tap();

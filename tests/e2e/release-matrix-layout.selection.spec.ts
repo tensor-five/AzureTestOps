@@ -51,7 +51,7 @@ test('V4-S02 RM4-01 RM4-04 adding changing hiding showing removing and reorderin
     const original = await rowKeys(page);
     await page.getByRole('button', { name: 'Spalte 2 nach links', exact: true }).click();
     expect(await rowKeys(page)).toEqual(original);
-    await expect(page.getByRole('table').getByRole('columnheader')).toHaveText(['Testfall','Inhalt','2.2.0','2.1.0']);
+    await expect(page.getByRole('table').getByRole('columnheader')).toHaveText(['ID','Titel','Inhalt','2.2.0','2.1.0']);
     await page.getByLabel('Spalte 1 anzeigen', { exact: true }).uncheck();
     await expect(rows(page, 'TST', 'Data Import', 999)).toHaveCount(0);
     await expect(rows(page, 'TST', 'Data Import', 203)).toHaveCount(1);
@@ -127,7 +127,7 @@ test('V4-S05 RM4-06 existing v3 state retains columns mappings filters groups an
     const before = JSON.parse(await server.disk()).users.contract;
     await page.reload(); await open(page); await settings(page).click();
     await expect(page.getByLabel('Stammsuite',{exact:true})).toHaveCount(0);
-    await expect(page.getByRole('table').getByRole('columnheader')).toHaveText(['Testfall','Umgebung','2.2.0','2.1.0']);
+    await expect(page.getByRole('table').getByRole('columnheader')).toHaveText(['ID','Titel','Umgebung','2.2.0','2.1.0']);
     await expect(page.getByLabel('Versions-Suite 2',{exact:true})).toHaveValue('40');
     await expect(page.getByLabel('Spalte 2 anzeigen',{exact:true})).not.toBeChecked();
     await expect(page.getByLabel('Gruppieren nach',{exact:true})).toHaveValue('content');
