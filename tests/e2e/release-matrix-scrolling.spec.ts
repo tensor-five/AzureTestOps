@@ -1,25 +1,17 @@
 import { expect, test } from '@playwright/test';
-import { startMatrixServer } from './release-matrix-v2/server.js';
-import { matrixConfig } from './release-matrix-v2/azure-fixture.js';
+import { startMatrixServer } from './release-matrix-v3/server.js';
+import { matrixConfig, addVersionColumns } from './release-matrix-v3/azure-fixture.js';
 
 let server: Awaited<ReturnType<typeof startMatrixServer>>;
-test.beforeAll(async ({ request }) => {
-    server = await startMatrixServer();
-    // The harness returns before listen completes; reset must not close that pending server.
-    await expect.poll(async () => {
-        try { return (await request.get(server.origin)).status(); }
-        catch { return 0; }
-    }).toBe(200);
-});
+test.beforeAll(async () => { server = await startMatrixServer(); });
 test.afterAll(async () => { await server.close(); });
 
 for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 600 }]) {
     test(`matrix scrolls within the viewport and keeps its headers fixed at ${viewport.width}px`, async ({ browser }) => {
-        await server.reset({ ...matrixConfig, columns: Array.from({ length: 12 }, (_, index) => ({
-            ...matrixConfig.columns[0], id: `column-${index}`, name: `Release ${index}`,
-        })) });
+        await server.reset();
+        await server.seed({ ...matrixConfig, columns: addVersionColumns(server.azure(), 12) });
         for (let id = 400; id < 460; id++) {
-            server.azure().membership[11].push(id);
+            server.azure().membership[22].push(id);
             server.azure().titles[id] = `Weiterer Test ${id}`;
         }
         const context = await browser.newContext({ viewport, isMobile: viewport.width < 600, hasTouch: viewport.width < 600 });

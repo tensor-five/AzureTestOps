@@ -1,0 +1,33 @@
+{
+  "contract": "release-matrix.v3.html",
+  "files": [
+    {
+      "path": "tests/e2e/release-matrix-v3.behavior.spec.ts",
+      "sha256": "32eb3a86c63f9fd6d76ec9a6fb202242ceb82a290a240f71c3f994b0ff3824d1"
+    },
+    {
+      "path": "tests/e2e/release-matrix-v3.hierarchy.spec.ts",
+      "sha256": "55fc74cca0c2ad1c55c18ba4ef2fe3779bd1b1e986d0c7e6cf3ae4541089cd6f"
+    },
+    {
+      "path": "tests/e2e/release-matrix-v3/server.ts",
+      "sha256": "9ee054d359def5552091ed081404204bc863bde0f4f25db82bd34628b78c6ac8"
+    },
+    {
+      "path": "tests/e2e/release-matrix-v3/azure-fixture.ts",
+      "sha256": "120f04c8f21a2aa32f03579e5522172cc6b34c1a4c10cb1bc660cd5340dea274"
+    },
+    {
+      "path": "tests/e2e/release-matrix-v3/ui.ts",
+      "sha256": "df8a79b803962d59f57be97f8235d9d52a29b0e60b2ccc8b8dde71e001a5940b"
+    },
+    {
+      "path": "tests/e2e/release-matrix-scrolling.spec.ts",
+      "sha256": "2b5189bc222e4784ec662f8999cf03d5637198f4ea799bdd5e29f7a15a923e90"
+    },
+    {
+      "path": "playwright.config.ts",
+      "sha256": "c3771820cd621346c54bf7948b3744129e395410ebb53301105d4b317e94aa1b"
+    }
+  ]
+}

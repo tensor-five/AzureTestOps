@@ -25,5 +25,8 @@ if (digest(await readFile('docs/contracts/release-matrix.v1.tests.json')) !== '4
 if (digest(await readFile('docs/contracts/release-matrix.v2.tests.json')) !== '993007a149c9eae0d139bf0262bdea52465ca39f1de2fb96b64c9238d2ca2c52') {
   throw new Error('Release matrix v2 frozen test manifest differs from the reviewed version.');
 }
+if (digest(await readFile('docs/contracts/release-matrix.v3.tests.json')) !== '379e321c00f44bf353ca672520952243ec18ff23b706efae75c0d0d9b7b2268c') {
+  throw new Error('Release matrix v3 frozen test manifest differs from the reviewed version.');
+}
 await import('./check-frozen-tests.mjs');
 console.log('Verified approved release matrix contract.');
