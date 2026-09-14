@@ -13,9 +13,15 @@ import { resetMatrixPoint } from '../../../application/use-cases/reset-matrix-po
 import { ApiError } from '../../../application/dto/api-error.js';
 import type { MatrixWriteDiagnostics } from '../../../application/use-cases/record-matrix-outcome-diagnostics.js';
 import { readBody, parseJsonBody, writeJson } from './route-helpers.js';
+import { registerReleaseMatrixMembershipRoute } from './release-matrix-membership-route.js';
+import { registerReleaseMatrixTagsRoute } from './release-matrix-tags-route.js';
 export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepositoryPort) {
+    const membershipRoute = registerReleaseMatrixMembershipRoute(ado, sets);
+    const tagsRoute = registerReleaseMatrixTagsRoute(ado, sets);
     const pending = new Set<string>();
     return async (method: string, pathname: string, req: IncomingMessage, res: ServerResponse): Promise<boolean> => {
+        if (await membershipRoute(method, pathname, req, res)) return true;
+        if (await tagsRoute(method, pathname, req, res)) return true;
         const match = pathname.match(/^\/phase2\/sets\/([^/]+)\/release-matrix(\/outcomes)?$/);
         if (!match)
             return false;
@@ -51,7 +57,16 @@ export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepository
             if (!ado.matrixServices)
                 throw new Error('Release-Matrix ist in dieser Laufzeit nicht verfügbar.');
             if (!match[2]) {
-                const options = { signal: controller.signal, diagnostics };
+                const requested = new URL(req.url ?? '/', 'http://localhost').searchParams.get('versions');
+                let versionSuiteIds: number[] | undefined;
+                if (requested !== null) {
+                    const parsed = parseJsonBody(requested);
+                    if (!Array.isArray(parsed) || !parsed.every(id => Number.isSafeInteger(id) && id > 0)) {
+                        writeJson(res, 400, {message: 'Ungültige Versionsauswahl.'}); return true;
+                    }
+                    versionSuiteIds = [...new Set(parsed)];
+                }
+                const options = { signal: controller.signal, diagnostics, versionSuiteIds };
                 const snapshot = await loadReleaseMatrix(planId, ado.matrixServices(context, options), options);
                 writeJson(res, 200, { ...snapshot, contextIdentity });
                 diagnostics?.finish('complete');

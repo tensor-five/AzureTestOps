@@ -158,6 +158,7 @@ test('V4-S06 RM4-07 search tag and membership filters only narrow selected-versi
     await page.getByLabel('Testfall suchen',{exact:true}).fill('303');
     await expect(page.locator('[data-matrix-row]')).toHaveCount(0);
     await page.getByRole('button',{name:'Filter zurücksetzen',exact:true}).click();
+    await page.getByLabel('Tag', { exact: true }).focus(); // Load the full tag catalogue through the real user interaction.
     await page.getByLabel('Tag',{exact:true}).selectOption('Regress');
     await expect(page.locator('[data-matrix-row]')).toHaveCount(0);
     await page.getByRole('button',{name:'Filter zurücksetzen',exact:true}).click();

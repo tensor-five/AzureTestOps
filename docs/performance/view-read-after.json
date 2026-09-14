@@ -1,0 +1,392 @@
+{
+  "mode": "after",
+  "baselineCommit": "f6cc4f21b1533f9476688402e76ce01db8bad5bb",
+  "delayMs": 15,
+  "repeats": 3,
+  "samples": [
+    {
+      "view": "matrix",
+      "history": 10,
+      "suiteCount": 23,
+      "repeat": 0,
+      "requests": 30,
+      "elapsedMs": 101,
+      "operations": {
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites": 2,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases": 8,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 8,
+        "/contract-org/contract-project/_apis/test/runs": 1,
+        "/contract-org/contract-project/_apis/wit/workitems": 1,
+        "/contract-org/contract-project/_apis/test/Runs/:id/results": 10
+      }
+    },
+    {
+      "view": "matrix",
+      "history": 10,
+      "suiteCount": 23,
+      "repeat": 1,
+      "requests": 30,
+      "elapsedMs": 98,
+      "operations": {
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites": 2,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases": 8,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 8,
+        "/contract-org/contract-project/_apis/test/runs": 1,
+        "/contract-org/contract-project/_apis/wit/workitems": 1,
+        "/contract-org/contract-project/_apis/test/Runs/:id/results": 10
+      }
+    },
+    {
+      "view": "matrix",
+      "history": 10,
+      "suiteCount": 23,
+      "repeat": 2,
+      "requests": 30,
+      "elapsedMs": 97,
+      "operations": {
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites": 2,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases": 8,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 8,
+        "/contract-org/contract-project/_apis/test/runs": 1,
+        "/contract-org/contract-project/_apis/wit/workitems": 1,
+        "/contract-org/contract-project/_apis/test/Runs/:id/results": 10
+      }
+    },
+    {
+      "view": "matching",
+      "history": 10,
+      "suiteCount": 23,
+      "repeat": 0,
+      "requests": 31,
+      "elapsedMs": 97,
+      "operations": {
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites": 1,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases": 9,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 9,
+        "/contract-org/contract-project/_apis/test/runs": 1,
+        "/contract-org/contract-project/_apis/wit/workitems": 1,
+        "/contract-org/contract-project/_apis/test/Runs/:id/results": 10
+      }
+    },
+    {
+      "view": "matching",
+      "history": 10,
+      "suiteCount": 23,
+      "repeat": 1,
+      "requests": 31,
+      "elapsedMs": 95,
+      "operations": {
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites": 1,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases": 9,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 9,
+        "/contract-org/contract-project/_apis/test/runs": 1,
+        "/contract-org/contract-project/_apis/wit/workitems": 1,
+        "/contract-org/contract-project/_apis/test/Runs/:id/results": 10
+      }
+    },
+    {
+      "view": "matching",
+      "history": 10,
+      "suiteCount": 23,
+      "repeat": 2,
+      "requests": 31,
+      "elapsedMs": 96,
+      "operations": {
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites": 1,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases": 9,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 9,
+        "/contract-org/contract-project/_apis/test/runs": 1,
+        "/contract-org/contract-project/_apis/wit/workitems": 1,
+        "/contract-org/contract-project/_apis/test/Runs/:id/results": 10
+      }
+    },
+    {
+      "view": "matrix",
+      "history": 10,
+      "suiteCount": 103,
+      "repeat": 0,
+      "requests": 30,
+      "elapsedMs": 98,
+      "operations": {
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites": 2,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases": 8,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 8,
+        "/contract-org/contract-project/_apis/test/runs": 1,
+        "/contract-org/contract-project/_apis/wit/workitems": 1,
+        "/contract-org/contract-project/_apis/test/Runs/:id/results": 10
+      }
+    },
+    {
+      "view": "matrix",
+      "history": 10,
+      "suiteCount": 103,
+      "repeat": 1,
+      "requests": 30,
+      "elapsedMs": 98,
+      "operations": {
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites": 2,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases": 8,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 8,
+        "/contract-org/contract-project/_apis/test/runs": 1,
+        "/contract-org/contract-project/_apis/wit/workitems": 1,
+        "/contract-org/contract-project/_apis/test/Runs/:id/results": 10
+      }
+    },
+    {
+      "view": "matrix",
+      "history": 10,
+      "suiteCount": 103,
+      "repeat": 2,
+      "requests": 30,
+      "elapsedMs": 99,
+      "operations": {
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites": 2,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases": 8,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 8,
+        "/contract-org/contract-project/_apis/test/runs": 1,
+        "/contract-org/contract-project/_apis/wit/workitems": 1,
+        "/contract-org/contract-project/_apis/test/Runs/:id/results": 10
+      }
+    },
+    {
+      "view": "matching",
+      "history": 10,
+      "suiteCount": 103,
+      "repeat": 0,
+      "requests": 31,
+      "elapsedMs": 98,
+      "operations": {
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites": 1,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases": 9,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 9,
+        "/contract-org/contract-project/_apis/test/runs": 1,
+        "/contract-org/contract-project/_apis/wit/workitems": 1,
+        "/contract-org/contract-project/_apis/test/Runs/:id/results": 10
+      }
+    },
+    {
+      "view": "matching",
+      "history": 10,
+      "suiteCount": 103,
+      "repeat": 1,
+      "requests": 31,
+      "elapsedMs": 98,
+      "operations": {
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites": 1,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases": 9,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 9,
+        "/contract-org/contract-project/_apis/test/runs": 1,
+        "/contract-org/contract-project/_apis/wit/workitems": 1,
+        "/contract-org/contract-project/_apis/test/Runs/:id/results": 10
+      }
+    },
+    {
+      "view": "matching",
+      "history": 10,
+      "suiteCount": 103,
+      "repeat": 2,
+      "requests": 31,
+      "elapsedMs": 96,
+      "operations": {
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites": 1,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases": 9,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 9,
+        "/contract-org/contract-project/_apis/test/runs": 1,
+        "/contract-org/contract-project/_apis/wit/workitems": 1,
+        "/contract-org/contract-project/_apis/test/Runs/:id/results": 10
+      }
+    },
+    {
+      "view": "matrix",
+      "history": 500,
+      "suiteCount": 23,
+      "repeat": 0,
+      "requests": 520,
+      "elapsedMs": 1072,
+      "operations": {
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites": 2,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases": 8,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 8,
+        "/contract-org/contract-project/_apis/test/runs": 1,
+        "/contract-org/contract-project/_apis/wit/workitems": 1,
+        "/contract-org/contract-project/_apis/test/Runs/:id/results": 500
+      }
+    },
+    {
+      "view": "matrix",
+      "history": 500,
+      "suiteCount": 23,
+      "repeat": 1,
+      "requests": 520,
+      "elapsedMs": 1075,
+      "operations": {
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites": 2,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases": 8,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 8,
+        "/contract-org/contract-project/_apis/test/runs": 1,
+        "/contract-org/contract-project/_apis/wit/workitems": 1,
+        "/contract-org/contract-project/_apis/test/Runs/:id/results": 500
+      }
+    },
+    {
+      "view": "matrix",
+      "history": 500,
+      "suiteCount": 23,
+      "repeat": 2,
+      "requests": 520,
+      "elapsedMs": 1070,
+      "operations": {
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites": 2,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases": 8,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 8,
+        "/contract-org/contract-project/_apis/test/runs": 1,
+        "/contract-org/contract-project/_apis/wit/workitems": 1,
+        "/contract-org/contract-project/_apis/test/Runs/:id/results": 500
+      }
+    },
+    {
+      "view": "matching",
+      "history": 500,
+      "suiteCount": 23,
+      "repeat": 0,
+      "requests": 521,
+      "elapsedMs": 1071,
+      "operations": {
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites": 1,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases": 9,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 9,
+        "/contract-org/contract-project/_apis/test/runs": 1,
+        "/contract-org/contract-project/_apis/wit/workitems": 1,
+        "/contract-org/contract-project/_apis/test/Runs/:id/results": 500
+      }
+    },
+    {
+      "view": "matching",
+      "history": 500,
+      "suiteCount": 23,
+      "repeat": 1,
+      "requests": 521,
+      "elapsedMs": 1068,
+      "operations": {
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites": 1,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases": 9,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 9,
+        "/contract-org/contract-project/_apis/test/runs": 1,
+        "/contract-org/contract-project/_apis/wit/workitems": 1,
+        "/contract-org/contract-project/_apis/test/Runs/:id/results": 500
+      }
+    },
+    {
+      "view": "matching",
+      "history": 500,
+      "suiteCount": 23,
+      "repeat": 2,
+      "requests": 521,
+      "elapsedMs": 1074,
+      "operations": {
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites": 1,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases": 9,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 9,
+        "/contract-org/contract-project/_apis/test/runs": 1,
+        "/contract-org/contract-project/_apis/wit/workitems": 1,
+        "/contract-org/contract-project/_apis/test/Runs/:id/results": 500
+      }
+    },
+    {
+      "view": "matrix",
+      "history": 500,
+      "suiteCount": 103,
+      "repeat": 0,
+      "requests": 520,
+      "elapsedMs": 1076,
+      "operations": {
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites": 2,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases": 8,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 8,
+        "/contract-org/contract-project/_apis/test/runs": 1,
+        "/contract-org/contract-project/_apis/wit/workitems": 1,
+        "/contract-org/contract-project/_apis/test/Runs/:id/results": 500
+      }
+    },
+    {
+      "view": "matrix",
+      "history": 500,
+      "suiteCount": 103,
+      "repeat": 1,
+      "requests": 520,
+      "elapsedMs": 1063,
+      "operations": {
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites": 2,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases": 8,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 8,
+        "/contract-org/contract-project/_apis/test/runs": 1,
+        "/contract-org/contract-project/_apis/wit/workitems": 1,
+        "/contract-org/contract-project/_apis/test/Runs/:id/results": 500
+      }
+    },
+    {
+      "view": "matrix",
+      "history": 500,
+      "suiteCount": 103,
+      "repeat": 2,
+      "requests": 520,
+      "elapsedMs": 1073,
+      "operations": {
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites": 2,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases": 8,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 8,
+        "/contract-org/contract-project/_apis/test/runs": 1,
+        "/contract-org/contract-project/_apis/wit/workitems": 1,
+        "/contract-org/contract-project/_apis/test/Runs/:id/results": 500
+      }
+    },
+    {
+      "view": "matching",
+      "history": 500,
+      "suiteCount": 103,
+      "repeat": 0,
+      "requests": 521,
+      "elapsedMs": 1072,
+      "operations": {
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites": 1,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases": 9,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 9,
+        "/contract-org/contract-project/_apis/test/runs": 1,
+        "/contract-org/contract-project/_apis/wit/workitems": 1,
+        "/contract-org/contract-project/_apis/test/Runs/:id/results": 500
+      }
+    },
+    {
+      "view": "matching",
+      "history": 500,
+      "suiteCount": 103,
+      "repeat": 1,
+      "requests": 521,
+      "elapsedMs": 1072,
+      "operations": {
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites": 1,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases": 9,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 9,
+        "/contract-org/contract-project/_apis/test/runs": 1,
+        "/contract-org/contract-project/_apis/wit/workitems": 1,
+        "/contract-org/contract-project/_apis/test/Runs/:id/results": 500
+      }
+    },
+    {
+      "view": "matching",
+      "history": 500,
+      "suiteCount": 103,
+      "repeat": 2,
+      "requests": 521,
+      "elapsedMs": 1069,
+      "operations": {
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites": 1,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases": 9,
+        "/contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 9,
+        "/contract-org/contract-project/_apis/test/runs": 1,
+        "/contract-org/contract-project/_apis/wit/workitems": 1,
+        "/contract-org/contract-project/_apis/test/Runs/:id/results": 500
+      }
+    }
+  ]
+}

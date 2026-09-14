@@ -62,7 +62,7 @@ export class AzureWorkItemHydrationAdapter implements WorkItemHydrationPort {
 
   private async hydrateChunk(ids: number[]): Promise<Map<number, WorkItem>> {
     const url = `${this.baseUrl}/_apis/wit/workitems?ids=${ids.join(",")}&$expand=relations&api-version=${API_VERSION_71}`;
-    const { response } = await requestWithRetry(() => this.httpClient.get(url));
+    const { response } = await requestWithRetry(() => this.httpClient.get(url), {signal: this.httpClient.signal});
     if (response.status !== 200) {
       throw new Error(`HYDRATION_HTTP_${response.status}`);
     }

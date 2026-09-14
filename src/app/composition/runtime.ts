@@ -1,3 +1,4 @@
+import type { LoadActiveSetSnapshotDeps } from '../../application/use-cases/load-active-set-snapshot.use-case.js';
 import type { MatrixWriteHttpMetrics } from '../../shared/azure-devops/matrix-write-http-metrics.js';
 import { createMatrixReadHttpClient } from '../../shared/azure-devops/matrix-read-http-client.js';
 import type { MatrixReadDiagnostics } from '../../shared/diagnostics/matrix-read-diagnostics.js';
@@ -5,6 +6,8 @@ import type { MatrixReadDeps } from "../../application/use-cases/load-release-ma
 import { AzureTestExecutionAdapter } from "../../adapters/azure-devops/test-management/azure-test-execution.adapter.js";
 import type { TestExecutionPort } from "../../application/ports/test-execution.port.js";
 import type { TestPointResetPort } from '../../application/ports/test-point-reset.port.js';
+import type { TestCaseTagsPort } from '../../application/ports/test-case-tags.port.js';
+import { AzureTestCaseTagsAdapter } from '../../adapters/azure-devops/test-management/azure-test-case-tags.adapter.js';
 import type { TestOutcomeReadPort } from '../../application/ports/test-outcome-read.port.js';
 import { AzureTestOutcomeReadAdapter } from '../../adapters/azure-devops/test-management/azure-test-outcome-read.adapter.js';
 import { AzureTestPointResetAdapter } from '../../adapters/azure-devops/test-management/azure-test-point-reset.adapter.js';
@@ -41,6 +44,8 @@ export type AdoRuntime = {
    * Resolved lazily on each call so a context change at runtime takes effect
    * without restarting the server.
    */
+  snapshotServices?(context: {organization: string; project: string}, signal: AbortSignal): Pick<LoadActiveSetSnapshotDeps,
+    'testManagement' | 'testCaseHydration' | 'workItemHydration' | 'savedQuery'>;
   resolveContext(): Promise<{ organization: string; project: string }>;
   testManagement(): Promise<TestManagementReadPort>;
   testCatalog(): Promise<TestCatalogPort>;
@@ -48,7 +53,7 @@ export type AdoRuntime = {
   testCaseHydration(): Promise<TestCaseHydrationPort>;
   savedQuery(): Promise<SavedQueryPort>;
   relations(): Promise<RelationPort>;
-  matrixServices?(context: {organization: string; project: string}, options?: { signal?: AbortSignal; diagnostics?: MatrixReadDiagnostics; writeMetrics?: MatrixWriteHttpMetrics }): MatrixReadDeps & {execution: TestExecutionPort; pointReset?: TestPointResetPort; outcomeRead?: TestOutcomeReadPort};
+  matrixServices?(context: {organization: string; project: string}, options?: { signal?: AbortSignal; diagnostics?: MatrixReadDiagnostics; writeMetrics?: MatrixWriteHttpMetrics }): MatrixReadDeps & {execution: TestExecutionPort; pointReset?: TestPointResetPort; outcomeRead?: TestOutcomeReadPort; caseTags?: TestCaseTagsPort};
 };
 
 export type RuntimeOptions = {
@@ -121,12 +126,21 @@ export function buildRuntime(options: RuntimeOptions = {}): Runtime {
 
   const ado: AdoRuntime = {
     resolveContext,
+    snapshotServices: (context, signal) => {
+      const readClient = createMatrixReadHttpClient(httpClient, {signal});
+      const workItemHydration = new AzureWorkItemHydrationAdapter(readClient, context);
+      return {testManagement: new AzureTestManagementAdapter(readClient, context),
+        workItemHydration,
+        testCaseHydration: new WorkItemBackedTestCaseHydrationAdapter(workItemHydration),
+        savedQuery: new AzureSavedQueryAdapter(readClient, context)};
+    },
     matrixServices: (context, options) => {
       const writeClient = options?.writeMetrics ? options.writeMetrics.wrap(httpClient) : httpClient;
       const readClient = options && !options.writeMetrics ? createMatrixReadHttpClient(httpClient, options) : writeClient;
       return {
         testManagement: new AzureTestManagementAdapter(readClient, context),
         testCatalog: new AzureTestCatalogAdapter(readClient, context),
+        caseTags: new AzureTestCaseTagsAdapter(readClient, context),
         testCaseHydration: new WorkItemBackedTestCaseHydrationAdapter(new AzureWorkItemHydrationAdapter(readClient, context)),
         execution: new AzureTestExecutionAdapter(writeClient, context),
         outcomeRead: new AzureTestOutcomeReadAdapter(readClient, context),

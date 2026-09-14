@@ -4,7 +4,7 @@ import type { MatrixReadDiagnostics } from '../diagnostics/matrix-read-diagnosti
 /** GET-only cache for one matrix load. Failed responses are evicted so existing retry policy still applies. */
 export function createMatrixReadHttpClient(client: AzureRestHttpClient, options: { signal?: AbortSignal; diagnostics?: MatrixReadDiagnostics }): AzureRestHttpClient {
     const pending = new Map<string, Promise<AzureHttpResponse>>();
-    return { get(url) {
+    return { signal: options.signal, get(url) {
         options.signal?.throwIfAborted();
         const cached = pending.get(url);
         if (cached) return cached;

@@ -56,21 +56,27 @@ export function registerActiveSetSnapshotStreamRoute(
     res.setHeader("connection", "keep-alive");
     res.flushHeaders?.();
 
+    const controller = new AbortController();
+    const closed = () => { if (!res.writableEnded) controller.abort(); };
+    res.once('close', closed);
     const send = (event: string, data: unknown): void => {
+      if (controller.signal.aborted || res.destroyed || res.writableEnded) return;
       res.write(`event: ${event}\n`);
       res.write(`data: ${JSON.stringify(data)}\n\n`);
     };
 
     try {
+      const services = deps.ado.snapshotServices
+        ? deps.ado.snapshotServices(await deps.ado.resolveContext(), controller.signal)
+        : {testManagement: await deps.ado.testManagement(), testCaseHydration: await deps.ado.testCaseHydration(),
+          workItemHydration: await deps.ado.workItemHydration(), savedQuery: await deps.ado.savedQuery()};
+      controller.signal.throwIfAborted();
       const snapshot = await loadActiveSetSnapshot(
         setId ? { setId } : {},
         {
           setRepository: deps.setRepository,
           adoContext: deps.adoContext,
-          testManagement: await deps.ado.testManagement(),
-          testCaseHydration: await deps.ado.testCaseHydration(),
-          workItemHydration: await deps.ado.workItemHydration(),
-          savedQuery: await deps.ado.savedQuery(),
+          ...services, signal: controller.signal,
           onProgress: (event: SnapshotProgressEvent) => send("progress", event)
         }
       );
@@ -82,7 +88,8 @@ export function registerActiveSetSnapshotStreamRoute(
         message: error instanceof Error ? error.message : String(error)
       });
     } finally {
-      res.end();
+      res.removeListener('close', closed);
+      if (!res.destroyed) res.end();
     }
 
     return true;

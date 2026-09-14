@@ -14,7 +14,11 @@ export type MatrixData = {
   resultEvidence?: MatrixResultEvidence[];
   /** Physical points freshly confirmed Ready/Active, with cleared execution references. */
   activePoints?: Array<{ pointId: number; suiteId: number; workItemId: number }>;
+  /** Direct membership only for suites actually loaded; an absent key is not an empty suite. */
+  suiteMemberships?: Record<string, number[]>;
 };
+export type MatrixSuiteMembership = { planId: number; suiteId: number; contextIdentity: string; workItemIds: number[] };
+export type MatrixTagCatalog = { planId: number; contextIdentity: string; tags: string[] };
 export type MatrixSnapshot = MatrixData & { contextIdentity: string };
 export type MatrixOutcomeTarget = { planId: number; suiteId: number; workItemId: number; pointId: number; outcome: ManualOutcome };
 export type MatrixResetTarget = Omit<MatrixOutcomeTarget, 'outcome'> & { outcome: 'ResetToActive' };

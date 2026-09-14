@@ -137,6 +137,7 @@ test('V4-B08 RM3-10 exact case-tag, direct-membership and search filters never c
     await page.getByLabel('In Testsuite', { exact: true }).selectOption('30');
     await expect(page.locator('[data-matrix-row]')).toHaveCount(0); // Parent contains no direct members.
     await page.getByRole('button', { name: 'Filter zurücksetzen', exact: true }).click();
+    await page.getByLabel('Tag', { exact: true }).focus(); // Load the full tag catalogue through the real user interaction.
     await page.getByLabel('Tag', { exact: true }).selectOption('Regress');
     await expect(page.locator('[data-matrix-row]')).toHaveCount(0); await expect(rows(page, 'TST', 'Regression', 303)).toHaveCount(0);
     await page.getByRole('button', { name: 'Filter zurücksetzen', exact: true }).click();
@@ -152,9 +153,10 @@ test('V4-B09 RM3-12 real v2 preferences migrate once, retaining filters, set and
         columns: [{ id:'test', name:'2.1.0', environment:'TST', tag:'2.1.0-Test', visible:true }],
         mappings: { '["Regression","test"]':22 }, groupOrder:['Regression'], collapsed:['Regression'], collapsedTags:['tag:regression'],
         search:'201', tagFilter:'Regression', suiteFilter:'32' };
+    await page.goto('about:blank');
     await server.seed(old); await server.patch({ setLayouts:{'matrix-set':{positions:{'tc:201:22':{x:12,y:34}}}} });
-    await page.reload(); await nav(page).click();
-    await expect(page.getByText(/Umstieg|Migration/i).first()).toBeVisible();
+    await page.goto(server.origin); await nav(page).click();
+    await expect(page.getByText(/Umstieg|Migration/i)).toHaveCount(0);
     await expect(page.getByText(/Versions.*auswählen|Versions.*wählen/i).first()).toBeVisible();
     await expect(page.locator('[data-matrix-column]')).toHaveCount(0);
     await expect(page.getByLabel('Testfall suchen', { exact:true })).toHaveValue('201');

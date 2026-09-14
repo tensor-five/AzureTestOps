@@ -1,13 +1,13 @@
 import { createMatrixReadDiagnostics } from '../../shared/diagnostics/matrix-read-diagnostics.js';
 import type { ReleaseMatrixClientPort } from '../../application/ports/client/release-matrix-client.port.js';
-import type { MatrixSnapshot, MatrixWrite, MatrixActionResult } from '../../application/dto/release-matrix.dto.js';
+import type { MatrixSnapshot, MatrixWrite, MatrixActionResult, MatrixSuiteMembership, MatrixTagCatalog } from '../../application/dto/release-matrix.dto.js';
 import { jsonFetch } from './json-fetch.js';
 export class HttpReleaseMatrixAdapter implements ReleaseMatrixClientPort {
-    async load(setId: string, signal?: AbortSignal): Promise<MatrixSnapshot> {
+    async load(setId: string, signal?: AbortSignal, versionSuiteIds?: readonly number[]): Promise<MatrixSnapshot> {
         const requestId = crypto.randomUUID();
         const diagnostics = createMatrixReadDiagnostics(requestId, 'browser');
         try {
-            const snapshot = await jsonFetch<MatrixSnapshot>(this.path(setId), { method: 'GET', signal, headers: { 'x-matrix-request-id': requestId } });
+            const snapshot = await jsonFetch<MatrixSnapshot>(this.path(setId) + (versionSuiteIds ? `?versions=${encodeURIComponent(JSON.stringify(versionSuiteIds))}` : ''), { method: 'GET', signal, headers: { 'x-matrix-request-id': requestId } });
             diagnostics.progress({ planId: snapshot.planId, suiteCount: snapshot.suites.length, projectionCount: snapshot.projections.length });
             diagnostics.finish('complete');
             return snapshot;
@@ -28,4 +28,10 @@ export class HttpReleaseMatrixAdapter implements ReleaseMatrixClientPort {
         }
     }
     private path(setId: string): string { return `/phase2/sets/${encodeURIComponent(setId)}/release-matrix`; }
+    loadMembership(setId: string, suiteId: number, contextIdentity: string, signal?: AbortSignal): Promise<MatrixSuiteMembership> {
+        return jsonFetch(`${this.path(setId)}/memberships/${suiteId}?contextIdentity=${encodeURIComponent(contextIdentity)}`, { method: 'GET', signal });
+    }
+    loadTagCatalog(setId: string, contextIdentity: string, signal?: AbortSignal): Promise<MatrixTagCatalog> {
+        return jsonFetch(`${this.path(setId)}/tags?contextIdentity=${encodeURIComponent(contextIdentity)}`, { method: 'GET', signal });
+    }
 }

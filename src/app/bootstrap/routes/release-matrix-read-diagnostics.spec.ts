@@ -33,7 +33,7 @@ describe('matrix server read diagnosis', () => {
         let resolve!: (value: []) => void;
         vi.spyOn(f.services.testCatalog, 'listSuitesForPlan').mockImplementation(() => new Promise(r => { resolve = r; }));
         const pending = f.route('GET', path, { headers: {} } as IncomingMessage, f.res as unknown as ServerResponse);
-        await Promise.resolve(); await Promise.resolve();
+        await vi.waitFor(() => expect(f.matrixServices).toHaveBeenCalledOnce());
         f.res.emit('close');
         expect(f.matrixServices.mock.calls[0][1]?.signal?.aborted).toBe(true);
         expect(log.mock.calls.at(-1)?.[1].event).toBe('aborted'); expect(vi.getTimerCount()).toBe(0);
