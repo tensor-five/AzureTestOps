@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Release-Matrix v3 – Vertragsentwurf</title>
+  <style>
+    :root{font-family:Inter,system-ui,sans-serif;color:#1c1917;background:#f5f5f4}body{margin:0}main{max-width:1180px;margin:auto;padding:32px 24px 64px}h1{font-size:30px;margin:0 0 8px}h2{margin-top:34px}p,li{line-height:1.55}.meta{color:#57534e}.decision{background:#ede9fe;border:1px solid #c4b5fd;border-radius:12px;padding:16px;margin:22px 0}.requirements{display:grid;gap:10px}.requirement{background:#fff;border:1px solid #e7e5e4;border-radius:10px;padding:14px 16px}.requirement strong{display:block;margin-bottom:4px}.mock{background:#fff;border:1px solid #d6d3d1;border-radius:14px;overflow:hidden}.toolbar{display:flex;gap:12px;align-items:end;padding:16px;border-bottom:1px solid #e7e5e4}.toolbar label{display:grid;gap:5px;font-size:13px}.toolbar select,.toolbar input{height:38px;border:1px solid #d6d3d1;border-radius:8px;padding:0 10px;background:#fff}.tablewrap{overflow:auto}table{width:100%;min-width:680px;border-collapse:collapse;table-layout:fixed}th,td{padding:9px 11px;border-bottom:1px solid #e7e5e4;text-align:left}thead th{background:#fafaf9}th:not(:first-child),td:not(:first-child){width:72px;text-align:center}.group th{background:#f5f5f4}.secondary{display:block;color:#78716c;font-size:12px;margin-top:3px}.chip{display:inline-grid;place-items:center;min-width:28px;height:20px;border-radius:999px;border:1px solid;font-weight:700}.pass{color:#166534;background:#dcfce7;border-color:#86efac}.fail{color:#991b1b;background:#fee2e2;border-color:#fca5a5}.blocked{color:#6b21a8;background:#f3e8ff;border-color:#d8b4fe}.tree{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:18px 0}.node{background:#fff;border:1px solid #d6d3d1;border-radius:8px;padding:8px 10px}.arrow{color:#a8a29e}.open{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 16px}@media(max-width:700px){main{padding:20px 12px}.toolbar{align-items:stretch;flex-direction:column}}
+  </style>
+</head>
+<body><main>
+  <h1>Release-Matrix v3 – Hierarchie statt Suite-Tags</h1>
+  <p class="meta">Status: Entwurf zur Abstimmung. Ersetzt nach Freigabe die Quell- und Zeilenlogik aus v2; Ergebnis-Matching und Schreiblogik bleiben unverändert.</p>
+
+  <div class="decision"><strong>Empfohlene Entscheidung:</strong> Die Matrix verwendet für Spalten und Zeilen ausschließlich die feste Suite-Hierarchie. Suite-Tags werden nicht vererbt und bestimmen keine Ergebnisquelle mehr. Damit gibt es nur eine fachliche Wahrheit und keine Abweichung zwischen Name, Hierarchie und Tag.</div>
+
+  <h2>Verbindliche Hierarchie</h2>
+  <div class="tree" aria-label="Suite-Hierarchie"><span class="node">Versions-Suite „2.1.0“</span><span class="arrow">→</span><span class="node">Umgebungs-Suite „TST“</span><span class="arrow">→</span><span class="node">Inhaltliche Suite „Regression“</span><span class="arrow">→</span><span class="node">Testfall #101</span></div>
+  <p>Die drei Ebenen sind fachlich fest: Version → Umgebung → Inhalt. Die Ergebnis-Suite ist die konkrete inhaltliche Suite, der der Testfall direkt zugeordnet ist und für die Azure den Testpunkt führt.</p>
+
+  <h2>Vorschau: Gruppierung nach Umgebung</h2>
+  <section class="mock" aria-label="Matrixvorschau Gruppierung Umgebung">
+    <div class="toolbar"><label>Gruppieren nach<select><option>Umgebung</option><option>Inhalt</option></select></label><label>Testfall suchen<input placeholder="ID oder Titel"></label></div>
+    <div class="tablewrap"><table><thead><tr><th>Testfall</th><th>2.1.0</th><th>2.2.0</th><th>2.3.0</th></tr></thead><tbody>
+      <tr class="group"><th colspan="4">▾ TST (3)</th></tr>
+      <tr><td>#101 Anmelden<span class="secondary">Regression</span></td><td><span class="chip pass">✓</span></td><td><span class="chip fail">×</span></td><td><span class="chip pass">✓</span></td></tr>
+      <tr><td>#102 Abmelden<span class="secondary">Regression</span></td><td><span class="chip pass">✓</span></td><td><span class="chip pass">✓</span></td><td>·</td></tr>
+      <tr><td>#201 CSV importieren<span class="secondary">Data Import</span></td><td><span class="chip fail">×</span></td><td><span class="chip pass">✓</span></td><td><span class="chip blocked">■</span></td></tr>
+      <tr class="group"><th colspan="4">▾ ACC (2)</th></tr>
+      <tr><td>#101 Anmelden<span class="secondary">Regression</span></td><td><span class="chip pass">✓</span></td><td><span class="chip pass">✓</span></td><td>·</td></tr>
+      <tr><td>#201 CSV importieren<span class="secondary">Data Import</span></td><td>·</td><td><span class="chip pass">✓</span></td><td>·</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <h2>Anforderungen</h2>
+  <div class="requirements">
+    <div class="requirement"><strong>RM3-01 – Spalten aus Versions-Suites</strong>Jede sichtbare Spalte verweist auf eine konkrete Versions-Suite im aktiven Testplan. Die Spaltenüberschrift ist immer deren aktueller vollständiger Titel, beispielsweise „2.1.0“. Der Nutzer wählt sichtbare Versions-Suites und ihre Reihenfolge; Name, Umgebung und Tag werden nicht mehr separat pro Spalte gepflegt.</div>
+    <div class="requirement"><strong>RM3-02 – Stabile Identität</strong>Intern wird die ID der ausgewählten Versions-Suite gespeichert. Eine Umbenennung aktualisiert die Überschrift, ohne die Auswahl zu verlieren. Ist die Suite nicht mehr im aktiven Plan, wird die Spalte als ungültig erklärt und bleibt schreibgeschützt. Zwei Versions-Suites mit gleichem Titel bleiben anhand Pfad und ID auswählbar.</div>
+    <div class="requirement"><strong>RM3-03 – Hierarchischer Quellpfad</strong>Für eine Zelle wird ausschließlich unter der ausgewählten Versions-Suite gesucht: direkter Kindknoten mit exakt gleichem Umgebungsnamen, darunter direkter Kindknoten mit exakt gleichem Inhaltsnamen. Das Ergebnis stammt aus der Projektion dieser konkreten inhaltlichen Suite und der Testfall-ID. Groß-/Kleinschreibung und der vollständige Name sind Bestandteil der Identität.</div>
+    <div class="requirement"><strong>RM3-04 – Eindeutige Zeile</strong>Der logische Zeilenschlüssel ist Umgebung + Inhalt + Testfall-ID. Diese Kombination erscheint genau einmal, auch wenn sie in mehreren Versionen vorkommt. Derselbe Testfall darf als eigene Zeile erneut vorkommen, wenn Umgebung oder Inhalt abweichen.</div>
+    <div class="requirement"><strong>RM3-05 – Umschaltbare Gruppierung</strong>Der Nutzer wählt „Umgebung“ oder „Inhalt“. Bei Gruppierung nach Umgebung ist der Umgebungsname die Gruppenüberschrift und der Inhaltsname steht als Zeilenkontext. Bei Gruppierung nach Inhalt gilt das Umgekehrte. Der Zeilenschlüssel und die Ergebnisquelle ändern sich beim Umschalten nicht.</div>
+    <div class="requirement"><strong>RM3-06 – Katalogbasis</strong>Der ausgewählte Stammkatalog einschließlich Unterbaum liefert die Vereinigungsmenge der logischen Zeilen. Die Versions-Suites für die Spalten dürfen innerhalb desselben Plans außerhalb dieses Katalogs liegen. Ein Fall, der nur außerhalb des Stammkatalogs vorkommt, erzeugt keine Zeile.</div>
+    <div class="requirement"><strong>RM3-07 – Fehlende und mehrdeutige Pfade</strong>Fehlt unter einer Version die passende Umgebung oder inhaltliche Suite, zeigt die Zelle „?“. Existieren innerhalb derselben Version mehrere direkte Pfade mit derselben Umgebung und demselben Inhalt, ist die Zelle mehrdeutig, zeigt „Suite zuordnen“ und bleibt bis zur Auswahl einer konkreten inhaltlichen Suite schreibgeschützt. Eine vorhandene Suite ohne direkte Testfall-Mitgliedschaft zeigt „·“.</div>
+    <div class="requirement"><strong>RM3-08 – Ergebnisse ohne Runs</strong>Ist ein eindeutiger Testpunkt vorhanden, aber kein abgeschlossener Run, zeigt die Zelle den bestehenden NotRun-Status. `runsItems: 0` darf deshalb kein Fragezeichen auslösen.</div>
+    <div class="requirement"><strong>RM3-09 – Unveränderte Ergebnislogik</strong>Outcome-Aggregator, Point-Fallback, Tooltip, kompakte Statuschips und manueller Schreibvorgang bleiben unverändert. Eine Änderung erzeugt genau einen neuen manuellen Run für den konkreten Testpunkt der inhaltlichen Suite. Physische Punkte verschiedener Versionen, Umgebungen oder Inhalte bleiben getrennt.</div>
+    <div class="requirement"><strong>RM3-10 – Filter</strong>Suche nach Testfall-ID/Titel sowie Filter nach direkter Suite-Mitgliedschaft und Testfall-Tags bleiben erhalten. Sie verändern weder Versionsspalten noch hierarchische Quellpfade. Die bisherige frei definierte Tag-Gruppierung entfällt zugunsten der Gruppierung nach Umgebung oder Inhalt.</div>
+    <div class="requirement"><strong>RM3-11 – Laden der Hierarchie</strong>Die Quelllogik verwendet den vollständig geladenen Suite-Baum, nicht allein die flache Katalogantwort. Fehlende `parentSuiteId`-Werte in der flachen Azure-Antwort gelten nicht als fehlende Hierarchie, wenn der Suite-Baum die Beziehungen liefert. Ladefehler oder unvollständige Baumdaten werden als Fehler angezeigt und sperren Writes.</div>
+    <div class="requirement"><strong>RM3-12 – Migration v2 → v3</strong>Stammkatalog, Suche, Filter, Set und Kontext bleiben erhalten. Alte tagbasierte Spalten, Suite-Tag-Zuordnungen, frei definierte Tag-Gruppen und ihre Zustände werden nicht automatisch in Versions-Suites umgedeutet. Sie werden mit einem Umstiegshinweis zurückgesetzt; der Nutzer wählt einmalig die konkreten Versions-Suites und die Gruppierung Umgebung oder Inhalt.</div>
+    <div class="requirement"><strong>RM3-13 – Persistenz und Bedienbarkeit</strong>Versionsauswahl, Spaltenreihenfolge, Gruppierungsmodus, Reihenfolge und Einklappzustände je Gruppierungsmodus sowie Filter werden pro Set über LowDB gespeichert; LocalStorage bleibt Fallback. Tastatur-, Touch-, Tooltip-, Sticky-Header- und Scrollverhalten aus v2 bleiben erhalten.</div>
+    <div class="requirement"><strong>RM3-14 – Keine Suite-Tag-Abhängigkeit</strong>Suite-Tags und ihre Vererbung spielen für Spalten, Zeilen und Ergebnisquellen keine Rolle. Vorhandene Tags werden weder geändert noch entfernt. Eine spätere allgemeine Tag-Vererbung wäre ein getrenntes Feature und darf diese Matrixlogik nicht beeinflussen.</div>
+  </div>
+
+  <h2>Auswertung der bereitgestellten Logs</h2>
+  <ul>
+    <li>`suiteTagsItems: 100` bestätigt, dass Suite-Metadaten vollständig gelesen wurden; die Fragezeichen sind kein Ladeabbruch.</li>
+    <li>`candidateRootCount: 100` und `missingParentCount: 100` stammen aus der flachen Katalogantwort ohne Parent-IDs. `canonicalRootCount: 1` zeigt, dass der anschließend geladene Suite-Baum eine gemeinsame Hierarchie auflöst.</li>
+    <li>`projectionCount: 614` und `pointCount: 614` bestätigen vorhandene Testfallprojektionen und Punkte.</li>
+    <li>`runsItems: 0` bedeutet, dass kein Run zurückgegeben wurde. Nach erfolgreicher hierarchischer Zuordnung muss das als NotRun erscheinen; aktuell verhindert bereits die tagbasierte Quellwahl diese Stufe.</li>
+  </ul>
+
+  <div class="open"><strong>Zur Freigabe offen:</strong> Soll dieser Entwurf wie empfohlen Suite-Tags vollständig aus der Matrix-Quelllogik entfernen? Dann ist ausschließlich die feste Hierarchie Version → Umgebung → Inhalt maßgeblich.</div>
+</main></body></html>
