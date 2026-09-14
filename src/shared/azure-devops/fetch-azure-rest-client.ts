@@ -9,6 +9,7 @@ export type FetchLike = (
     method?: string;
     headers?: Record<string, string>;
     body?: string;
+    signal?: AbortSignal;
   }
 ) => Promise<{
   status: number;
@@ -54,8 +55,8 @@ export class FetchAzureRestClient implements AzureRestHttpClient {
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 
-  public async get(url: string): Promise<AzureHttpResponse> {
-    return this.send(url, "GET");
+  public async get(url: string, options?: { signal?: AbortSignal }): Promise<AzureHttpResponse> {
+    return this.send(url, "GET", undefined, undefined, options?.signal);
   }
 
   public async post(url: string, body: unknown): Promise<AzureHttpResponse> {
@@ -74,42 +75,46 @@ export class FetchAzureRestClient implements AzureRestHttpClient {
     url: string,
     method: "GET" | "PATCH" | "POST",
     body?: unknown,
-    extraHeaders?: Record<string, string>
+    extraHeaders?: Record<string, string>,
+    signal?: AbortSignal
   ): Promise<AzureHttpResponse> {
-    const headers: Record<string, string> = {
-      accept: "application/json",
-      ...(extraHeaders ?? {})
-    };
+    return this.withTimeout(async requestSignal => {
+      const headers: Record<string, string> = {
+        accept: "application/json",
+        ...(extraHeaders ?? {})
+      };
 
-    if (method === "PATCH" || method === "POST") {
-      headers["content-type"] = headers["content-type"] ?? "application/json-patch+json";
-    }
+      if (method === "PATCH" || method === "POST") {
+        headers["content-type"] = headers["content-type"] ?? "application/json-patch+json";
+      }
 
-    const authHeader = await this.resolveAuthHeader();
-    if (authHeader) {
-      headers.authorization = authHeader;
-    }
+      const authHeader = await this.resolveAuthHeader();
+      requestSignal.throwIfAborted();
+      if (authHeader) {
+        headers.authorization = authHeader;
+      }
 
-    const init: { method: string; headers: Record<string, string>; body?: string } = { method, headers };
-    if (method === "PATCH" || method === "POST") {
-      init.body = typeof body === "string" ? body : JSON.stringify(body ?? []);
-    }
+      const init = { method, headers, signal: requestSignal } as { method: string; headers: Record<string, string>; body?: string; signal: AbortSignal };
+      if (method === "PATCH" || method === "POST") {
+        init.body = typeof body === "string" ? body : JSON.stringify(body ?? []);
+      }
 
-    const response = await this.withTimeout(this.fetchImpl(url, init));
+      const response = await this.fetchImpl(url, init);
 
-    const text = await response.text();
-    const json = parseJsonSafely(text);
+      const text = await response.text();
+      const json = parseJsonSafely(text);
 
-    const responseHeaders: Record<string, string> = {};
-    response.headers.forEach((value, name) => {
-      responseHeaders[name.toLowerCase()] = value;
-    });
+      const responseHeaders: Record<string, string> = {};
+      response.headers.forEach((value, name) => {
+        responseHeaders[name.toLowerCase()] = value;
+      });
 
-    return {
-      status: response.status,
-      json: json !== undefined ? json : text,
-      headers: responseHeaders
-    };
+      return {
+        status: response.status,
+        json: json !== undefined ? json : text,
+        headers: responseHeaders
+      };
+    }, signal);
   }
 
   private async resolveAuthHeader(): Promise<string | null> {
@@ -129,21 +134,25 @@ export class FetchAzureRestClient implements AzureRestHttpClient {
     return null;
   }
 
-  private withTimeout<T>(promise: Promise<T>): Promise<T> {
-    return new Promise<T>((resolve, reject) => {
-      const handle = setTimeout(() => {
-        reject(new Error(`Azure REST request timed out after ${this.timeoutMs}ms`));
-      }, this.timeoutMs);
-      promise
-        .then((value) => {
-          clearTimeout(handle);
-          resolve(value);
-        })
-        .catch((error) => {
-          clearTimeout(handle);
-          reject(error);
-        });
+  private async withTimeout<T>(operation: (signal: AbortSignal) => Promise<T>, external?: AbortSignal): Promise<T> {
+    external?.throwIfAborted();
+    const controller = new AbortController();
+    const abort = () => controller.abort(new DOMException('Request aborted', 'AbortError'));
+    external?.addEventListener('abort', abort, { once: true });
+    const timer = setTimeout(() => controller.abort(new Error(`Azure REST request timed out after ${this.timeoutMs}ms`)), this.timeoutMs);
+    let rejectAbort: () => void = () => {};
+    const interrupted = new Promise<never>((_, reject) => {
+      rejectAbort = () => reject(controller.signal.reason);
+      controller.signal.addEventListener('abort', rejectAbort, { once: true });
+      if (controller.signal.aborted) rejectAbort();
     });
+    try {
+      return await Promise.race([operation(controller.signal), interrupted]);
+    } finally {
+      clearTimeout(timer);
+      external?.removeEventListener('abort', abort);
+      controller.signal.removeEventListener('abort', rejectAbort);
+    }
   }
 }
 

@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+import { createMatrixReadDiagnostics } from '../../../shared/diagnostics/matrix-read-diagnostics.js';
 import { buildAdoBaseUrl } from "../../../shared/azure-devops/azure-rest-client.js";
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { AdoRuntime } from '../../composition/runtime.js';
@@ -13,6 +15,13 @@ export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepository
         if (!match)
             return false;
         let lock: string | null = null;
+        const reading = !match[2] && method === 'GET';
+        const providedId = req.headers?.['x-matrix-request-id'];
+        const requestId = typeof providedId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(providedId) ? providedId : randomUUID();
+        const diagnostics = reading ? createMatrixReadDiagnostics(requestId, 'server') : undefined;
+        const controller = new AbortController();
+        const closed = () => { if (!res.writableEnded) { controller.abort(); diagnostics?.finish('aborted'); } };
+        if (reading) { res.setHeader('x-matrix-request-id', requestId); res.once?.('close', closed); }
         try {
             if (method !== (match[2] ? 'POST' : 'GET')) {
                 writeJson(res, 405, { message: 'Methode nicht erlaubt.' });
@@ -34,7 +43,10 @@ export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepository
             if (!ado.matrixServices)
                 throw new Error('Release-Matrix ist in dieser Laufzeit nicht verfügbar.');
             if (!match[2]) {
-                writeJson(res, 200, { ...await loadReleaseMatrix(planId, ado.matrixServices(context)), contextIdentity });
+                const options = { signal: controller.signal, diagnostics };
+                const snapshot = await loadReleaseMatrix(planId, ado.matrixServices(context, options), options);
+                writeJson(res, 200, { ...snapshot, contextIdentity });
+                diagnostics?.finish('complete');
                 return true;
             }
             if (!body || body.planId !== planId) {
@@ -56,9 +68,13 @@ export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepository
             writeJson(res, 200, await recordMatrixOutcome(body, services));
         }
         catch (error) {
+            diagnostics?.finish(controller.signal.aborted ? 'aborted' : 'error');
+            if (controller.signal.aborted) return true;
             writeJson(res, 500, { message: error instanceof Error ? error.message : 'Release-Matrix konnte nicht geladen oder gespeichert werden.' });
         }
         finally {
+            res.removeListener?.('close', closed);
+            diagnostics?.finish(controller.signal.aborted ? 'aborted' : 'error');
             if (lock)
                 pending.delete(lock);
         }

@@ -1,33 +1,67 @@
+import type { MatrixReadDiagnostics } from '../../shared/diagnostics/matrix-read-diagnostics.js';
 import type { MatrixData } from '../dto/release-matrix.dto.js';
 import type { TestCatalogPort } from '../ports/test-catalog.port.js';
 import type { TestPoint } from '../../domain/test-management/test-point.js';
-import { flattenSuiteTree } from '../../domain/test-management/test-suite-tree.js';
+import { flattenSuiteTree, type TestSuiteNode } from '../../domain/test-management/test-suite-tree.js';
 import { loadTestCaseProjections, type LoadTestCaseProjectionsDeps } from './load-test-case-projections.use-case.js';
+import { createMatrixReadSession } from './matrix-read-session.js';
 export type MatrixReadDeps = LoadTestCaseProjectionsDeps & {
     testCatalog: TestCatalogPort;
 };
 /** Reuses the existing suite/result aggregation without altering its matching rules. */
-export async function loadReleaseMatrix(planId: number, deps: MatrixReadDeps): Promise<MatrixData> {
-    const catalog = await deps.testCatalog.listSuitesForPlan(planId);
+export async function loadReleaseMatrix(planId: number, deps: MatrixReadDeps, options: { signal?: AbortSignal; diagnostics?: MatrixReadDiagnostics } = {}): Promise<MatrixData> {
+    options.signal?.throwIfAborted();
+    const catalog = await (options.diagnostics ? options.diagnostics.measure('catalog', { planId }, () => deps.testCatalog.listSuitesForPlan(planId)) : deps.testCatalog.listSuitesForPlan(planId));
     const ids = new Set(catalog.map(s => s.id));
     const roots = catalog.filter(s => s.parentSuiteId === null || !ids.has(s.parentSuiteId));
+    options.diagnostics?.progress({ planId, catalogSuiteCount: catalog.length, candidateRootCount: roots.length, missingParentCount: roots.length, duplicateCatalogSuiteIdCount: catalog.length - ids.size });
+    let skippedOverlappingRoots = 0, overlappingSuiteCount = 0;
     const points = new Map<number, TestPoint[]>();
-    const read = deps.testManagement;
-    const snapshot: MatrixData = { planId, suites: [], projections: [], pointCounts: {} };
+    const session = createMatrixReadSession(deps, options);
+    const read = session.testManagement;
+    // The flat catalog can omit parent IDs. Resolve its candidates against the actual tree
+    // before aggregation, so child-first catalogs cannot overwrite complete paths with subtrees.
+    const discovered = new Set<number>();
+    const trees = new Map<number, TestSuiteNode>();
     for (const root of roots) {
-        const loaded = await loadTestCaseProjections({ planId, rootSuiteId: root.id }, { ...deps, testManagement: {
+        if (discovered.has(root.id)) { skippedOverlappingRoots++; continue; }
+        const tree = await read.loadSuiteTree(planId, root.id);
+        const entries = flattenSuiteTree(tree);
+        for (const entry of entries) {
+            if (discovered.has(entry.id)) overlappingSuiteCount++;
+            discovered.add(entry.id);
+            if (entry.id !== tree.id) trees.delete(entry.id);
+        }
+        trees.set(tree.id, tree);
+    }
+    options.diagnostics?.progress({ canonicalRootCount: trees.size, skippedOverlappingRoots, overlappingSuiteCount });
+    const snapshot: MatrixData = { planId, suites: [], projections: [], pointCounts: {} };
+    const suiteTypes = new Map(catalog.map(suite => [suite.id, suite.suiteType]));
+    for (const root of trees.values()) {
+        const loaded = await loadTestCaseProjections({ planId, rootSuiteId: root.id }, { ...session, testManagement: {
                 loadSuiteTree: (p, s) => read.loadSuiteTree(p, s), listTestCasesInSuite: (p, s) => read.listTestCasesInSuite(p, s),
                 listRunsForPlan: p => read.listRunsForPlan(p), loadResultsForRun: r => read.loadResultsForRun(r),
                 loadPointsForSuite: async (p, s) => { const result = await read.loadPointsForSuite(p, s); points.set(s, result); return result; }
             } });
-        snapshot.suites.push(...flattenSuiteTree(loaded.suiteTree).map(s => ({ ...s, suiteType: catalog.find(c => c.id === s.id)?.suiteType ?? null })));
+        snapshot.suites.push(...flattenSuiteTree(loaded.suiteTree).map(s => ({ ...s, suiteType: suiteTypes.get(s.id) ?? null })));
         snapshot.projections.push(...loaded.projections);
     }
-    snapshot.projections = [...new Map(snapshot.projections.map(p => [`${p.suiteId}:${p.workItemId}`, p])).values()];
+    const canonicalSuites = new Map<number, MatrixData['suites'][number]>();
+    for (const suite of snapshot.suites) {
+        const previous = canonicalSuites.get(suite.id);
+        if (!previous || suite.depth > previous.depth) canonicalSuites.set(suite.id, suite);
+    }
+    options.diagnostics?.progress({ suiteCount: canonicalSuites.size, duplicateSuiteIdCount: snapshot.suites.length - canonicalSuites.size });
+    snapshot.suites = [...canonicalSuites.values()];
+    snapshot.projections = [...new Map(snapshot.projections.map(p => [`${p.suiteId}:${p.workItemId}`, {
+        ...p, suitePath: canonicalSuites.get(p.suiteId)?.path ?? p.suitePath,
+    }])).values()];
     for (const [suiteId, list] of points)
         for (const point of list) {
             const key = `${suiteId}:${point.workItemId}`;
             snapshot.pointCounts[key] = (snapshot.pointCounts[key] ?? 0) + 1;
         }
+    options.signal?.throwIfAborted();
+    options.diagnostics?.progress({ projectionCount: snapshot.projections.length, pointCount: [...points.values()].reduce((total, list) => total + list.length, 0) });
     return snapshot;
 }

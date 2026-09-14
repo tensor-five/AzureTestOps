@@ -11,6 +11,7 @@ on:
       - scripts/check-frozen-tests.mjs
       - src/application/**/release-matrix*
       - src/application/**/load-release-matrix*
+      - src/application/use-cases/matrix-read-session*
       - src/application/ports/test-execution.port.ts
       - src/application/**/record-matrix-outcome*
       - src/application/ports/client/client-ports.ts
@@ -20,6 +21,8 @@ on:
       - src/shared/user-preferences/**
       - src/shared/test-management/**
       - src/shared/azure-devops/**
+      - src/shared/diagnostics/matrix-read*
+      - src/adapters/http/json-fetch*
       - src/app/composition/**
       - src/app/bootstrap/http-server.ts
       - src/app/bootstrap/ui-client.tsx

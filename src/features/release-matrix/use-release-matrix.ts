@@ -13,6 +13,7 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
     const [loading, setLoading] = React.useState(true);
     const alive = React.useRef(true);
     const request = React.useRef(0);
+    const activeRead = React.useRef<AbortController | null>(null);
     const contextIdentity = snapshot?.contextIdentity ?? expectedContextIdentity;
     const mutationStore = React.useMemo(() => port && contextIdentity
         ? getMatrixMutationStore(port, setId, planId, contextIdentity) : null,
@@ -21,6 +22,9 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
         mutationStore?.getSnapshot ?? getEmptyMutationState);
     const observed = React.useRef<{ store: MatrixMutationStore; revision: number } | null>(null);
     const reload = React.useCallback(async (background = false) => {
+        activeRead.current?.abort();
+        const controller = new AbortController();
+        activeRead.current = controller;
         const version = ++request.current;
         if (!background) setLoading(true);
         if (!background) setSnapshot(null);
@@ -32,7 +36,7 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
             let readStartedAt: number;
             do {
                 readStartedAt = getMatrixMutationRevision();
-                value = await port.load(setId);
+                value = await port.load(setId, controller.signal);
                 store = getMatrixMutationStore(port, setId, value.planId, value.contextIdentity);
             } while (alive.current && version === request.current && store.getSnapshot().confirmationRevision > readStartedAt);
             if (alive.current && version === request.current) {
@@ -42,7 +46,7 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
             }
         }
         catch (e) {
-            if (alive.current && version === request.current)
+            if (!controller.signal.aborted && alive.current && version === request.current)
                 setError(`Matrix konnte nicht geladen werden. ${e instanceof Error ? e.message : ''}`);
         }
         finally {
@@ -57,7 +61,7 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
             void reload(true);
         }
     }, [mutationStore, mutation.confirmationRevision, reload]);
-    React.useEffect(() => { alive.current = true; void reload(); return () => { alive.current = false; request.current++; }; }, [reload]);
+    React.useEffect(() => { alive.current = true; void reload(); return () => { alive.current = false; request.current++; activeRead.current?.abort(); }; }, [reload]);
     const configRef = React.useRef(config);
     const update = React.useCallback((patch: Partial<MatrixConfig>) => {
         const next = { ...configRef.current, ...patch };

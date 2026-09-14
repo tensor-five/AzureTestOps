@@ -6,6 +6,8 @@ const ADO_CSRF_HEADER = "x-ado-csrf-token";
 export type JsonFetchInit = {
   method: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
+  signal?: AbortSignal;
+  headers?: Record<string, string>;
 };
 
 /**
@@ -18,6 +20,7 @@ export type JsonFetchInit = {
  */
 export async function jsonFetch<T>(url: string, init: JsonFetchInit): Promise<T> {
   const headers: Record<string, string> = {
+    ...init.headers,
     accept: "application/json"
   };
   if (init.body !== undefined) {
@@ -32,6 +35,7 @@ export async function jsonFetch<T>(url: string, init: JsonFetchInit): Promise<T>
 
   const response = await fetch(url, {
     method: init.method,
+    signal: init.signal,
     headers,
     body: init.body !== undefined ? JSON.stringify(init.body) : undefined
   });
