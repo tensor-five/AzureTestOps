@@ -2,8 +2,8 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  // Frozen v1 suite-root expectations are historical; v2 is the active matrix contract.
-  testIgnore: "**/release-matrix.contract.spec.ts",
+  // Frozen v1/v2 matrix semantics remain historical; v3 is the active contract.
+  testIgnore: ["**/release-matrix.contract.spec.ts", "**/release-matrix-v2.contract.spec.ts", "**/release-matrix-v2.sources.spec.ts"],
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

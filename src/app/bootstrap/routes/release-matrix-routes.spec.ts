@@ -32,6 +32,15 @@ function setup() {
 }
 
 describe('Matrix write context binding', () => {
+    it.each([false,true])('reports a structured unconfirmed-run failure only after creation (%s)',async created=>{
+        const fixture=setup(),loaded=await fixture.call('GET');
+        if(created)fixture.azure.control.failAfterCreate=true;else fixture.azure.control.failWrite=true;
+        const result=await fixture.call('POST',{...target,contextIdentity:loaded.body.contextIdentity});
+        expect(result.status).toBe(500);
+        expect(result.body.code).toBe(created?'MATRIX_RUN_UNCONFIRMED':undefined);
+        expect(result.body.details).toEqual(created?{runId:100}:undefined);
+        expect(fixture.azure.writes.filter(w=>w.method==='POST')).toHaveLength(created?1:0);
+    });
     it('rejects a snapshot from another project before starting Azure work even with identical numeric IDs', async () => {
         const fixture = setup();
         const loaded = await fixture.call('GET');

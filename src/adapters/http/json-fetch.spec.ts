@@ -77,6 +77,18 @@ describe("jsonFetch", () => {
     });
   });
 
+  it("preserves structured error details independently of the message", async () => {
+    installFetch(() => jsonResponse(500, {code:"MATRIX_RUN_UNCONFIRMED",message:"Unconfirmed",details:{runId:100}}));
+    await expect(jsonFetch("/x",{method:"POST"})).rejects.toMatchObject({
+      code:"MATRIX_RUN_UNCONFIRMED",message:"Unconfirmed",details:{runId:100}
+    });
+  });
+
+  it.each([null, [], "100"])("ignores malformed error details (%s)", async details => {
+    installFetch(() => jsonResponse(500,{message:"Failure",details}));
+    await expect(jsonFetch("/x",{method:"GET"})).rejects.toMatchObject({details:undefined});
+  });
+
   it("falls back to HTTP_<status> when the body has no code", async () => {
     installFetch(() => new Response("plain text", { status: 503 }));
 

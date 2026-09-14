@@ -59,7 +59,10 @@ export async function jsonFetch<T>(url: string, init: JsonFetchInit): Promise<T>
       parsed && typeof parsed === "object" && typeof (parsed as { message?: unknown }).message === "string"
         ? (parsed as { message: string }).message
         : `Request failed with status ${response.status}`;
-    throw new ApiError(response.status, code, message);
+    const rawDetails = parsed && typeof parsed === "object" ? (parsed as { details?: unknown }).details : undefined;
+    const details = rawDetails && typeof rawDetails === "object" && !Array.isArray(rawDetails)
+      ? rawDetails as Record<string, unknown> : undefined;
+    throw new ApiError(response.status, code, message, details);
   }
 
   return (parsed as T) ?? ({} as T);

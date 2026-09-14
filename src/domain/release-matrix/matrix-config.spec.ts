@@ -1,48 +1,30 @@
-import { describe, it, expect } from 'vitest';
-import { emptyMatrixConfig, sanitizeMatrixConfig, uniqueTags } from './matrix-config.js';
-describe('Matrix user configuration', () => {
-    it('keeps first tag spelling and order while ignoring case and blank entries', () => {
-        expect(uniqueTags([' Data Import ', 'Regression', 'DATA IMPORT', ''])).toEqual(['Data Import', 'Regression']);
+import {describe,it,expect} from 'vitest';
+import {emptyMatrixConfig,sanitizeMatrixConfig,uniqueTags} from './matrix-config.js';
+describe('Matrix v3 user configuration',()=>{
+    it('normalizes test-case filter tag lists preserving first spelling',()=>{
+        expect(uniqueTags([' Import ','Smoke','IMPORT',''])).toEqual(['Import','Smoke']);
     });
-    it('persists only declared preferences and preserves source identities', () => {
-        const config = { ...emptyMatrixConfig(1, 10), columns: [{ id: 'release', name: 'Version', environment: 'Test', tag: 'any-tag', rootSuiteId: 20, visible: false }], mappings: { '11:release': 21 }, pending: true, results: [{ lastOutcome: 'Passed' }] };
-        const clean = sanitizeMatrixConfig(config)!;
-        expect(clean.columns[0]).toEqual({ id: 'release', name: 'Version', environment: 'Test', tag: 'any-tag', visible: false });
-        expect(clean.columns[0]).not.toHaveProperty('rootSuiteId');
-        expect(clean.mappings).toEqual(config.mappings);
-        expect(clean).not.toHaveProperty('pending');
-        expect(clean).not.toHaveProperty('results');
+    it('persists only declared configuration with stable version and mapping IDs',()=>{
+        const raw={...emptyMatrixConfig(1,10),columns:[{id:'a',versionSuiteId:20,visible:false,name:'Old',tag:'Ignored'}],mappings:{'["TST","Regression","a"]':22},pending:true,results:[{}]};
+        const clean=sanitizeMatrixConfig(raw)!;
+        expect(clean.columns).toEqual([{id:'a',versionSuiteId:20,visible:false}]);expect(clean.mappings).toEqual(raw.mappings);
+        expect(clean).not.toHaveProperty('pending');expect(clean).not.toHaveProperty('results');
     });
-    it('rejects incomplete scopes and removes malformed column and mapping entries', () => {
-        expect(sanitizeMatrixConfig({ planId: 0, catalogRootId: 10 })).toBeNull();
-        expect(sanitizeMatrixConfig(null)).toBeNull();
-        const clean = sanitizeMatrixConfig({ ...emptyMatrixConfig(1, 10), columns: [null, { id: '' }, { id: 'a', rootSuiteId: -5 }, { id: 'a', name: 'duplicate' }], mappings: { bad: -1, valid: 42 } })!;
-        expect(clean.columns).toHaveLength(1);
-        expect(clean.columns[0]).not.toHaveProperty('rootSuiteId');
-        expect(clean.mappings).toEqual({ valid: 42 });
+    it('rejects incomplete scopes and sanitizes malformed columns, modes and mappings',()=>{
+        expect(sanitizeMatrixConfig(null)).toBeNull();expect(sanitizeMatrixConfig({planId:0,catalogRootId:10})).toBeNull();
+        const clean=sanitizeMatrixConfig({...emptyMatrixConfig(1,10),columns:[null,{id:''},{id:'a',versionSuiteId:-3},{id:'a',versionSuiteId:40}],mappings:{bad:-1,valid:22},groupOrderByMode:{environment:['TST',3,'TST']}})!;
+        expect(clean.columns).toEqual([{id:'a',versionSuiteId:0,visible:true}]);expect(clean.mappings).toEqual({valid:22});
+        expect(clean.groupOrderByMode).toEqual({environment:['TST'],content:[]});
     });
-    it('migrates v1 exactly once and preserves provenance through repeated server/UI sanitization', () => {
-        const raw = { ...emptyMatrixConfig(1,10), version: undefined, grouping: 'tags', tags:[' Data Import '],
-            columns:[{id:'test',name:'Release',environment:'Test',tag:'2.1.0-Test',rootSuiteId:40,visible:false}],
-            mappings:{'11:test':43},groupOrder:['11','12'],collapsed:['11'],search:'CSV',tagFilter:'Regression',suiteFilter:'21' };
-        let clean = sanitizeMatrixConfig(raw)!;
-        expect(clean).toMatchObject({version:2,migratedFrom:1,catalogRootId:10,grouping:'tags',tags:['Data Import'],
-            mappings:{},groupOrder:[],collapsed:[],search:'CSV',tagFilter:'Regression',suiteFilter:'21'});
-        expect(clean.columns[0]).toMatchObject({name:'Release',environment:'Test',tag:'2.1.0-Test',visible:false});
-        clean.mappings[JSON.stringify(['Regression','test'])]=21;clean.groupOrder=['Regression'];clean.collapsed=['Regression'];
-        const expected=structuredClone(clean);
-        for(let pass=0;pass<5;pass++)clean=sanitizeMatrixConfig(clean)!;
+    it.each([1,2])('resets legacy v%s source/tag state once while retaining scope and filters',version=>{
+        let clean=sanitizeMatrixConfig({version,planId:1,catalogRootId:10,grouping:'tags',tags:['Regression'],columns:[{id:'old',name:'2.1.0',tag:'Test'}],mappings:{old:22},groupOrder:['Regression'],collapsedTags:['tag:regression'],search:'201',tagFilter:'Regression',suiteFilter:'32'})!;
+        expect(clean).toEqual({...emptyMatrixConfig(1,10),migratedFrom:version,search:'201',tagFilter:'Regression',suiteFilter:'32'});
+        clean.columns=[{id:'new',versionSuiteId:20,visible:true}];clean.grouping='content';clean.collapsedByMode.content=['Regression'];
+        const expected=structuredClone(clean);for(let pass=0;pass<5;pass++)clean=sanitizeMatrixConfig(clean)!;
         expect(clean).toEqual(expected);
     });
-
-    it('preserves separate suite and tag collapse states through repeated sanitization', () => {
-        const raw = { ...emptyMatrixConfig(1, 10), collapsed: ['untagged', 'tag:smoke'], collapsedTags: ['tag:smoke', 42, null] };
-        const clean = sanitizeMatrixConfig(raw)!;
-        expect(clean.collapsed).toEqual(['untagged', 'tag:smoke']);
-        expect(clean.collapsedTags).toEqual(['tag:smoke']);
-        expect(sanitizeMatrixConfig(clean)).toEqual(clean);
-        expect(sanitizeMatrixConfig({ ...raw, collapsedTags: undefined })!.collapsedTags).toEqual([]);
-        expect(sanitizeMatrixConfig({ ...raw, version: 1 })!.collapsedTags).toEqual([]);
+    it('keeps same-name groups independent in both modes through sanitization',()=>{
+        const clean=sanitizeMatrixConfig({...emptyMatrixConfig(1,10),collapsedByMode:{environment:['TST'],content:['TST',null]},groupOrderByMode:{environment:['TST','ACC'],content:['Import','TST']}})!;
+        expect(clean.collapsedByMode).toEqual({environment:['TST'],content:['TST']});expect(sanitizeMatrixConfig(clean)).toEqual(clean);
     });
-
 });
