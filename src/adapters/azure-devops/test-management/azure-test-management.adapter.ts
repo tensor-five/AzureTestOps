@@ -108,7 +108,7 @@ export class AzureTestManagementAdapter implements TestManagementReadPort {
     let skip = 0;
 
     while (true) {
-      const url = `${this.baseUrl}/_apis/test/runs?planId=${planId}&$top=${this.runsPageSize}&$skip=${skip}&api-version=${API_VERSION_71}`;
+      const url = `${this.baseUrl}/_apis/test/runs?planId=${planId}&$top=${this.runsPageSize}&$skip=${skip}&includeRunDetails=true&api-version=${API_VERSION_71}`;
       const { response } = await requestWithRetry(() => this.httpClient.get(url));
       if (response.status !== 200) {
         throw new Error(`RUNS_HTTP_${response.status}`);
@@ -120,7 +120,7 @@ export class AzureTestManagementAdapter implements TestManagementReadPort {
       }
 
       for (const raw of value) {
-        const run = toTestRun(raw);
+        const run = toTestRun(raw, planId);
         if (run) {
           all.push(run);
         }
@@ -266,13 +266,16 @@ function toTestPoint(value: unknown, fallbackSuiteId: number): TestPoint | null 
   };
 }
 
-function toTestRun(value: unknown): TestRun | null {
+function toTestRun(value: unknown, requestedPlanId: number): TestRun | null {
   if (!value || typeof value !== "object") {
     return null;
   }
   const candidate = value as Record<string, unknown>;
   const runId = readNumber(candidate.id);
-  const planId = readNumber((candidate.plan as { id?: unknown } | undefined)?.id);
+  // Compact runs may omit the plan; the request already filters it server-side.
+  const planId = candidate.plan == null
+    ? requestedPlanId
+    : readNumber((candidate.plan as { id?: unknown }).id);
   if (runId === null || planId === null) {
     return null;
   }
