@@ -46,11 +46,13 @@ export function MatrixTable({ snapshot, config, groups, pending, blocked, stale,
       <table aria-label="Release-Matrix">
         <colgroup>
           <col className="matrix-title-col" />
+          <col className="matrix-context-col" />
           {columns.map(column => <col key={column.id} className="matrix-status-col" />)}
         </colgroup>
         <thead>
           <tr>
             <th scope="col">Testfall</th>
+            <th scope="col" className="matrix-context-cell">{config.grouping === 'environment' ? 'Inhalt' : 'Umgebung'}</th>
             {columns.map(column => (
               <th key={column.id} scope="col" title={versionTitle(snapshot,column)}
                 aria-label={versionTitle(snapshot,column)}>
@@ -64,7 +66,7 @@ export function MatrixTable({ snapshot, config, groups, pending, blocked, stale,
           return (
             <tbody key={group.id}>
               <tr className="matrix-group-row" data-matrix-group={group.id}>
-                <th colSpan={columns.length + 1} scope="rowgroup">
+                <th colSpan={columns.length + 2} scope="rowgroup">
                   <div>
                     <button type="button" aria-expanded={!collapsed}
                       aria-label={`Gruppe ${group.name} ${collapsed ? 'aufklappen' : 'einklappen'}`}
@@ -86,8 +88,8 @@ export function MatrixTable({ snapshot, config, groups, pending, blocked, stale,
                 <tr key={matrixRowKey(row)} data-matrix-row={matrixRowKey(row)}>
                   <th scope="row">
                     <span className="matrix-case-id">#{row.workItemId}</span> {row.title}
-                    <small>{config.grouping === 'environment' ? row.content : row.environment}</small>
                   </th>
+                  <td className="matrix-context-cell">{config.grouping === 'environment' ? row.content : row.environment}</td>
                   {columns.map(column => {
                     const source = sources.get(mappingKey(row, column.id))!;
                     const key = `${source.suite?.id}:${row.workItemId}`;

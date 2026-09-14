@@ -56,14 +56,15 @@
 .matrix-scroll { overflow:auto; min-height:0; min-width:0; max-width:100%; max-height:max(calc(var(--space-4) * 12),80dvh); flex:1 1 auto; border:1px solid var(--color-border); border-radius:var(--radius-lg); }
 .matrix-scroll table { border-collapse:separate; border-spacing:0; table-layout:fixed; width:max-content; min-width:0; font-size:var(--text-sm); }
 .matrix-title-col { width:350px; }
+.matrix-context-col { width:var(--space-32); }
 .matrix-status-col { width:76px; }
 .matrix-scroll th,.matrix-scroll td { border-right:1px solid var(--color-border-subtle); border-bottom:1px solid var(--color-border-subtle); box-sizing:border-box; }
 .matrix-scroll thead th { position:sticky; top:0; z-index:3; width:76px; min-width:76px; max-width:76px; padding:var(--space-3) var(--space-1); background:var(--color-bg-muted); text-align:center; overflow-wrap:anywhere; }
-.matrix-scroll th small { display:block; font-weight:normal; color:var(--color-text-secondary); margin-top:var(--space-1); line-height:1.4; }
 .matrix-scroll thead th:first-child { left:0; z-index:4; width:350px; min-width:350px; text-align:left; padding:var(--space-3); }
 .matrix-scroll th[scope=row] { position:sticky; left:0; z-index:2; background:var(--color-surface); text-align:left; padding:var(--space-2) var(--space-3); width:350px; min-width:350px; max-width:350px; overflow-wrap:anywhere; font-weight:normal; }
 .matrix-case-id { color:var(--color-text-muted); font-variant-numeric:tabular-nums; }
 .matrix-scroll td { width:76px; min-width:76px; max-width:76px; padding:0; text-align:center; background:var(--color-surface); }
+.matrix-scroll .matrix-context-cell { width:var(--space-32); min-width:var(--space-32); max-width:var(--space-32); padding:var(--space-2) var(--space-3); text-align:left; overflow-wrap:anywhere; }
 .matrix-group-row th { padding:0; text-align:left; background:var(--color-bg-muted); }
 .matrix-group-row th>div { position:sticky; left:0; width:350px; display:flex; align-items:center; min-height:38px; }
 .matrix-group-row button { border:0; background:transparent; padding:var(--space-2); }
