@@ -1,4 +1,5 @@
 import { validateMatrixConfirmation } from './validate-matrix-confirmation.js';
+import { matrixSnapshotCache } from './matrix-snapshot-cache.js';
 import type { MatrixSnapshot, MatrixWrite } from '../../application/dto/release-matrix.dto.js';
 import type { ReleaseMatrixClientPort } from '../../application/ports/client/release-matrix-client.port.js';
 import type { TestCaseOutcomeUpdate } from '../../domain/test-management/test-case-outcome-update.js';
@@ -95,7 +96,11 @@ export class MatrixMutationStore {
             changed = true;
         }
         // The caller already accepts this snapshot; do not trigger another reload or repeat the write.
-        if (changed) this.publish();
+        if (changed) {
+            // Reconciled writes have no delta journal: every older selection must read again.
+            matrixSnapshotCache(this.port).invalidateScope(this.setId, this.planId, this.contextIdentity);
+            this.publish();
+        }
     }
 
     private publish() {

@@ -23,8 +23,8 @@ async function fixture() {
     let reject!: (error: Error) => void;
     let liveSnapshot = snapshot;
     const port = { load: vi.fn(async () => liveSnapshot), record: vi.fn(() => new Promise<MatrixWriteResult>((yes, no) => { resolve = yes; reject = no; })) };
-    const mount = async (setId = 'catalog') => {
-        const hook = renderHook(() => useReleaseMatrix(setId, 1, 10, port, contextIdentity));
+    const mount = async (setId = 'catalog', expectedContext = contextIdentity) => {
+        const hook = renderHook(() => useReleaseMatrix(setId, 1, 10, port, expectedContext));
         await waitFor(() => expect(hook.result.current.loading).toBe(false));
         return hook;
     };
@@ -113,7 +113,7 @@ describe('Release matrix navigation during writes', () => {
         expect(returned.result.current.status).toBe('Durchlauf bestätigt: 100');
         returned.unmount();
         f.port.load.mockResolvedValue({ ...f.snapshot, contextIdentity: 'other-project' });
-        const changedContext = await f.mount();
+        const changedContext = await f.mount('catalog', 'other-project');
         expect(changedContext.result.current.status).toBe('');
     });
 

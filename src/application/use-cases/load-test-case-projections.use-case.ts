@@ -1,3 +1,6 @@
+import { loadPlanTestResults } from './load-plan-test-results.js';
+import { settleOutcomeReads } from './matrix-outcome-target.js';
+import type { TestRun } from '../../domain/test-management/test-run.js';
 import { aggregateTestCaseProjections } from "../../domain/test-management/outcome-aggregator.js";
 import {
   flattenSuiteTree,
@@ -13,11 +16,16 @@ import { mapConcurrent } from "../../shared/utils/concurrency.js";
 export type LoadTestCaseProjectionsInput = {
   planId: number;
   rootSuiteId: number;
+  includedSuiteIds?: ReadonlySet<number>;
 };
 
 export type LoadTestCaseProjectionsResult = {
   suiteTree: TestSuiteNode;
   projections: TestCaseProjection[];
+  runs: TestRun[];
+  results: TestResult[];
+  pointsBySuiteId: Map<number, TestPoint[]>;
+  testCasesBySuiteId: Map<number, number[]>;
 };
 
 export type LoadTestCaseProjectionsDeps = {
@@ -25,6 +33,7 @@ export type LoadTestCaseProjectionsDeps = {
   testCaseHydration: TestCaseHydrationPort;
   /** Concurrency for per-suite and per-run fan-outs. Defaults to 8. */
   concurrency?: number;
+  signal?: AbortSignal;
 };
 
 const DEFAULT_CONCURRENCY = 8;
@@ -42,16 +51,17 @@ export async function loadTestCaseProjections(
   deps: LoadTestCaseProjectionsDeps
 ): Promise<LoadTestCaseProjectionsResult> {
   const concurrency = deps.concurrency ?? DEFAULT_CONCURRENCY;
+  deps.signal?.throwIfAborted();
   const suiteTree = await deps.testManagement.loadSuiteTree(input.planId, input.rootSuiteId);
-  const suiteEntries = flattenSuiteTree(suiteTree);
+  const suiteEntries = flattenSuiteTree(suiteTree).filter(suite => !input.includedSuiteIds || input.includedSuiteIds.has(suite.id));
 
   const perSuite = await mapConcurrent(suiteEntries, concurrency, async (entry) => {
-    const [caseIds, points] = await Promise.all([
+    const [caseIds, points] = await settleOutcomeReads([
       deps.testManagement.listTestCasesInSuite(input.planId, entry.id),
       deps.testManagement.loadPointsForSuite(input.planId, entry.id)
-    ]);
+    ] as const);
     return { suiteId: entry.id, caseIds, points };
-  });
+  }, deps.signal);
 
   const testCasesBySuiteId = new Map<number, number[]>();
   const pointsBySuiteId = new Map<number, TestPoint[]>();
@@ -65,24 +75,18 @@ export async function loadTestCaseProjections(
     }
   }
 
-  const [runs, hydrationByWorkItemId] = await Promise.all([
-    deps.testManagement.listRunsForPlan(input.planId),
+  const [execution, hydrationByWorkItemId] = await settleOutcomeReads([
+    loadPlanTestResults(input.planId, allWorkItemIds.size > 0, deps),
     deps.testCaseHydration.hydrateTestCases([...allWorkItemIds])
-  ]);
-
-  const resultsByRun = await mapConcurrent(runs, concurrency, async (run) =>
-    deps.testManagement.loadResultsForRun(run.runId)
-  );
-
-  const allResults: TestResult[] = ([] as TestResult[]).concat(...resultsByRun);
-
+  ] as const);
+  deps.signal?.throwIfAborted();
   const projections = aggregateTestCaseProjections({
     suiteEntries,
     testCasesBySuiteId,
     pointsBySuiteId,
-    results: allResults,
+    results: execution.results,
     hydrationByWorkItemId
   });
 
-  return { suiteTree, projections };
+  return { suiteTree, projections, ...execution, pointsBySuiteId, testCasesBySuiteId };
 }

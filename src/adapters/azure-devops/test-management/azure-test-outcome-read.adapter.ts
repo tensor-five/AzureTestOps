@@ -64,7 +64,7 @@ export class AzureTestOutcomeReadAdapter implements TestOutcomeReadPort {
   }
   loadResultsForRun(runId: number): Promise<TestResult[]> { return this.results.loadResultsForRun(runId); }
   private async get(url: string, operation: string, allowMissing = false): Promise<AzureHttpResponse> {
-    const { response } = await requestWithRetry(() => this.client.get(url));
+    const { response } = await requestWithRetry(() => this.client.get(url), {signal: this.client.signal});
     if (response.status !== 200 && !(allowMissing && response.status === 404)) throw new Error(`${operation}_HTTP_${response.status}`);
     return response;
   }

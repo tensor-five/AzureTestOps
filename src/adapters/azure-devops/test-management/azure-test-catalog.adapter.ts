@@ -43,7 +43,7 @@ export class AzureTestCatalogAdapter implements TestCatalogPort {
 
     do {
       const url = this.buildPlansUrl(continuationToken);
-      const { response } = await requestWithRetry(() => this.httpClient.get(url));
+      const { response } = await requestWithRetry(() => this.httpClient.get(url), {signal: this.httpClient.signal});
       if (response.status !== 200) {
         throw new Error(`PLANS_HTTP_${response.status}`);
       }
@@ -64,7 +64,7 @@ export class AzureTestCatalogAdapter implements TestCatalogPort {
 
   public async listSuitesForPlan(planId: number): Promise<TestSuiteSummary[]> {
     const url = `${this.baseUrl}/_apis/test/Plans/${planId}/suites?api-version=${API_VERSION_50}`;
-    const { response } = await requestWithRetry(() => this.httpClient.get(url));
+    const { response } = await requestWithRetry(() => this.httpClient.get(url), {signal: this.httpClient.signal});
     if (response.status !== 200) {
       throw new Error(`SUITES_HTTP_${response.status}`);
     }

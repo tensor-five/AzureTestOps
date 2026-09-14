@@ -1,3 +1,4 @@
+import { settleOutcomeReads } from './matrix-outcome-target.js';
 import type { Set } from "../../domain/sets/set.js";
 import type { ActiveSetSnapshot } from "../dto/active-set-snapshot.dto.js";
 import type { AdoContextPort } from "../ports/ado-context.port.js";
@@ -42,6 +43,7 @@ export type LoadActiveSetSnapshotDeps = {
   adoContext?: AdoContextPort;
   /** Forwarded to the underlying projections fan-out. Defaults to 8. */
   concurrency?: number;
+  signal?: AbortSignal;
   /** Injectable clock for deterministic tests. Defaults to `() => new Date()`. */
   now?: () => Date;
   /** Optional progress sink — called once per major load stage. */
@@ -64,6 +66,7 @@ export async function loadActiveSetSnapshot(
   input: LoadActiveSetSnapshotInput,
   deps: LoadActiveSetSnapshotDeps
 ): Promise<ActiveSetSnapshot> {
+  deps.signal?.throwIfAborted();
   const onProgress = deps.onProgress ?? noopProgress;
 
   onProgress({ stage: "context", done: 0, total: 1 });
@@ -82,13 +85,13 @@ export async function loadActiveSetSnapshot(
   onProgress({ stage: "test-cases", done: 0, total: 1 });
   onProgress({ stage: "saved-query", done: 0, total: 1 });
 
-  const [testCaseLoad, queryRun] = await Promise.all([
+  const [testCaseLoad, queryRun] = await settleOutcomeReads([
     loadTestCaseProjections(
       { planId, rootSuiteId },
       {
         testManagement: deps.testManagement,
         testCaseHydration: deps.testCaseHydration,
-        concurrency: deps.concurrency
+        concurrency: deps.concurrency, signal: deps.signal
       }
     ).then((result) => {
       onProgress({
@@ -114,7 +117,8 @@ export async function loadActiveSetSnapshot(
       });
       return result;
     })
-  ]);
+  ] as const);
+  deps.signal?.throwIfAborted();
 
   onProgress({ stage: "aggregate", done: 1, total: 1 });
 

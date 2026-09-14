@@ -38,7 +38,7 @@ export class AzureSavedQueryAdapter implements SavedQueryPort {
     const url =
       `${this.baseUrl}/_apis/wit/queries/${SHARED_QUERIES_PATH}` +
       `?$depth=2&$expand=all&api-version=${API_VERSION_71}`;
-    const { response } = await requestWithRetry(() => this.httpClient.get(url));
+    const { response } = await requestWithRetry(() => this.httpClient.get(url), {signal: this.httpClient.signal});
     if (response.status !== 200) {
       throw new Error(`SAVED_QUERY_LIST_HTTP_${response.status}`);
     }
@@ -55,7 +55,7 @@ export class AzureSavedQueryAdapter implements SavedQueryPort {
     const url =
       `${this.baseUrl}/_apis/wit/wiql/${encodeURIComponent(trimmed)}` +
       `?api-version=${API_VERSION_71}`;
-    const { response } = await requestWithRetry(() => this.httpClient.get(url));
+    const { response } = await requestWithRetry(() => this.httpClient.get(url), {signal: this.httpClient.signal});
     if (response.status !== 200) {
       throw new Error(`SAVED_QUERY_EXECUTE_HTTP_${response.status}`);
     }

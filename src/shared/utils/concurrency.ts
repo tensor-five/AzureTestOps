@@ -8,8 +8,10 @@
 export async function mapConcurrent<T, R>(
   items: readonly T[],
   concurrency: number,
-  worker: (item: T, index: number) => Promise<R>
+  worker: (item: T, index: number) => Promise<R>,
+  signal?: AbortSignal
 ): Promise<R[]> {
+  signal?.throwIfAborted();
   const total = items.length;
   if (total === 0) {
     return [];
@@ -18,12 +20,15 @@ export async function mapConcurrent<T, R>(
   const limit = Math.max(1, Math.min(concurrency, total));
   const results: R[] = new Array(total);
   let nextIndex = 0;
+  let failed = false;
 
   async function runOne(): Promise<void> {
-    while (nextIndex < total) {
+    while (!failed && nextIndex < total) {
+      signal?.throwIfAborted();
       const currentIndex = nextIndex;
       nextIndex += 1;
-      results[currentIndex] = await worker(items[currentIndex], currentIndex);
+      try { results[currentIndex] = await worker(items[currentIndex], currentIndex); }
+      catch (error) { failed = true; throw error; }
     }
   }
 
@@ -31,7 +36,9 @@ export async function mapConcurrent<T, R>(
   for (let i = 0; i < limit; i += 1) {
     workers.push(runOne());
   }
-  await Promise.all(workers);
+  const settled = await Promise.allSettled(workers);
+  for (const entry of settled) if (entry.status === 'rejected') throw entry.reason;
+  signal?.throwIfAborted();
 
   return results;
 }

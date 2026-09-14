@@ -3,7 +3,7 @@
   "files": [
     {
       "path": "tests/e2e/release-matrix-v4.behavior.spec.ts",
-      "sha256": "2a73f8454a2853ba4b6145b464a13273bdba5f99fde26ab3235fb849ba0b948a"
+      "sha256": "2e1c77393410def886ef8b1687f4c824eb7a470948d953bfd6610968ee15565f"
     },
     {
       "path": "tests/e2e/release-matrix-v4.hierarchy.spec.ts",
@@ -11,7 +11,7 @@
     },
     {
       "path": "tests/e2e/release-matrix-v4.selection.spec.ts",
-      "sha256": "1f44a8877743d83fcdb8ff90b8006f489e2ea3fdfaa611a71762369b435ccdd1"
+      "sha256": "982aba173fdb8a8d9abf16b9be5019b2ea01496d946146f58d70536d2219e229"
     },
     {
       "path": "tests/e2e/release-matrix-v4.scrolling.spec.ts",

@@ -45,7 +45,7 @@ export class AzureTestManagementAdapter implements TestManagementReadPort {
 
   public async loadSuiteTree(planId: number, rootSuiteId: number): Promise<TestSuiteNode> {
     const url = `${this.baseUrl}/_apis/test/Plans/${planId}/suites?$asTreeView=true&api-version=${API_VERSION_50}`;
-    const { response } = await requestWithRetry(() => this.httpClient.get(url));
+    const { response } = await requestWithRetry(() => this.httpClient.get(url), {signal: this.httpClient.signal});
     if (response.status !== 200) {
       throw new Error(`SUITE_TREE_HTTP_${response.status}`);
     }
@@ -63,7 +63,7 @@ export class AzureTestManagementAdapter implements TestManagementReadPort {
 
   public async listTestCasesInSuite(planId: number, suiteId: number): Promise<number[]> {
     const url = `${this.baseUrl}/_apis/test/Plans/${planId}/suites/${suiteId}/testcases?api-version=${API_VERSION_50}`;
-    const { response } = await requestWithRetry(() => this.httpClient.get(url));
+    const { response } = await requestWithRetry(() => this.httpClient.get(url), {signal: this.httpClient.signal});
     if (response.status !== 200) {
       throw new Error(`TEST_CASES_HTTP_${response.status}`);
     }
@@ -85,7 +85,7 @@ export class AzureTestManagementAdapter implements TestManagementReadPort {
 
     do {
       const url = this.buildPointsUrl(planId, suiteId, continuationToken);
-      const { response } = await requestWithRetry(() => this.httpClient.get(url));
+      const { response } = await requestWithRetry(() => this.httpClient.get(url), {signal: this.httpClient.signal});
       if (response.status !== 200) {
         throw new Error(`POINTS_HTTP_${response.status}`);
       }
@@ -110,7 +110,7 @@ export class AzureTestManagementAdapter implements TestManagementReadPort {
 
     while (true) {
       const url = `${this.baseUrl}/_apis/test/runs?planId=${planId}&$top=${this.runsPageSize}&$skip=${skip}&includeRunDetails=true&api-version=${API_VERSION_71}`;
-      const { response } = await requestWithRetry(() => this.httpClient.get(url));
+      const { response } = await requestWithRetry(() => this.httpClient.get(url), {signal: this.httpClient.signal});
       if (response.status !== 200) {
         throw new Error(`RUNS_HTTP_${response.status}`);
       }
@@ -143,7 +143,7 @@ export class AzureTestManagementAdapter implements TestManagementReadPort {
 
     while (true) {
       const url = `${this.baseUrl}/_apis/test/Runs/${runId}/results?$top=${this.resultsPageSize}&$skip=${skip}&detailsToInclude=Point&api-version=${API_VERSION_71}`;
-      const { response } = await requestWithRetry(() => this.httpClient.get(url));
+      const { response } = await requestWithRetry(() => this.httpClient.get(url), {signal: this.httpClient.signal});
       if (response.status !== 200) {
         throw new Error(`RESULTS_HTTP_${response.status}`);
       }

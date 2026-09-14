@@ -12,6 +12,8 @@ export type AzureHttpResponse = {
 };
 
 export interface AzureRestHttpClient {
+  /** Present on request-scoped read clients; also cancels pagination and retry waits. */
+  readonly signal?: AbortSignal;
   get(url: string, options?: { signal?: AbortSignal }): Promise<AzureHttpResponse>;
   post?(url: string, body: unknown): Promise<AzureHttpResponse>;
   patch?(

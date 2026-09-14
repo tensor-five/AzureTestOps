@@ -57,7 +57,9 @@ export function catalogRows(snapshot: MatrixSnapshot, config: MatrixConfig): Mat
 }
 const normalizedTag = (tag:string)=>tag.trim().toLocaleLowerCase();
 export function matrixGroups(snapshot: MatrixSnapshot, config: MatrixConfig): MatrixGroup[] {
-    const memberIds = new Set(snapshot.projections.filter(p=>String(p.suiteId)===config.suiteFilter).map(p=>p.workItemId));
+    const memberIds = new Set(snapshot.suiteMemberships
+        ? snapshot.suiteMemberships[config.suiteFilter] ?? []
+        : snapshot.projections.filter(p=>String(p.suiteId)===config.suiteFilter).map(p=>p.workItemId));
     const rows = catalogRows(snapshot,config).filter(row=>(!config.search||`${row.workItemId} ${row.title}`.toLocaleLowerCase().includes(config.search.toLocaleLowerCase()))
         &&(!config.tagFilter||row.tags.some(tag=>normalizedTag(tag)===normalizedTag(config.tagFilter)))&&(!config.suiteFilter||memberIds.has(row.workItemId)))
         .sort((a,b)=>a.title.localeCompare(b.title,undefined,{sensitivity:'base'})||a.workItemId-b.workItemId||matrixRowKey(a).localeCompare(matrixRowKey(b)));

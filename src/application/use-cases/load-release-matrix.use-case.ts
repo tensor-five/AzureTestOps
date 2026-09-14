@@ -10,7 +10,7 @@ export type MatrixReadDeps = LoadTestCaseProjectionsDeps & {
     testCatalog: TestCatalogPort;
 };
 /** Reuses the existing suite/result aggregation without altering its matching rules. */
-export async function loadReleaseMatrix(planId: number, deps: MatrixReadDeps, options: { signal?: AbortSignal; diagnostics?: MatrixReadDiagnostics } = {}): Promise<MatrixData> {
+export async function loadReleaseMatrix(planId: number, deps: MatrixReadDeps, options: { signal?: AbortSignal; diagnostics?: MatrixReadDiagnostics; versionSuiteIds?: readonly number[] } = {}): Promise<MatrixData> {
     options.signal?.throwIfAborted();
     const catalog = await (options.diagnostics ? options.diagnostics.measure('catalog', { planId }, () => deps.testCatalog.listSuitesForPlan(planId)) : deps.testCatalog.listSuitesForPlan(planId));
     const ids = new Set(catalog.map(s => s.id));
@@ -40,22 +40,22 @@ export async function loadReleaseMatrix(planId: number, deps: MatrixReadDeps, op
     options.diagnostics?.progress({ canonicalRootCount: trees.size, skippedOverlappingRoots, overlappingSuiteCount });
     for (const id of ids) if (!discovered.has(id))
         throw new Error(`Suite-Baum unvollständig: Suite #${id} fehlt in der geladenen Hierarchie.`);
-    const snapshot: MatrixData = { planId, suites: [], projections: [], pointCounts: {} };
+    const snapshot: MatrixData = { planId, suites: [], projections: [], pointCounts: {}, suiteMemberships: {} };
     const suiteTypes = new Map(catalog.map(suite => [suite.id, suite.suiteType]));
+    const allSuites = [...trees.values()].flatMap(flattenSuiteTree);
+    const byId = new Map(allSuites.map(s => [s.id, s]));
+    const selected = options.versionSuiteIds ? new Set(options.versionSuiteIds) : null;
+    // Rows use direct version → environment → content hierarchy. Keep the complete catalog for selection.
+    const includedSuiteIds = selected ? new Set(allSuites.filter(s => {
+        const environment = s.parentSuiteId === null ? undefined : byId.get(s.parentSuiteId);
+        return environment?.parentSuiteId !== null && environment?.parentSuiteId !== undefined && selected.has(environment.parentSuiteId);
+    }).map(s => s.id)) : undefined;
     for (const root of trees.values()) {
-        const loaded = await loadTestCaseProjections({ planId, rootSuiteId: root.id }, { ...session, testManagement: {
-                loadSuiteTree: (p, s) => read.loadSuiteTree(p, s), listTestCasesInSuite: (p, s) => read.listTestCasesInSuite(p, s),
-                listRunsForPlan: async p => {
-                    const runs = await read.listRunsForPlan(p);
-                    for (const run of runs) if (run.state === 'Completed') completedRunIds.add(run.runId);
-                    return runs;
-                }, loadResultsForRun: async runId => {
-                    const results = await read.loadResultsForRun(runId);
-                    for (const result of results) rawResults.set(`${result.runId}:${result.resultId}`, result);
-                    return results;
-                },
-                loadPointsForSuite: async (p, s) => { const result = await read.loadPointsForSuite(p, s); points.set(s, result); return result; }
-            } });
+        const loaded = await loadTestCaseProjections({ planId, rootSuiteId: root.id, includedSuiteIds }, session);
+        for (const run of loaded.runs) if (run.state === 'Completed') completedRunIds.add(run.runId);
+        for (const result of loaded.results) rawResults.set(`${result.runId}:${result.resultId}`, result);
+        for (const [suite, list] of loaded.pointsBySuiteId) points.set(suite, list);
+        for (const [suite, caseIds] of loaded.testCasesBySuiteId) snapshot.suiteMemberships![String(suite)] = [...new Set(caseIds)];
         snapshot.suites.push(...flattenSuiteTree(loaded.suiteTree).map(s => ({ ...s, suiteType: suiteTypes.get(s.id) ?? null })));
         snapshot.projections.push(...loaded.projections);
     }

@@ -9,13 +9,17 @@ export function createMatrixReadSession(deps: LoadTestCaseProjectionsDeps, optio
         const previous = promises.get(key);
         if (previous) return previous as Promise<T>;
         const [operation, first, second] = key.split(':');
-        const ids: Record<string, number> = operation === 'hydrate' ? {} : operation === 'results' ? { runId: Number(first) } : { planId: Number(first), ...(second ? { suiteId: Number(second) } : {}) };
+        const ids: Record<string, number> = operation === 'hydrate' ? {}
+            : operation === 'results'
+                ? { runId: Number(first) }
+                : { planId: Number(first), ...(second ? { suiteId: Number(second) } : {}) };
         const pending = options.diagnostics ? options.diagnostics.measure(operation, ids, read) : read();
         promises.set(key, pending);
         return pending;
     };
     return {
         ...deps,
+        signal: options.signal ?? deps.signal,
         testManagement: {
             loadSuiteTree: (plan, suite) => once(`tree:${plan}:${suite}`, () => deps.testManagement.loadSuiteTree(plan, suite)),
             listTestCasesInSuite: (plan, suite) => once(`cases:${plan}:${suite}`, () => deps.testManagement.listTestCasesInSuite(plan, suite)),
