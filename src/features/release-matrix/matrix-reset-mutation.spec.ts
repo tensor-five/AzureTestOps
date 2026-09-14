@@ -29,7 +29,7 @@ it('confirms reset without a run and emits its exact projection to the matching 
 });
 it('allows an explicit second attempt after validation failed before any Azure reset', async () => {
   const backend = resetActiveServices();
-  const membership = vi.spyOn(backend.services.testManagement, 'listTestCasesInSuite')
+  const membership = vi.spyOn(backend.services.outcomeRead, 'isCaseInSuite')
     .mockRejectedValueOnce(new Error('TEST_CASES_HTTP_503'));
   const record = vi.fn(() => resetMatrixPoint({ ...input, outcome: 'ResetToActive' }, backend.services));
   const store = new MatrixMutationStore({ load: vi.fn(), record }, 'set', input.planId, input.contextIdentity);

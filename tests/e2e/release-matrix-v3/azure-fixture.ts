@@ -61,8 +61,14 @@ export function makeAzureFixture() {
         if(url.searchParams.has('$asTreeView')) return control.failTree?response({},400):list([tree(1)]);
         return list(suites.filter(s=>inPlan(s.id)).map(s=>control.flatParentsMissing?{...s,parentSuite:undefined}:s));
       }
+      const caseMatch=path.match(/suites\/(\d+)\/testcases\/(\d+)$/);
+      if(caseMatch){const suite=Number(caseMatch[1]),id=Number(caseMatch[2]);if(control.failSuite===suite)return response({},400);return (membership[suite]??[]).includes(id)?response({testCase:{id}}):response({},404);}
+      const singleRun=path.match(/runs\/(\d+)$/);
+      if(singleRun){const run=runs.find(r=>r.id===Number(singleRun[1])&&(!control.hideNewResults||r.id===1));return run?response(run):response({},404);}
+      const singleResult=path.match(/runs\/(\d+)\/results\/(\d+)$/);
+      if(singleResult){const result=results.find(r=>r.testRun.id===Number(singleResult[1])&&r.id===Number(singleResult[2])&&(!control.hideNewResults||r.testRun.id===1));return result?response(control.omitResultSuite?{...result,testSuite:null}:result):response({},404);}
       const suiteMatch=path.match(/suites\/(\d+)\/(testcases|points)$/);
-      if(suiteMatch){const id=Number(suiteMatch[1]);if(control.failSuite===id)return response({},400);const ids=[...new Set(membership[id]??[])];return list(suiteMatch[2]==='testcases'?(membership[id]??[]).map(id=>({testCase:{id}})):ids.flatMap(wi=>wi===304?[]:wi===302?[point(id,wi),point(id,wi,true)]:[point(id,wi)]));}
+      if(suiteMatch){const id=Number(suiteMatch[1]);if(control.failSuite===id)return response({},400);const ids=[...new Set(membership[id]??[])].filter(wi=>!url.searchParams.has('testCaseId')||wi===Number(url.searchParams.get('testCaseId')));return list(suiteMatch[2]==='testcases'?(membership[id]??[]).map(id=>({testCase:{id}})):ids.flatMap(wi=>wi===304?[]:wi===302?[point(id,wi),point(id,wi,true)]:[point(id,wi)]));}
       if(path.endsWith('/plans'))return list([{id:1,name:'Plan'}]);
       if(path.endsWith('/runs'))return list(control.hideNewResults?runs.filter(r=>r.id===1):runs);
       const runMatch=path.match(/runs\/(\d+)\/results$/);if(runMatch)return list(results.filter(r=>r.testRun.id===Number(runMatch[1])).map(r=>control.omitResultSuite?{...r,testSuite:null}:r));

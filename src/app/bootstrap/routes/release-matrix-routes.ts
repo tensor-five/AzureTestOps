@@ -1,3 +1,4 @@
+import { MatrixWriteHttpMetrics } from '../../../shared/azure-devops/matrix-write-http-metrics.js';
 import { randomUUID } from 'node:crypto';
 import { createMatrixReadDiagnostics } from '../../../shared/diagnostics/matrix-read-diagnostics.js';
 import { buildAdoBaseUrl } from "../../../shared/azure-devops/azure-rest-client.js";
@@ -24,6 +25,7 @@ export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepository
         const providedId = req.headers?.['x-matrix-request-id'];
         const requestId = typeof providedId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(providedId) ? providedId : randomUUID();
         const writeStartedAt = performance.now();
+        const writeMetrics = match[2] && method === 'POST' ? new MatrixWriteHttpMetrics() : undefined;
         const diagnostics = reading ? createMatrixReadDiagnostics(requestId, 'server') : undefined;
         const controller = new AbortController();
         const closed = () => { if (!res.writableEnded) { controller.abort(); diagnostics?.finish('aborted'); } };
@@ -63,7 +65,10 @@ export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepository
                 writeJson(res, 409, { message: 'Der Azure-Kontext hat sich seit dem Laden der Matrix geändert. Bitte die Matrix aktualisieren; es wurde kein Durchlauf erzeugt.' });
                 return true;
             }
-            const services = ado.matrixServices(context);
+            const services = ado.matrixServices(context, { writeMetrics });
+            const outcomeRead = services.outcomeRead;
+            if (!outcomeRead) throw new ApiError(500, body.outcome === 'ResetToActive' ? 'MATRIX_RESET_NOT_ATTEMPTED' : 'MATRIX_WRITE_NOT_ATTEMPTED',
+                'Die Statusänderung wurde nicht gestartet: Gezielte Testpunktprüfung ist nicht verfügbar.', { pointId: body.pointId });
             const key = JSON.stringify([contextIdentity, planId, body.pointId]);
             if (pending.has(key)) {
                 writeJson(res, 409, { message: 'Für diesen Testpunkt wird bereits ein Durchlauf gespeichert.' });
@@ -77,7 +82,7 @@ export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepository
             if (body.outcome === 'ResetToActive') {
                 if (!services.pointReset) throw new ApiError(500, 'MATRIX_RESET_NOT_ATTEMPTED',
                     'Reset auf Active wurde nicht gestartet: Diese Laufzeit unterstützt den Vorgang nicht.', { pointId: body.pointId });
-                writeJson(res, 200, await resetMatrixPoint(body, { ...services, pointReset: services.pointReset, diagnostics: writeDiagnostics }));
+                writeJson(res, 200, await resetMatrixPoint(body, { outcomeRead, pointReset: services.pointReset, diagnostics: writeDiagnostics }));
                 return true;
             }
             // Preserve the existing use case while exposing whether a failed write already created a run.
@@ -89,15 +94,19 @@ export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepository
                 completeResult: (run, result, outcome) => services.execution.completeResult(run, result, outcome),
                 completeRun: run => services.execution.completeRun(run),
             };
-            writeJson(res, 200, await recordMatrixOutcome(body, { ...services, execution, diagnostics: writeDiagnostics }));
+            writeJson(res, 200, await recordMatrixOutcome(body, { outcomeRead, execution, diagnostics: writeDiagnostics }));
         }
         catch (error) {
             diagnostics?.finish(controller.signal.aborted ? 'aborted' : 'error');
             if (controller.signal.aborted) return true;
-            writeJson(res, 500, { ...(error instanceof ApiError && (error.code === 'MATRIX_RESET_UNCONFIRMED' || error.code === 'MATRIX_RESET_NOT_ATTEMPTED') ? { code: error.code, details: error.details }
+            writeJson(res, 500, { ...(error instanceof ApiError && ['MATRIX_RESET_UNCONFIRMED', 'MATRIX_RESET_NOT_ATTEMPTED', 'MATRIX_RUN_UNCONFIRMED', 'MATRIX_WRITE_NOT_ATTEMPTED'].includes(error.code) ? { code: error.code, details: error.details }
                 : createdRunId !== null ? {code:'MATRIX_RUN_UNCONFIRMED',details:{runId:createdRunId}} : {}), message: error instanceof Error ? error.message : 'Release-Matrix konnte nicht geladen oder gespeichert werden.' });
         }
         finally {
+            if (writeMetrics) {
+                try { console.info('[release-matrix.write-summary]', { requestId, side: 'server',
+                    event: res.statusCode === 200 ? 'confirmed' : 'error', ...writeMetrics.snapshot() }); } catch { /* Diagnostics do not affect writes. */ }
+            }
             res.removeListener?.('close', closed);
             diagnostics?.finish(controller.signal.aborted ? 'aborted' : 'error');
             if (lock)

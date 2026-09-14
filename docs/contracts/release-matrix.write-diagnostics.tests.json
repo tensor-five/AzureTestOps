@@ -3,11 +3,11 @@
   "files": [
     {
       "path": "src/application/use-cases/record-matrix-outcome-diagnostics.spec.ts",
-      "sha256": "4660ac52c6d0d2f0589975d87744620456069f3ba1a2cbfca768fff2e3a4a9b5"
+      "sha256": "42513916424fd75c5f30f1659db90b0b5df957f7e18128ab6e4700f76037cda4"
     },
     {
       "path": "src/app/bootstrap/routes/release-matrix-write-diagnostics.spec.ts",
-      "sha256": "dc5c4f06abd8e662ac49b7da270700d894df6e23b012d546df295f518cee356d"
+      "sha256": "f286507835d57634c6d20dd6bfda7e7be027e1967c5dfa4236b5ef35349efb17"
     }
   ]
 }

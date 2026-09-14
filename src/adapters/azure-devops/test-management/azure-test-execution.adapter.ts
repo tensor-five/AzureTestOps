@@ -1,4 +1,5 @@
 import type { TestExecutionPort } from '../../../application/ports/test-execution.port.js';
+import { ApiError } from '../../../application/dto/api-error.js';
 import type { ManualOutcome } from '../../../domain/release-matrix/matrix-config.js';
 import { buildAdoBaseUrl, type AdoOrgProjectContext, type AzureRestHttpClient, type AzureHttpResponse } from '../../../shared/azure-devops/azure-rest-client.js';
 export class AzureTestExecutionAdapter implements TestExecutionPort {
@@ -6,8 +7,10 @@ export class AzureTestExecutionAdapter implements TestExecutionPort {
     constructor(private readonly client: AzureRestHttpClient, context: AdoOrgProjectContext) { this.base = buildAdoBaseUrl(context) + '/_apis/test/runs'; }
     async createManualRun(planId: number, pointId: number): Promise<number> {
         if (!this.client.post)
-            throw new Error('Schreibzugriff auf Testläufe ist nicht verfügbar.');
+            throw new ApiError(500, 'MATRIX_WRITE_NOT_ATTEMPTED', 'Schreibzugriff auf Testläufe ist nicht verfügbar.');
         const response = await this.client.post(`${this.base}?api-version=7.1`, { name: `Manueller Durchlauf ${new Date().toISOString()}`, plan: { id: planId }, pointIds: [pointId], automated: false, state: 'InProgress' });
+        if ([400, 401, 403, 404, 422].includes(response.status))
+            throw new ApiError(response.status, 'MATRIX_WRITE_NOT_ATTEMPTED', `Azure konnte den Testlauf nicht speichern (HTTP ${response.status}).`);
         this.check(response);
         const id = Number((response.json as {
             id?: unknown;

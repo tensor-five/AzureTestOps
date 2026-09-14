@@ -65,9 +65,9 @@ describe('Manual matrix outcome diagnostics', () => {
     expectSafeEvents(events);
   });
 
-  it('identifies an empty run-list confirmation after both PATCHes completed without retrying', async () => {
+  it('identifies an missing targeted run confirmation after both PATCHes completed without retrying', async () => {
     const { deps, events, azure } = setup();
-    vi.spyOn(deps.testManagement, 'listRunsForPlan').mockResolvedValue([]);
+    vi.spyOn(deps.outcomeRead, 'loadRun').mockResolvedValue(null);
 
     await expect(recordMatrixOutcome(target, deps)).rejects.toThrow(unconfirmed);
     expect(events).toEqual(expect.arrayContaining([
@@ -83,7 +83,7 @@ describe('Manual matrix outcome diagnostics', () => {
 
   it('identifies an empty newly created result list and sends no PATCH', async () => {
     const { deps, events, azure } = setup();
-    vi.spyOn(deps.testManagement, 'loadResultsForRun').mockResolvedValue([]);
+    vi.spyOn(deps.outcomeRead, 'loadResultsForRun').mockResolvedValue([]);
 
     await expect(recordMatrixOutcome(target, deps)).rejects.toThrow(unconfirmed);
     expect(events.at(-1)).toMatchObject({ stage: 'find-result', event: 'error', fields: { runId: 100, resultCount: 0, matchingResultCount: 0 } });
@@ -106,11 +106,9 @@ describe('Manual matrix outcome diagnostics', () => {
 
   it('does not leak unknown Azure state strings into diagnostics', async () => {
     const { deps, events } = setup();
-    const runs = deps.testManagement.listRunsForPlan.bind(deps.testManagement);
+    const loadRun = deps.outcomeRead.loadRun.bind(deps.outcomeRead);
     const rawState = 'private-state https://private.invalid';
-    vi.spyOn(deps.testManagement, 'listRunsForPlan').mockImplementation(async planId =>
-      (await runs(planId)).map(run => ({ ...run, state: rawState })),
-    );
+    vi.spyOn(deps.outcomeRead, 'loadRun').mockImplementation(async runId => ({ ...(await loadRun(runId))!, state: rawState }));
 
     await expect(recordMatrixOutcome(target, deps)).rejects.toThrow(unconfirmed);
     expect(events.at(-1)).toMatchObject({ stage: 'confirm-run', event: 'error' });

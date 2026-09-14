@@ -1,4 +1,5 @@
 import type { TestCaseProjection } from '../../domain/test-management/test-case-projection.js';
+import type { TestCaseOutcomeUpdate } from '../../domain/test-management/test-case-outcome-update.js';
 import type { TestSuiteFlatEntry } from '../../domain/test-management/test-suite-tree.js';
 import type { ManualOutcome } from '../../domain/release-matrix/matrix-config.js';
 import type { TestResult } from '../../domain/test-management/test-result.js';
@@ -18,6 +19,6 @@ export type MatrixSnapshot = MatrixData & { contextIdentity: string };
 export type MatrixOutcomeTarget = { planId: number; suiteId: number; workItemId: number; pointId: number; outcome: ManualOutcome };
 export type MatrixResetTarget = Omit<MatrixOutcomeTarget, 'outcome'> & { outcome: 'ResetToActive' };
 export type MatrixWrite = (MatrixOutcomeTarget | MatrixResetTarget) & { contextIdentity: string };
-export type MatrixWriteResult = { runId: number; projection: TestCaseProjection };
-export type MatrixResetResult = { runId: null; resetToActive: true; projection: TestCaseProjection };
+export type MatrixWriteResult = { runId: number; projection: TestCaseOutcomeUpdate };
+export type MatrixResetResult = { runId: null; resetToActive: true; projection: TestCaseOutcomeUpdate };
 export type MatrixActionResult = MatrixWriteResult | MatrixResetResult;

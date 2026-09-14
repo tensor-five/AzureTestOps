@@ -60,15 +60,14 @@ describe('Matrix write request diagnostics', () => {
     expect(logs[0]).toMatchObject({ stage: 'validate-target', event: 'start' });
     expect(logs.at(-1)).toMatchObject({ stage: 'confirm-projection', event: 'complete' });
     expect(logs).toEqual(expect.arrayContaining([expect.objectContaining({ stage: 'complete-result', event: 'complete', fields: expect.objectContaining({ runId: 100, resultId: 1000, outcome: 'NotApplicable' }) })]));
-    // Read diagnostics options activate caching in the runtime. A write must
-    // retain the existing uncached service factory invocation.
-    expect(fixture.matrixServices.mock.calls[0]).toHaveLength(1);
+    // Write metrics explicitly select the uncached runtime path.
+    expect(fixture.matrixServices).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({writeMetrics: expect.anything()}));
     expect(fixture.azure.writes.map(write => write.method)).toEqual(['POST', 'PATCH', 'PATCH']);
   });
 
   it('locates an unconfirmed run after successful PATCHes within the same request', async () => {
     const fixture = setup();
-    vi.spyOn(fixture.services.testManagement, 'listRunsForPlan').mockResolvedValue([]);
+    vi.spyOn(fixture.services.outcomeRead, 'loadRun').mockResolvedValue(null);
     const response = await fixture.call();
     const logs = fixture.logs();
 

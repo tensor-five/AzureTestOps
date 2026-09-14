@@ -28,13 +28,14 @@ export type OutcomeAggregatorInput = {
  * combination, joining the latest matching test result by `completedDate`.
  *
  * Test Cases without a hydrated work item are dropped (hydration failure).
- * Results without `completedDate` or `suiteId` are ignored — they cannot be
- * matched into a (workItemId, suiteId) key reliably.
+ * A missing result suite is only bridged by a unique point's exact execution
+ * references with explicit Completed evidence, never by a case-only match.
  */
 export function aggregateTestCaseProjections(
   input: OutcomeAggregatorInput
 ): TestCaseProjection[] {
   const latestResultByKey = buildLatestResultIndex(input.results);
+  const uniqueResultsByIdentity = indexUniqueResultIdentities(input.results);
   const projections: TestCaseProjection[] = [];
 
   for (const suite of input.suiteEntries) {
@@ -53,7 +54,10 @@ export function aggregateTestCaseProjections(
       const point = pointEntry?.first ?? null;
       // A reset must not hide another configuration's result for the same case.
       const active = pointEntry?.count === 1 && isActiveTestPoint(point);
-      const latestResult = active ? null : latestResultByKey.get(projectionKey(workItemId, suite.id)) ?? null;
+      const suiteResult = latestResultByKey.get(projectionKey(workItemId, suite.id)) ?? null;
+      const pointResult = !active && pointEntry?.count === 1 && point
+        ? newerReferencedResult(point, suite.id, workItemId, suiteResult, uniqueResultsByIdentity) : null;
+      const latestResult = active ? null : pointResult ?? suiteResult;
 
       // Fallback to point.lastOutcome — Azure sometimes drops `testSuite.id` on results.
       const fallbackOutcome = point?.lastOutcome ?? NOT_RUN;
@@ -75,7 +79,7 @@ export function aggregateTestCaseProjections(
         configurationName: point?.configurationName ?? null,
         lastOutcome: latestResult ? latestResult.outcome : fallbackOutcome,
         lastResultId: active ? null : latestResult?.resultId ?? point?.lastResultId ?? null,
-        lastResultCompletedDate: latestResult?.completedDate ?? null,
+        lastResultCompletedDate: latestResult?.suiteId === null ? null : latestResult?.completedDate ?? null,
         lastRunId: active ? null : latestResult?.runId ?? point?.lastRunId ?? null
       });
     }
@@ -121,4 +125,28 @@ function indexPointsByWorkItem(points: TestPoint[]): Map<number, { first: TestPo
     else byWorkItem.set(point.workItemId, { first: point, count: 1 });
   }
   return byWorkItem;
+}
+
+/** Duplicate identities cannot prove which payload the physical point refers to. */
+function indexUniqueResultIdentities(results: TestResult[]): Map<string, TestResult | null> {
+  const index = new Map<string, TestResult | null>();
+  for (const result of results) {
+    const key = `${result.runId}:${result.resultId}`;
+    index.set(key, index.has(key) ? null : result);
+  }
+  return index;
+}
+
+function newerReferencedResult(point: TestPoint, suiteId: number, workItemId: number, previous: TestResult | null,
+  results: ReadonlyMap<string, TestResult | null>): TestResult | null {
+  if (point.suiteId !== suiteId || point.workItemId !== workItemId
+    || !Number.isSafeInteger(point.lastRunId) || !Number.isSafeInteger(point.lastResultId)
+    || (point.lastRunId ?? 0) <= 0 || (point.lastResultId ?? 0) <= 0) return null;
+  const result = results.get(`${point.lastRunId}:${point.lastResultId}`);
+  if (!result || result.state !== 'Completed' || result.workItemId !== workItemId || result.pointId !== point.pointId
+    || (result.suiteId !== null && result.suiteId !== suiteId) || result.outcome !== point.lastOutcome
+    || result.completedDate === null) return null;
+  const timestamp = Date.parse(result.completedDate);
+  const previousTimestamp = previous?.completedDate ? Date.parse(previous.completedDate) : -Infinity;
+  return Number.isFinite(timestamp) && timestamp > previousTimestamp ? result : null;
 }

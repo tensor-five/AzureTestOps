@@ -12,10 +12,10 @@ const evidence: MatrixResultEvidence = {resultId:1000,runId:100,suiteId:21,workI
 async function fixture() {
     const { services, azure } = matrixTestServices();
     const snapshot: MatrixSnapshot = { ...await loadReleaseMatrix(1, services), contextIdentity };
-    const result: MatrixWriteResult = { runId: 100, projection: {
+    const result = { runId: 100, projection: {
         ...snapshot.projections.find(p => p.suiteId === 21 && p.workItemId === 201)!, lastOutcome: 'Passed', lastRunId: 100,
     } };
-    const port = { load: vi.fn(async () => snapshot), record: vi.fn(async () => result) };
+    const port = { load: vi.fn(async () => snapshot), record: vi.fn(async (): Promise<MatrixWriteResult> => result) };
     return { snapshot, result, port, services, azure, store: getMatrixMutationStore(port, 'catalog', 1, contextIdentity) };
 }
 
@@ -159,7 +159,7 @@ describe('Matrix mutation lifetime and scope', () => {
     });
 
     it('allows an explicit retry when a failed request created no run',async()=>{
-        const {port,store}=await fixture();port.record.mockRejectedValueOnce(new ApiError(500,'HTTP_500','Kein Run angelegt.'));
+        const {port,store}=await fixture();port.record.mockRejectedValueOnce(new ApiError(500,'MATRIX_WRITE_NOT_ATTEMPTED','Kein Run angelegt.'));
         await store.record(input);expect(store.getSnapshot().blocked.size).toBe(0);
         await store.record(input);expect(port.record).toHaveBeenCalledTimes(2);expect(store.getSnapshot().status).toContain('100');
     });
@@ -180,4 +180,50 @@ describe('Matrix mutation lifetime and scope', () => {
         await store.record({ ...input, suiteId: 22, pointId: 22201 });
         expect(store.getSnapshot().error).toContain('100 ist nicht bestätigt');
     });
+});
+
+describe('Targeted confirmed updates', () => {
+    it('patches only exact physical identities after the read started and preserves metadata', async () => {
+        const {store, snapshot, result} = await fixture();
+        const started = getMatrixMutationRevision();
+        await store.record(input);
+        const patched = store.applyConfirmations(snapshot, started);
+        for (let index = 0; index < snapshot.projections.length; index++) {
+            const original = snapshot.projections[index], updated = patched.projections[index];
+            if (original.suiteId === input.suiteId && original.workItemId === input.workItemId) {
+                expect(updated).toEqual({...original, lastOutcome: result.projection.lastOutcome,
+                    lastRunId: result.projection.lastRunId, lastResultId: result.projection.lastResultId,
+                    lastResultCompletedDate: result.projection.lastResultCompletedDate});
+                expect(updated.tags).toBe(original.tags);
+            } else expect(updated).toBe(original);
+        }
+        expect(store.applyConfirmations(snapshot, getMatrixMutationRevision())).toBe(snapshot);
+        const other = {...snapshot, contextIdentity: 'other'};
+        expect(store.applyConfirmations(other, started)).toBe(other);
+        const differentPoint = {...snapshot, projections: [{...result.projection, testPointId: 999, lastOutcome: 'Failed'}]};
+        expect(store.applyConfirmations(differentPoint, started).projections[0]).toBe(differentPoint.projections[0]);
+    });
+    it('keeps concurrent confirmations for different physical points without any reload', async () => {
+        const {port, store, snapshot, result} = await fixture();
+        const started = getMatrixMutationRevision();
+        let finish!: (result: MatrixWriteResult) => void;
+        port.record.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+        const first = store.record(input);
+        const other = {runId: 101, projection: {...result.projection, suiteId: 22, testPointId: 22201, lastRunId: 101}};
+        port.record.mockResolvedValueOnce(other);
+        await store.record({...input, suiteId: 22, pointId: 22201});
+        finish(result); await first;
+        const patched = store.applyConfirmations(snapshot, started);
+        expect(patched.projections.find(p => p.suiteId === 21 && p.workItemId === 201)?.lastRunId).toBe(100);
+        expect(patched.projections.find(p => p.suiteId === 22 && p.workItemId === 201)?.lastRunId).toBe(101);
+        expect(port.load).not.toHaveBeenCalled();
+    });
+    it.each([new TypeError('Connection lost'), new ApiError(502, 'HTTP_502', 'Gateway'), new ApiError(408, 'HTTP_408', 'Timeout')])(
+        'blocks further ordinary writes after an ambiguous response without inventing a run ID: %s', async error => {
+            const {port, store} = await fixture(); port.record.mockRejectedValue(error);
+            await store.record(input); await store.record(input);
+            expect(port.record).toHaveBeenCalledTimes(1);
+            expect(store.getSnapshot().blocked.has('21:201')).toBe(true);
+            expect(store.getSnapshot().status).toBe('');
+        });
 });

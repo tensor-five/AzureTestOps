@@ -1,6 +1,8 @@
+import { validateMatrixConfirmation } from './validate-matrix-confirmation.js';
 import type { MatrixSnapshot, MatrixWrite } from '../../application/dto/release-matrix.dto.js';
 import type { ReleaseMatrixClientPort } from '../../application/ports/client/release-matrix-client.port.js';
-import type { TestCaseProjection } from '../../domain/test-management/test-case-projection.js';
+import type { TestCaseOutcomeUpdate } from '../../domain/test-management/test-case-outcome-update.js';
+import { applyConfirmedOutcomes } from '../../shared/test-management/apply-confirmed-outcomes.js';
 import { ApiError } from '../../application/dto/api-error.js';
 
 type Mutation = {
@@ -20,14 +22,22 @@ export const getMatrixMutationRevision = () => revision;
 
 /** Request lifetime is independent of the mounted view. Nothing in this store is persisted. */
 export class MatrixMutationStore {
+    // Keep only the latest confirmation per physical point, scoped to this set/context.
+    // Only reads started before that confirmation receive the overlay.
+    private readonly confirmations = new Map<string, { revision: number; projection: TestCaseOutcomeUpdate }>();
+    applyConfirmations(snapshot: MatrixSnapshot, readStartedAt: number): MatrixSnapshot {
+        if (snapshot.planId !== this.planId || snapshot.contextIdentity !== this.contextIdentity) return snapshot;
+        const updates = [...this.confirmations.values()].filter(value => value.revision > readStartedAt).map(value => value.projection);
+        return updates.length ? { ...snapshot, projections: applyConfirmedOutcomes(snapshot.projections, updates) } : snapshot;
+    }
     private readonly mutations = new Map<string, Mutation>();
     private readonly listeners = new Set<() => void>();
-    private readonly confirmationListeners = new Set<(projection: TestCaseProjection) => void>();
-    subscribeConfirmed = (listener: (projection: TestCaseProjection) => void): (() => void) => {
+    private readonly confirmationListeners = new Set<(projection: TestCaseOutcomeUpdate) => void>();
+    subscribeConfirmed = (listener: (projection: TestCaseOutcomeUpdate) => void): (() => void) => {
         this.confirmationListeners.add(listener);
         return () => { this.confirmationListeners.delete(listener); };
     };
-    private confirm(projection: TestCaseProjection) {
+    private confirm(projection: TestCaseOutcomeUpdate) {
         this.confirmationListeners.forEach(listener => listener(projection));
     }
     private state = emptyMatrixMutationState;
@@ -99,14 +109,20 @@ export class MatrixMutationStore {
         this.publish();
         try {
             const result = await this.port.record(this.setId, input);
+            validateMatrixConfirmation(result, input);
             this.mutations.set(key, { pending: false, runId: result.runId ?? undefined, reset: result.runId === null });
             this.confirmationRevision = ++revision;
+            this.confirmations.set(`${input.suiteId}:${input.workItemId}:${input.pointId}`, {
+                revision: this.confirmationRevision, projection: result.projection,
+            });
             this.confirm(result.projection);
         } catch (error) {
             const lostResetResponse = input.outcome === 'ResetToActive' && (!(error instanceof ApiError)
-                || error.status >= 500 && error.code !== 'MATRIX_RESET_UNCONFIRMED' && error.code !== 'MATRIX_RESET_NOT_ATTEMPTED');
+                || (error.status >= 500 || error.status === 408) && error.code !== 'MATRIX_RESET_UNCONFIRMED' && error.code !== 'MATRIX_RESET_NOT_ATTEMPTED');
             const resetBlocked = lostResetResponse || error instanceof ApiError && error.code === 'MATRIX_RESET_UNCONFIRMED';
-            const blocked = resetBlocked || error instanceof ApiError && error.code === 'MATRIX_RUN_UNCONFIRMED';
+            const lostWriteResponse = input.outcome !== 'ResetToActive' && (!(error instanceof ApiError)
+                || (error.status >= 500 || error.status === 408) && error.code !== 'MATRIX_WRITE_NOT_ATTEMPTED' && error.code !== 'MATRIX_RUN_UNCONFIRMED');
+            const blocked = resetBlocked || lostWriteResponse || error instanceof ApiError && error.code === 'MATRIX_RUN_UNCONFIRMED';
             const runId = error instanceof ApiError ? error.details?.runId : undefined;
             this.mutations.set(key, { pending: false,
                 blocked,
@@ -115,6 +131,7 @@ export class MatrixMutationStore {
                 ...(!resetBlocked && blocked && typeof runId === 'number' && Number.isSafeInteger(runId) && runId > 0
                     ? { unconfirmed: { runId, pointId: input.pointId, outcome: input.outcome, failedAt: ++revision } } : {}),
                 error: lostResetResponse ? `Reset auf Active für Testpunkt ${input.pointId} wurde nicht bestätigt. Bitte Azure prüfen und die Ansicht aktualisieren; es wird nicht automatisch erneut gespeichert.`
+                    : lostWriteResponse ? `${error instanceof Error ? error.message : 'Statusänderung konnte nicht bestätigt werden.'} Bitte Azure prüfen; erneutes Speichern ist gesperrt.`
                     : error instanceof Error ? error.message : 'Statusänderung konnte nicht gespeichert werden.' });
         }
         this.publish();

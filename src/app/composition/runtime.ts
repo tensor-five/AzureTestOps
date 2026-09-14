@@ -1,9 +1,12 @@
+import type { MatrixWriteHttpMetrics } from '../../shared/azure-devops/matrix-write-http-metrics.js';
 import { createMatrixReadHttpClient } from '../../shared/azure-devops/matrix-read-http-client.js';
 import type { MatrixReadDiagnostics } from '../../shared/diagnostics/matrix-read-diagnostics.js';
 import type { MatrixReadDeps } from "../../application/use-cases/load-release-matrix.use-case.js";
 import { AzureTestExecutionAdapter } from "../../adapters/azure-devops/test-management/azure-test-execution.adapter.js";
 import type { TestExecutionPort } from "../../application/ports/test-execution.port.js";
 import type { TestPointResetPort } from '../../application/ports/test-point-reset.port.js';
+import type { TestOutcomeReadPort } from '../../application/ports/test-outcome-read.port.js';
+import { AzureTestOutcomeReadAdapter } from '../../adapters/azure-devops/test-management/azure-test-outcome-read.adapter.js';
 import { AzureTestPointResetAdapter } from '../../adapters/azure-devops/test-management/azure-test-point-reset.adapter.js';
 import os from "node:os";
 import path from "node:path";
@@ -45,7 +48,7 @@ export type AdoRuntime = {
   testCaseHydration(): Promise<TestCaseHydrationPort>;
   savedQuery(): Promise<SavedQueryPort>;
   relations(): Promise<RelationPort>;
-  matrixServices?(context: {organization: string; project: string}, options?: { signal?: AbortSignal; diagnostics?: MatrixReadDiagnostics }): MatrixReadDeps & {execution: TestExecutionPort; pointReset?: TestPointResetPort};
+  matrixServices?(context: {organization: string; project: string}, options?: { signal?: AbortSignal; diagnostics?: MatrixReadDiagnostics; writeMetrics?: MatrixWriteHttpMetrics }): MatrixReadDeps & {execution: TestExecutionPort; pointReset?: TestPointResetPort; outcomeRead?: TestOutcomeReadPort};
 };
 
 export type RuntimeOptions = {
@@ -119,13 +122,15 @@ export function buildRuntime(options: RuntimeOptions = {}): Runtime {
   const ado: AdoRuntime = {
     resolveContext,
     matrixServices: (context, options) => {
-      const readClient = options ? createMatrixReadHttpClient(httpClient, options) : httpClient;
+      const writeClient = options?.writeMetrics ? options.writeMetrics.wrap(httpClient) : httpClient;
+      const readClient = options && !options.writeMetrics ? createMatrixReadHttpClient(httpClient, options) : writeClient;
       return {
         testManagement: new AzureTestManagementAdapter(readClient, context),
         testCatalog: new AzureTestCatalogAdapter(readClient, context),
         testCaseHydration: new WorkItemBackedTestCaseHydrationAdapter(new AzureWorkItemHydrationAdapter(readClient, context)),
-        execution: new AzureTestExecutionAdapter(httpClient, context),
-        pointReset: new AzureTestPointResetAdapter(httpClient, context)
+        execution: new AzureTestExecutionAdapter(writeClient, context),
+        outcomeRead: new AzureTestOutcomeReadAdapter(readClient, context),
+        pointReset: new AzureTestPointResetAdapter(writeClient, context)
       };
     },
     testManagement: async () => (await resolveBundle()).testManagement,

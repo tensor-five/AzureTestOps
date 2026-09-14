@@ -13,6 +13,19 @@ export class HttpReleaseMatrixAdapter implements ReleaseMatrixClientPort {
             return snapshot;
         } catch (error) { diagnostics.finish(signal?.aborted ? 'aborted' : 'error'); throw error; }
     }
-    record(setId: string, input: MatrixWrite): Promise<MatrixActionResult> { return jsonFetch(this.path(setId) + '/outcomes', { method: 'POST', body: input }); }
+    async record(setId: string, input: MatrixWrite): Promise<MatrixActionResult> {
+        const requestId = crypto.randomUUID(), started = performance.now();
+        let event = 'error';
+        try {
+            const result = await jsonFetch<MatrixActionResult>(this.path(setId) + '/outcomes', {
+                method: 'POST', body: input, headers: { 'x-matrix-request-id': requestId },
+            });
+            event = 'confirmed';
+            return result;
+        } finally {
+            try { console.info('[release-matrix.write-summary]', { requestId, side: 'browser', event,
+                elapsedMs: Math.round(performance.now() - started) }); } catch { /* Diagnostic failures never cause a retry. */ }
+        }
+    }
     private path(setId: string): string { return `/phase2/sets/${encodeURIComponent(setId)}/release-matrix`; }
 }
