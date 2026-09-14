@@ -1,0 +1,55 @@
+name: Release matrix contract
+on:
+  pull_request:
+    paths: &matrix_paths
+      - src/features/release-matrix/**
+      - src/domain/release-matrix/**
+      - src/domain/test-management/**
+      - src/application/use-cases/load-test-case-projections.use-case.ts
+      - src/application/ports/test-management.port.ts
+      - playwright.config.ts
+      - scripts/check-frozen-tests.mjs
+      - src/application/**/release-matrix*
+      - src/application/**/record-test-outcome*
+      - src/application/ports/client/client-ports.ts
+      - src/adapters/azure-devops/test-management/**
+      - src/adapters/http/http-release-matrix*
+      - src/adapters/persistence/settings/**
+      - src/shared/user-preferences/**
+      - src/shared/test-management/**
+      - src/shared/azure-devops/**
+      - src/app/composition/**
+      - src/app/bootstrap/http-server.ts
+      - src/app/bootstrap/ui-client.tsx
+      - src/app/bootstrap/routes/release-matrix*
+      - src/app/bootstrap/local-ui*.css
+      - src/features/navigation/**
+      - src/features/relations-view/test-case-card.tsx
+      - docs/contracts/release-matrix.*
+      - tests/e2e/release-matrix*
+      - tests/e2e/release-matrix/**
+      - scripts/check-release-matrix-approval.mjs
+      - .github/workflows/release-matrix.yml
+      - package.json
+      - package-lock.json
+  push:
+    branches: [main, Development]
+    paths: *matrix_paths
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: self-hosted
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/check-release-matrix-approval.mjs
+      - run: npm ci
+      - run: npm run typecheck && npm run check:cycles && npm test
+      - run: npx playwright install chromium
+      - run: npm run test:e2e -- tests/e2e/release-matrix.contract.spec.ts
