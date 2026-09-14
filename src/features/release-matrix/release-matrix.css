@@ -82,3 +82,8 @@
 }
 
 .matrix-cell-control[aria-busy="true"]::after { content:"…"; position:absolute; right:var(--space-1); color:var(--color-primary); font-weight:var(--font-bold); }
+
+.matrix-filters .matrix-environment-toggle { flex:0 1 auto; flex-direction:row; align-items:center; align-self:center; gap:var(--space-2); }
+.matrix-filters .matrix-environment-toggle input { flex-shrink:0; width:var(--space-4); height:var(--space-4); margin:0; accent-color:var(--color-primary); }
+.matrix-source-picker { display:block; width:100%; min-width:0; box-sizing:border-box; padding:var(--space-1); border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--color-bg-muted); color:var(--color-text); font:inherit; font-size:var(--text-xs); }
+.matrix-source-picker:disabled { opacity:.6; }

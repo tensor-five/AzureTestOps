@@ -7,13 +7,14 @@ export function MatrixSettings({ snapshot, config, update }: {
     config: MatrixConfig;
     update(patch: Partial<MatrixConfig>): void;
 }) {
-    const contexts = [...new Map(catalogRows(snapshot,config).map(row=>[mappingKey(row,''),row])).values()]
+    const contexts = config.separateEnvironments === false ? [] : [...new Map(catalogRows(snapshot,config).map(row=>[mappingKey(row,''),row])).values()]
         .sort((a,b)=>a.environment.localeCompare(b.environment)||a.content.localeCompare(b.content));
     const change = (id:string,patch:Partial<MatrixColumn>)=>update({columns:config.columns.map(c=>c.id===id?{...c,...patch}:c)});
     const move = (index:number,direction:number)=>{const columns=[...config.columns];[columns[index],columns[index+direction]]=[columns[index+direction],columns[index]];update({columns});};
     const describe = (suite:MatrixSnapshot['suites'][number])=>`${suite.path} (#${suite.id})`;
     return <section className="matrix-settings" aria-label="Matrix konfigurieren">
       <p>Wähle die Versions-Suites für den Vergleich. Die sichtbaren Versionen liefern die Testfälle. Darunter werden Umgebung und Inhalt über ihre direkten Unterordner zugeordnet.</p>
+      {config.separateEnvironments === false && <p>Testfälle werden über Umgebungen hinweg zusammengefasst. Wenn mehrere Quellsuites denselben Testfall enthalten, wähle die Umgebung direkt in der jeweiligen Zelle.</p>}
       <div className="matrix-column-settings">{config.columns.map((column,index)=><fieldset key={column.id}>
         <legend>Spalte {index+1}</legend>
         <label>Versions-Suite<select aria-label={`Versions-Suite ${index+1}`} value={column.versionSuiteId} onChange={e=>change(column.id,{versionSuiteId:Number(e.target.value)})}>

@@ -1,6 +1,6 @@
 import type { MatrixSnapshot } from '../../application/dto/release-matrix.dto.js';
 import type { MatrixColumn, MatrixConfig } from '../../domain/release-matrix/matrix-config.js';
-export type MatrixRow = { environment: string; content: string; workItemId: number; title: string; tags: string[] };
+export type MatrixRow = { environment: string; content: string; workItemId: number; title: string; tags: string[]; combinedEnvironments?: true };
 export type MatrixGroup = { id: string; name: string; rows: MatrixRow[] };
 export type MatrixRowContext = Pick<MatrixRow, 'environment' | 'content'>;
 export function descendantIds(snapshot: MatrixSnapshot, root: number): Set<number> {
@@ -18,7 +18,8 @@ export function descendantIds(snapshot: MatrixSnapshot, root: number): Set<numbe
     return found;
 }
 export const mappingKey = (row: MatrixRowContext, columnId: string): string => JSON.stringify([row.environment,row.content,columnId]);
-export const matrixRowKey = (row: MatrixRow): string => JSON.stringify([row.environment,row.content,row.workItemId]);
+export const matrixRowKey = (row: MatrixRow): string => JSON.stringify(row.combinedEnvironments ? [row.content,row.workItemId] : [row.environment,row.content,row.workItemId]);
+export const effectiveMatrixGrouping = (config: MatrixConfig) => config.separateEnvironments === false ? 'content' : config.grouping;
 export function versionTitle(snapshot: MatrixSnapshot, column: MatrixColumn): string {
     return snapshot.suites.find(s=>s.id===column.versionSuiteId)?.name ?? (column.versionSuiteId?`Versions-Suite #${column.versionSuiteId} ungültig`:'Versions-Suite auswählen');
 }
@@ -50,7 +51,8 @@ export function catalogRows(snapshot: MatrixSnapshot, config: MatrixConfig): Mat
         const content = contents.get(projection.suiteId);
         const environment = content?.parentSuiteId == null ? undefined : environments.get(content.parentSuiteId);
         if (!content||!environment) continue;
-        const row = {environment:environment.name,content:content.name,workItemId:projection.workItemId,title:projection.title,tags:projection.tags};
+        const row: MatrixRow = {environment:config.separateEnvironments === false ? '' : environment.name,content:content.name,workItemId:projection.workItemId,title:projection.title,tags:projection.tags,
+            ...(config.separateEnvironments === false ? {combinedEnvironments:true as const} : {})};
         if (!rows.has(matrixRowKey(row))) rows.set(matrixRowKey(row),row);
     }
     return [...rows.values()];
@@ -63,8 +65,9 @@ export function matrixGroups(snapshot: MatrixSnapshot, config: MatrixConfig): Ma
     const rows = catalogRows(snapshot,config).filter(row=>(!config.search||`${row.workItemId} ${row.title}`.toLocaleLowerCase().includes(config.search.toLocaleLowerCase()))
         &&(!config.tagFilter||row.tags.some(tag=>normalizedTag(tag)===normalizedTag(config.tagFilter)))&&(!config.suiteFilter||memberIds.has(row.workItemId)))
         .sort((a,b)=>a.title.localeCompare(b.title,undefined,{sensitivity:'base'})||a.workItemId-b.workItemId||matrixRowKey(a).localeCompare(matrixRowKey(b)));
-    const names = [...new Set(rows.map(row=>row[config.grouping]))].sort((a,b)=>a.localeCompare(b));
-    const order = config.groupOrderByMode[config.grouping];
+    const grouping = effectiveMatrixGrouping(config);
+    const names = [...new Set(rows.map(row=>row[grouping]))].sort((a,b)=>a.localeCompare(b));
+    const order = config.groupOrderByMode[grouping];
     const rank = (name:string)=>{const index=order.indexOf(name);return index<0?Infinity:index;};
-    return names.map(name=>({id:name,name,rows:rows.filter(row=>row[config.grouping]===name)})).sort((a,b)=>rank(a.id)-rank(b.id));
+    return names.map(name=>({id:name,name,rows:rows.filter(row=>row[grouping]===name)})).sort((a,b)=>rank(a.id)-rank(b.id));
 }

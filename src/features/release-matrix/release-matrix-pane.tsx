@@ -3,7 +3,7 @@ import * as React from 'react';
 import { NotificationToast } from '../../shared/ui/notification-toast.js';
 import { useClientPorts } from '../../app/composition/client-ports-context.js';
 import { uniqueTags, type MatrixGrouping } from '../../domain/release-matrix/matrix-config.js';
-import { catalogRows, matrixGroups, visibleVersionColumns } from './matrix-presentation.js';
+import { catalogRows, effectiveMatrixGrouping, matrixGroups, visibleVersionColumns } from './matrix-presentation.js';
 import { useReleaseMatrix } from './use-release-matrix.js';
 import { MatrixTable } from './matrix-table.js';
 import { MatrixSettings } from './matrix-settings.js';
@@ -29,7 +29,8 @@ export function ReleaseMatrixPane({ setId, planId, rootSuiteId, contextIdentity 
     return <MatrixTooltipProvider><section className="release-matrix-pane" aria-label="Release-Matrix Ansicht">
     <div className="matrix-heading"><h2>Release-Matrix</h2><p>Testfälle der ausgewählten Versionen im Vergleich</p></div>
     <div className="matrix-filters">
-      <label>Gruppieren nach<select aria-label="Gruppieren nach" value={config.grouping} onChange={e => update({ grouping: e.target.value as MatrixGrouping })}><option value="environment">Umgebung</option><option value="content">Inhalt</option></select></label>
+      <label className="matrix-environment-toggle"><input type="checkbox" checked={config.separateEnvironments !== false} onChange={e => update({ separateEnvironments: e.target.checked })}/>Umgebungen getrennt anzeigen</label>
+      <label>Gruppieren nach<select aria-label="Gruppieren nach" disabled={config.separateEnvironments === false} value={effectiveMatrixGrouping(config)} onChange={e => update({ grouping: e.target.value as MatrixGrouping })}><option value="environment">Umgebung</option><option value="content">Inhalt</option></select></label>
       <label>Testfall suchen<input aria-label="Testfall suchen" placeholder="ID oder Titel" value={config.search} onChange={e => update({ search: e.target.value })}/></label>
       <label>Tag<select aria-label="Tag" aria-busy={model.tagsLoading} onFocus={model.loadTags} value={config.tagFilter} onChange={e => update({ tagFilter: e.target.value })}><option value="">Alle Tags</option>{tags.map(t => <option key={t} value={t}>{t}</option>)}</select></label>
       <label>In Testsuite<select aria-label="In Testsuite" value={config.suiteFilter} onChange={e => update({ suiteFilter: e.target.value })}><option value="">Alle Testsuites</option>{snapshot?.suites.map(s => <option key={s.id} value={s.id}>{s.path} (#{s.id})</option>)}</select></label>
