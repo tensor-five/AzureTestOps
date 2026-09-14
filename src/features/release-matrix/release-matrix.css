@@ -55,18 +55,23 @@
 .matrix-empty { padding:var(--space-5); color:var(--color-text-secondary); background:var(--color-bg-muted); border-radius:var(--radius-md); }
 .matrix-scroll { overflow:auto; min-height:0; min-width:0; max-width:100%; max-height:max(calc(var(--space-4) * 12),80dvh); flex:1 1 auto; border:1px solid var(--color-border); border-radius:var(--radius-lg); }
 .matrix-scroll table { border-collapse:separate; border-spacing:0; table-layout:fixed; width:max-content; min-width:0; font-size:var(--text-sm); }
-.matrix-title-col { width:350px; }
+.matrix-title-col { width:var(--matrix-title-column-width); }
 .matrix-context-col { width:var(--space-32); }
 .matrix-status-col { width:76px; }
 .matrix-scroll th,.matrix-scroll td { border-right:1px solid var(--color-border-subtle); border-bottom:1px solid var(--color-border-subtle); box-sizing:border-box; }
 .matrix-scroll thead th { position:sticky; top:0; z-index:3; width:76px; min-width:76px; max-width:76px; padding:var(--space-3) var(--space-1); background:var(--color-bg-muted); text-align:center; overflow-wrap:anywhere; }
-.matrix-scroll thead th:first-child { left:0; z-index:4; width:350px; min-width:350px; text-align:left; padding:var(--space-3); }
-.matrix-scroll th[scope=row] { position:sticky; left:0; z-index:2; background:var(--color-surface); text-align:left; padding:var(--space-2) var(--space-3); width:350px; min-width:350px; max-width:350px; overflow-wrap:anywhere; font-weight:normal; }
+.matrix-scroll thead th:first-child { left:0; z-index:4; width:var(--matrix-title-column-width); min-width:var(--matrix-title-column-width); max-width:var(--matrix-title-column-width); text-align:left; padding:var(--space-3); }
+.matrix-scroll th[scope=row] { position:sticky; left:0; z-index:2; background:var(--color-surface); text-align:left; padding:var(--space-2) var(--space-3); width:var(--matrix-title-column-width); min-width:var(--matrix-title-column-width); max-width:var(--matrix-title-column-width); font-weight:normal; }
+.matrix-case-title { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.matrix-title-header { position:relative; }
+.matrix-title-resize-handle { position:absolute; top:0; right:calc(var(--space-1) * -1); bottom:0; width:var(--space-3); cursor:col-resize; touch-action:none; user-select:none; }
+.matrix-title-resize-handle::after { content:""; position:absolute; top:var(--space-2); right:var(--space-1); bottom:var(--space-2); border-right:var(--space-0-5) solid var(--color-border-strong); }
+.matrix-title-resize-handle:hover::after,.matrix-title-resize-handle:focus-visible::after { border-color:var(--color-primary); }
 .matrix-case-id { color:var(--color-text-muted); font-variant-numeric:tabular-nums; }
 .matrix-scroll td { width:76px; min-width:76px; max-width:76px; padding:0; text-align:center; background:var(--color-surface); }
 .matrix-scroll .matrix-context-cell { width:var(--space-32); min-width:var(--space-32); max-width:var(--space-32); padding:var(--space-2) var(--space-3); text-align:left; overflow-wrap:anywhere; }
 .matrix-group-row th { padding:0; text-align:left; background:var(--color-bg-muted); }
-.matrix-group-row th>div { position:sticky; left:0; width:350px; display:flex; align-items:center; min-height:38px; }
+.matrix-group-row th>div { position:sticky; left:0; width:var(--matrix-title-column-width); display:flex; align-items:center; min-height:38px; }
 .matrix-group-row button { border:0; background:transparent; padding:var(--space-2); }
 .matrix-group-row button:first-child { flex:1; text-align:left; font-weight:600; }
 .matrix-group-row span { color:var(--color-text-secondary); font-weight:normal; }
@@ -78,6 +83,7 @@
 @media(max-width:600px) {
   .release-matrix-pane { padding:var(--space-2); }
   .matrix-title-col,.matrix-scroll thead th:first-child,.matrix-scroll th[scope=row],.matrix-group-row th>div { width:210px; min-width:210px; max-width:210px; }
+  .matrix-title-resize-handle { display:none; }
   .ui-shell-header-actions { flex-wrap:wrap; min-width:0; }
 }
 

@@ -6,6 +6,7 @@ import { combinedMappingKey, createCombinedSourceResolver } from './matrix-combi
 import { MatrixSourcePicker } from './matrix-source-picker.js';
 import { MatrixCell } from './matrix-cell.js';
 import { moveVisibleMatrixGroup } from './matrix-group-order.js';
+import { useMatrixTitleColumnResize } from './use-matrix-title-column-resize.js';
 
 type MatrixTableProps = {
   snapshot: MatrixSnapshot;
@@ -25,6 +26,8 @@ export function MatrixTable({ snapshot, config, groups, pending, blocked, stale,
   const grouping = effectiveMatrixGrouping(config);
   const collapsedGroups = config.collapsedByMode[grouping];
   const sourceKey = combined ? combinedMappingKey : mappingKey;
+  const titleColumn = useMatrixTitleColumnResize(config.testCaseColumnWidth, width => update({ testCaseColumnWidth: width }));
+  const tableStyle = { '--matrix-title-column-width': `${titleColumn.width}px` } as React.CSSProperties;
   // Separate rows share suite contexts; combined rows additionally require concrete case membership.
   const sources = React.useMemo(() => {
     const contexts = new Map(groups.flatMap(group => group.rows.map(row => [sourceKey(row,''),row] as const)));
@@ -49,7 +52,7 @@ export function MatrixTable({ snapshot, config, groups, pending, blocked, stale,
 
   return (
     <div className="matrix-scroll" data-matrix-scroll="">
-      <table aria-label="Release-Matrix">
+      <table aria-label="Release-Matrix" style={tableStyle}>
         <colgroup>
           <col className="matrix-title-col" />
           {!combined && <col className="matrix-context-col" />}
@@ -57,7 +60,10 @@ export function MatrixTable({ snapshot, config, groups, pending, blocked, stale,
         </colgroup>
         <thead>
           <tr>
-            <th scope="col">Testfall</th>
+            <th scope="col" className="matrix-title-header" aria-label="Testfall">
+              Testfall
+              <span className="matrix-title-resize-handle" {...titleColumn.handleProps} />
+            </th>
             {!combined && <th scope="col" className="matrix-context-cell">{grouping === 'environment' ? 'Inhalt' : 'Umgebung'}</th>}
             {columns.map(column => (
               <th key={column.id} scope="col" title={versionTitle(snapshot,column)}
@@ -92,7 +98,7 @@ export function MatrixTable({ snapshot, config, groups, pending, blocked, stale,
               </tr>
               {!collapsed && group.rows.map(row => (
                 <tr key={matrixRowKey(row)} data-matrix-row={matrixRowKey(row)}>
-                  <th scope="row">
+                  <th scope="row" className="matrix-case-title" title={`#${row.workItemId} ${row.title}`}>
                     <span className="matrix-case-id">#{row.workItemId}</span> {row.title}
                   </th>
                   {!combined && <td className="matrix-context-cell">{grouping === 'environment' ? row.content : row.environment}</td>}
