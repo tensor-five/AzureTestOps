@@ -31,14 +31,22 @@
 .release-matrix-pane button { color:var(--color-text); background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:var(--space-2) var(--space-3); font:inherit; cursor:pointer; }
 .release-matrix-pane button:disabled { opacity:.45; cursor:default; }
 .release-matrix-pane :focus-visible { outline:2px solid var(--color-primary); outline-offset:2px; }
-.matrix-toolbar,.matrix-filters,.matrix-tag-editor { display:flex; align-items:center; gap:var(--space-3); flex-wrap:wrap; }
-.matrix-toolbar>div { margin-right:auto; }
-.matrix-toolbar h2 { font-size:var(--text-lg); margin:0; }
-.matrix-toolbar p,.matrix-settings p { color:var(--color-text-secondary); margin:var(--space-1) 0; }
+.matrix-heading { display:flex; align-items:baseline; gap:var(--space-3); flex-wrap:wrap; }
+.matrix-tag-editor { display:flex; align-items:center; gap:var(--space-3); flex-wrap:wrap; }
+.matrix-heading h2 { font-size:var(--text-lg); margin:0; }
+.matrix-heading p { color:var(--color-text-secondary); margin:0; font-size:var(--text-sm); }
+.matrix-settings p { color:var(--color-text-secondary); margin:var(--space-1) 0; }
+.matrix-filters { display:flex; align-items:flex-end; gap:var(--space-2); }
+.matrix-filters button { flex-shrink:0; white-space:nowrap; font-size:var(--text-sm); }
 .matrix-filters label,.matrix-settings label,.matrix-tag-editor label { display:flex; flex-direction:column; gap:var(--space-1); min-width:0; font-size:var(--text-sm); }
 .matrix-filters input,.matrix-filters select,.matrix-settings input:not([type=checkbox]),.matrix-settings select,.matrix-tag-editor textarea { color:var(--color-text); background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:var(--space-2); font:inherit; max-width:100%; box-sizing:border-box; }
-.matrix-filters label { flex:1; min-width:140px; }
-.matrix-filters select { width:100%; }
+.matrix-filters label { flex:1 1 0; }
+.matrix-filters input,.matrix-filters select { width:100%; min-width:0; height:var(--space-10); }
+.matrix-filters button { min-height:var(--space-10); }
+@media(max-width:1000px) {
+  .matrix-filters { flex-wrap:wrap; }
+  .matrix-filters label { flex:1 1 140px; }
+}
 .matrix-settings { flex-shrink:0; max-height:45vh; overflow:auto; border:1px solid var(--color-border); border-radius:var(--radius-lg); padding:var(--space-3); background:var(--color-bg-muted); }
 .matrix-column-settings { display:flex; gap:var(--space-3); overflow:auto; padding:var(--space-2) 0; }
 .matrix-column-settings fieldset { flex:0 0 270px; min-width:0; display:flex; flex-direction:column; gap:var(--space-2); border:1px solid var(--color-border); border-radius:var(--radius-md); }
@@ -68,19 +76,8 @@
 .matrix-tooltip { position:fixed; z-index:10000; pointer-events:none; box-sizing:border-box; width:max-content; max-width:min(320px,calc(100vw - 16px)); border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--color-surface-elevated); color:var(--color-text); box-shadow:0 4px 16px var(--color-overlay-scrim); font-size:var(--text-sm); padding:var(--space-2) var(--space-3); overflow-wrap:anywhere; }
 @media(max-width:600px) {
   .release-matrix-pane { padding:var(--space-2); }
-  .matrix-toolbar { gap:var(--space-2); }
   .matrix-title-col,.matrix-scroll thead th:first-child,.matrix-scroll th[scope=row],.matrix-group-row th>div { width:210px; min-width:210px; max-width:210px; }
   .ui-shell-header-actions { flex-wrap:wrap; min-width:0; }
-  .matrix-filters label { min-width:120px; }
 }
 
 .matrix-cell-control[aria-busy="true"]::after { content:"…"; position:absolute; right:var(--space-1); color:var(--color-primary); font-weight:var(--font-bold); }
-
-.matrix-migration-notice {
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg-muted);
-  color: var(--color-text-secondary);
-  font-size: var(--text-xs);
-}
