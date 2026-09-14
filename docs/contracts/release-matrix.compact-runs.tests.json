@@ -1,0 +1,9 @@
+{
+  "contract": "release-matrix.v4.html",
+  "files": [
+    {
+      "path": "src/adapters/azure-devops/test-management/azure-test-management.compact-runs.spec.ts",
+      "sha256": "9633725b525c38a71d82ca040489a5f4b2ab78675cc5d7218e5abaa9620cea9a"
+    }
+  ]
+}
