@@ -4,6 +4,7 @@ import type { ReleaseMatrixClientPort } from '../../application/ports/client/rel
 import type { TestCaseOutcomeUpdate } from '../../domain/test-management/test-case-outcome-update.js';
 import { applyConfirmedOutcomes } from '../../shared/test-management/apply-confirmed-outcomes.js';
 import { ApiError } from '../../application/dto/api-error.js';
+import { createTransientNotification, type TransientNotification } from '../../shared/ui/transient-notification.js';
 
 type Mutation = {
     pending: boolean; reset?: boolean; unconfirmedReset?: {pointId: number; failedAt: number}; blocked?: boolean; error?: string; runId?: number;
@@ -15,6 +16,7 @@ export type MatrixMutationState = {
     error: string;
     status: string;
     confirmationRevision: number;
+    notification?: TransientNotification;
 };
 export const emptyMatrixMutationState: MatrixMutationState = { pending: new Set(), blocked: new Set(), error: '', status: '', confirmationRevision: 0 };
 let revision = 0;
@@ -42,6 +44,11 @@ export class MatrixMutationStore {
     }
     private state = emptyMatrixMutationState;
     private confirmationRevision = 0;
+    private notification: TransientNotification | undefined;
+
+    private notifyConfirmation(runId: number | null) {
+        this.notification = createTransientNotification(runId === null ? 'Auf Active zurückgesetzt.' : `Durchlauf bestätigt: ${runId}`, 'success');
+    }
 
     constructor(private readonly port: ReleaseMatrixClientPort, private readonly setId: string,
         private readonly planId: number, private readonly contextIdentity: string) {}
@@ -67,6 +74,7 @@ export class MatrixMutationStore {
                 && snapshot.activePoints?.some(point => point.pointId === reset.pointId
                     && point.suiteId === projection.suiteId && point.workItemId === projection.workItemId)) {
                 this.mutations.set(key, { pending: false, reset: true });
+                this.notifyConfirmation(null);
                 this.confirm(projection);
                 changed = true;
                 continue;
@@ -82,6 +90,7 @@ export class MatrixMutationStore {
                 && Number.isFinite(Date.parse(result.completedDate)));
             if (!confirmedResult) continue;
             this.mutations.set(key, { pending: false, runId: target.runId });
+            this.notifyConfirmation(target.runId);
             this.confirm(projection);
             changed = true;
         }
@@ -97,6 +106,7 @@ export class MatrixMutationStore {
             error: entries.flatMap(([, value]) => value.error ? [value.error] : []).join(' '),
             status: entries.flatMap(([, value]) => value.reset ? ['Auf Active zurückgesetzt.'] : value.runId ? [`Durchlauf bestätigt: ${value.runId}`] : []).join(' '),
             confirmationRevision: this.confirmationRevision,
+            notification: this.notification,
         };
         this.listeners.forEach(listener => listener());
     }
@@ -111,6 +121,7 @@ export class MatrixMutationStore {
             const result = await this.port.record(this.setId, input);
             validateMatrixConfirmation(result, input);
             this.mutations.set(key, { pending: false, runId: result.runId ?? undefined, reset: result.runId === null });
+            this.notifyConfirmation(result.runId);
             this.confirmationRevision = ++revision;
             this.confirmations.set(`${input.suiteId}:${input.workItemId}:${input.pointId}`, {
                 revision: this.confirmationRevision, projection: result.projection,
@@ -133,6 +144,7 @@ export class MatrixMutationStore {
                 error: lostResetResponse ? `Reset auf Active für Testpunkt ${input.pointId} wurde nicht bestätigt. Bitte Azure prüfen und die Ansicht aktualisieren; es wird nicht automatisch erneut gespeichert.`
                     : lostWriteResponse ? `${error instanceof Error ? error.message : 'Statusänderung konnte nicht bestätigt werden.'} Bitte Azure prüfen; erneutes Speichern ist gesperrt.`
                     : error instanceof Error ? error.message : 'Statusänderung konnte nicht gespeichert werden.' });
+            this.notification = createTransientNotification(this.mutations.get(key)!.error!, 'error');
         }
         this.publish();
     }

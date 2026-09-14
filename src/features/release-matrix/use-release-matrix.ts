@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { createTransientNotification, type TransientNotification } from '../../shared/ui/transient-notification.js';
 import type { MatrixSnapshot, MatrixWrite } from '../../application/dto/release-matrix.dto.js';
 import type { ReleaseMatrixClientPort } from '../../application/ports/client/release-matrix-client.port.js';
 import { matrixPreferenceStore } from './matrix-preference-store.js';
@@ -10,6 +11,7 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
     const [config, setConfig] = React.useState(() => { const saved = matrixPreferenceStore.load({ scopeKey: setId }); return saved?.planId === planId ? saved : emptyMatrixConfig(planId, rootSuiteId); });
     const [snapshot, setSnapshot] = React.useState<MatrixSnapshot | null>(null);
     const [error, setError] = React.useState('');
+    const [readNotification, setReadNotification] = React.useState<TransientNotification | null>(null);
     const [loading, setLoading] = React.useState(true);
     const alive = React.useRef(true);
     const request = React.useRef(0);
@@ -42,8 +44,11 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
             }
         }
         catch (e) {
-            if (!controller.signal.aborted && alive.current && version === request.current)
-                setError(`Matrix konnte nicht geladen werden. ${e instanceof Error ? e.message : ''}`);
+            if (!controller.signal.aborted && alive.current && version === request.current) {
+                const message = `Matrix konnte nicht geladen werden. ${e instanceof Error ? e.message : ''}`;
+                setError(message);
+                setReadNotification(createTransientNotification(message, 'error'));
+            }
         }
         finally {
             if (alive.current && version === request.current)
@@ -76,6 +81,8 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
     };
     const mutationError = mutation.error && !snapshot ? `${mutation.error} Azure-Kontext: ${contextIdentity}.` : mutation.error;
     const staleMessage = stale ? 'Die angezeigte Matrix ist veraltet. Weitere Änderungen sind bis zum erfolgreichen Aktualisieren gesperrt.' : '';
+    const notification = (mutation.notification?.id ?? 0) > (readNotification?.id ?? 0) ? mutation.notification : readNotification;
     return { config, update, snapshot, stale, error: [error, mutationError, staleMessage].filter(Boolean).join(' '),
+        notification,
         status: mutation.status, loading, pending: mutation.pending, blocked: mutation.blocked, record, reload };
 }
