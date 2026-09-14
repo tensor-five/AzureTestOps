@@ -20,6 +20,31 @@ async function fixture() {
 }
 
 describe('Matrix mutation lifetime and scope', () => {
+    it('announces only the latest completed write and preserves its event across unrelated pending writes', async () => {
+        const {port, store, result} = await fixture();
+        await store.record(input);
+        const first = store.getSnapshot().notification!;
+        expect(first).toMatchObject({message: 'Durchlauf bestätigt: 100', severity: 'success'});
+        const next = {runId: 101, projection: {...result.projection, suiteId: 22, testPointId: 22201, lastRunId: 101}};
+        let finish!: (result: MatrixWriteResult) => void;
+        port.record.mockImplementationOnce(() => new Promise(resolve => {finish = resolve;}));
+        const write = store.record({...input, suiteId: 22, pointId: 22201});
+        expect(store.getSnapshot().notification).toBe(first);
+        finish(next); await write;
+        expect(store.getSnapshot().notification).toMatchObject({message: 'Durchlauf bestätigt: 101', severity: 'success'});
+        expect(store.getSnapshot().notification!.id).toBeGreaterThan(first.id);
+    });
+
+    it('emits a new error event for each failed attempt without clearing blocked writes', async () => {
+        const {port, store} = await fixture();
+        port.record.mockRejectedValue(new ApiError(500, 'MATRIX_RUN_UNCONFIRMED', 'Nicht bestätigt', {runId:100}));
+        await store.record(input);
+        const first = store.getSnapshot().notification!;
+        await store.record({...input, suiteId:22, pointId:22201});
+        expect(store.getSnapshot().notification).toMatchObject({message:'Nicht bestätigt', severity:'error'});
+        expect(store.getSnapshot().notification!.id).toBeGreaterThan(first.id);
+        expect([...store.getSnapshot().blocked]).toEqual(['21:201', '22:201']);
+    });
     it.each([
         {rawPoint:99999,omitSuite:false,completedDate:'2026-09-02T10:00:00Z',confirmed:false},
         {rawPoint:21201,omitSuite:true,completedDate:'2026-09-02T10:00:00Z',confirmed:true},

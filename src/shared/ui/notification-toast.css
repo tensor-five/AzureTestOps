@@ -1,0 +1,27 @@
+.notification-toast {
+  position: fixed;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  z-index: 150;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(26rem, calc(100vw - var(--space-8)));
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-success-fg);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-elevated);
+  color: var(--color-text);
+  box-shadow: var(--shadow-md);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  overflow-wrap: anywhere;
+}
+.notification-toast > div { min-width: 0; }
+.notification-toast > button { flex-shrink: 0; }
+.notification-toast strong { font-weight: var(--font-medium); }
+.notification-toast[data-severity="error"] { border-left-color: var(--color-danger); }

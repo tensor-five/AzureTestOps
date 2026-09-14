@@ -1,5 +1,6 @@
 import { MatrixTooltipProvider } from "./matrix-tooltip.js";
 import * as React from 'react';
+import { NotificationToast } from '../../shared/ui/notification-toast.js';
 import { useClientPorts } from '../../app/composition/client-ports-context.js';
 import { uniqueTags, type MatrixGrouping } from '../../domain/release-matrix/matrix-config.js';
 import { catalogRows, matrixGroups, visibleVersionColumns } from './matrix-presentation.js';
@@ -35,9 +36,8 @@ export function ReleaseMatrixPane({ setId, planId, rootSuiteId, contextIdentity 
       <label>In Testsuite<select aria-label="In Testsuite" value={config.suiteFilter} onChange={e => update({ suiteFilter: e.target.value })}><option value="">Alle Testsuites</option>{snapshot?.suites.map(s => <option key={s.id} value={s.id}>{s.path} (#{s.id})</option>)}</select></label>
       <button type="button" onClick={() => update({ search: '', tagFilter: '', suiteFilter: '' })}>Filter zurücksetzen</button>
     </div>
-    {model.error && <div role="alert" className="matrix-error">{model.error}</div>}
+    <NotificationToast notification={model.notification}/>
     {model.pending.size > 0 && <div role="status">Neuer Durchlauf wird gespeichert …</div>}
-    {model.status && <div role="status" className="matrix-success">{model.status}</div>}
     {model.loading && <div role="status">Matrix wird geladen …</div>}
     {settings && snapshot && <MatrixSettings snapshot={snapshot} config={config} update={update}/>}
     {!hasVersionSelection && <div className="matrix-empty">Versionsspalten auswählen: Öffne „Spalten &amp; Gruppierung“ und wähle mindestens eine gültige Versions-Suite zum Anzeigen.</div>}
