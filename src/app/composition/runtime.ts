@@ -1,3 +1,5 @@
+import { createMatrixReadHttpClient } from '../../shared/azure-devops/matrix-read-http-client.js';
+import type { MatrixReadDiagnostics } from '../../shared/diagnostics/matrix-read-diagnostics.js';
 import type { MatrixReadDeps } from "../../application/use-cases/load-release-matrix.use-case.js";
 import { AzureTestExecutionAdapter } from "../../adapters/azure-devops/test-management/azure-test-execution.adapter.js";
 import type { TestExecutionPort } from "../../application/ports/test-execution.port.js";
@@ -41,7 +43,7 @@ export type AdoRuntime = {
   testCaseHydration(): Promise<TestCaseHydrationPort>;
   savedQuery(): Promise<SavedQueryPort>;
   relations(): Promise<RelationPort>;
-  matrixServices?(context: {organization: string; project: string}): MatrixReadDeps & {execution: TestExecutionPort};
+  matrixServices?(context: {organization: string; project: string}, options?: { signal?: AbortSignal; diagnostics?: MatrixReadDiagnostics }): MatrixReadDeps & {execution: TestExecutionPort};
 };
 
 export type RuntimeOptions = {
@@ -114,12 +116,15 @@ export function buildRuntime(options: RuntimeOptions = {}): Runtime {
 
   const ado: AdoRuntime = {
     resolveContext,
-    matrixServices: context => ({
-      testManagement: new AzureTestManagementAdapter(httpClient, context),
-      testCatalog: new AzureTestCatalogAdapter(httpClient, context),
-      testCaseHydration: new WorkItemBackedTestCaseHydrationAdapter(new AzureWorkItemHydrationAdapter(httpClient, context)),
-      execution: new AzureTestExecutionAdapter(httpClient, context)
-    }),
+    matrixServices: (context, options) => {
+      const readClient = options ? createMatrixReadHttpClient(httpClient, options) : httpClient;
+      return {
+        testManagement: new AzureTestManagementAdapter(readClient, context),
+        testCatalog: new AzureTestCatalogAdapter(readClient, context),
+        testCaseHydration: new WorkItemBackedTestCaseHydrationAdapter(new AzureWorkItemHydrationAdapter(readClient, context)),
+        execution: new AzureTestExecutionAdapter(httpClient, context)
+      };
+    },
     testManagement: async () => (await resolveBundle()).testManagement,
     testCatalog: async () => (await resolveBundle()).testCatalog,
     workItemHydration: async () => (await resolveBundle()).workItemHydration,
