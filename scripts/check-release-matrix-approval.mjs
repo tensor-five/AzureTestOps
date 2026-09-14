@@ -7,6 +7,12 @@ const checksum = await readFile('docs/contracts/release-matrix.v1.sha256', 'utf8
 if (digest(contract) !== approvedContract || checksum !== `${approvedContract}  release-matrix.v1.html\n`) {
   throw new Error('Release matrix contract or checksum differs from the approved artifact.');
 }
+const approvedV2 = '1ec76cfba36147cee4d480ebcb53a0342666aaa339f2092f4437266bd2221d1a';
+const v2 = await readFile('docs/contracts/release-matrix.v2.html');
+const v2Checksum = await readFile('docs/contracts/release-matrix.v2.sha256', 'utf8');
+if (digest(v2) !== approvedV2 || v2Checksum !== `${approvedV2}  release-matrix.v2.html\n`) {
+  throw new Error('Release matrix v2 contract or checksum differs from the approved artifact.');
+}
 if (digest(await readFile('docs/contracts/release-matrix.v1.tests.json')) !== '4860a2e6c1e41277d041d6fb0f31eba678bb89daa6b1aa414333c0608d2b4d4e') {
   throw new Error('Release matrix frozen test manifest differs from the reviewed version.');
 }
