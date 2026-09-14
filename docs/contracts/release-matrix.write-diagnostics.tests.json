@@ -1,0 +1,13 @@
+{
+  "contract": "release-matrix.v4.html",
+  "files": [
+    {
+      "path": "src/application/use-cases/record-matrix-outcome-diagnostics.spec.ts",
+      "sha256": "4660ac52c6d0d2f0589975d87744620456069f3ba1a2cbfca768fff2e3a4a9b5"
+    },
+    {
+      "path": "src/app/bootstrap/routes/release-matrix-write-diagnostics.spec.ts",
+      "sha256": "dc5c4f06abd8e662ac49b7da270700d894df6e23b012d546df295f518cee356d"
+    }
+  ]
+}
