@@ -1,6 +1,10 @@
 export type MatrixColumn = { id: string; versionSuiteId: number; visible: boolean };
 export type MatrixGrouping = 'environment' | 'content';
 export type MatrixGroupState = Record<MatrixGrouping, string[]>;
+export const DEFAULT_MATRIX_TITLE_COLUMN_WIDTH = 350;
+export const MIN_MATRIX_TITLE_COLUMN_WIDTH = 240;
+export const MAX_MATRIX_TITLE_COLUMN_WIDTH = 900;
+export const MATRIX_TITLE_COLUMN_WIDTH_STEP = 20;
 export type MatrixConfig = {
     version: 3;
     /** Preserve the migration explanation across server and browser sanitization. */
@@ -19,13 +23,15 @@ export type MatrixConfig = {
     search: string;
     tagFilter: string;
     suiteFilter: string;
+    /** Width in pixels of the sticky test-case title column. */
+    testCaseColumnWidth: number;
 };
 export const manualOutcomes = ['Passed', 'Failed', 'Blocked', 'NotApplicable', 'Inconclusive'] as const;
 export type ManualOutcome = typeof manualOutcomes[number];
 export function emptyMatrixConfig(planId: number, catalogRootId: number): MatrixConfig {
     return { version: 3, planId, catalogRootId, grouping: 'environment', separateEnvironments: true, combinedMappings: {}, columns: [], mappings: {},
         groupOrderByMode: { environment: [], content: [] }, collapsedByMode: { environment: [], content: [] },
-        search: '', tagFilter: '', suiteFilter: '' };
+        search: '', tagFilter: '', suiteFilter: '', testCaseColumnWidth: DEFAULT_MATRIX_TITLE_COLUMN_WIDTH };
 }
 export function uniqueTags(value: string[]): string[] {
     const seen = new Set<string>();
@@ -36,6 +42,10 @@ const positive = (v: unknown): v is number => typeof v === 'number' && Number.is
 const string = (v: unknown): string => typeof v === 'string' ? v : '';
 const strings = (v: unknown): string[] => Array.isArray(v) ? [...new Set(v.filter((s): s is string => typeof s === 'string'))] : [];
 const groupState = (v: unknown): MatrixGroupState => ({environment:record(v)?strings(v.environment):[],content:record(v)?strings(v.content):[]});
+export function sanitizeMatrixTitleColumnWidth(value: unknown): number {
+    if (typeof value !== 'number' || !Number.isFinite(value)) return DEFAULT_MATRIX_TITLE_COLUMN_WIDTH;
+    return Math.min(MAX_MATRIX_TITLE_COLUMN_WIDTH, Math.max(MIN_MATRIX_TITLE_COLUMN_WIDTH, Math.round(value)));
+}
 /** Persist configuration only. Historical tags never imply a selected version ID. */
 export function sanitizeMatrixConfig(raw: unknown): MatrixConfig | null {
     if (!record(raw) || !positive(raw.planId) || !positive(raw.catalogRootId)) return null;
@@ -56,5 +66,6 @@ export function sanitizeMatrixConfig(raw: unknown): MatrixConfig | null {
         grouping:!legacy&&raw.grouping==='content'?'content':'environment',columns:[...columns.values()],mappings,
         separateEnvironments:legacy||raw.separateEnvironments!==false,combinedMappings,
         groupOrderByMode:groupState(legacy?null:raw.groupOrderByMode),collapsedByMode:groupState(legacy?null:raw.collapsedByMode),
-        search:string(raw.search),tagFilter:string(raw.tagFilter),suiteFilter:string(raw.suiteFilter)};
+        search:string(raw.search),tagFilter:string(raw.tagFilter),suiteFilter:string(raw.suiteFilter),
+        testCaseColumnWidth:sanitizeMatrixTitleColumnWidth(raw.testCaseColumnWidth)};
 }
