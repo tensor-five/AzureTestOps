@@ -95,3 +95,32 @@ for (const theme of ['light', 'dark']) test(`status colors match between both vi
   }
   expect(colors.size).toBe(3);
 });
+
+for (const [action, expectedReads, expectedWrites, display] of [
+  ['NotApplicable', 7, 3, 'NotApplicable'], ['ResetToActive', 4, 1, 'Unspecified'],
+] as const) test(`confirmed ${action} patches both views without a matrix or history reload`, async ({page}) => {
+  await open(page);
+  const target = outcome(page, 'TST', 'Regression', 201);
+  await expect(target).toBeEnabled();
+  const azure = server.azure();
+  azure.reads.length = 0; azure.writes.length = 0;
+  const matrixReads: string[] = [];
+  page.on('request', request => {
+    if (request.method() === 'GET' && /release-matrix(?:\?|$)/.test(request.url())) matrixReads.push(request.url());
+  });
+  const saved = page.waitForResponse(response => response.url().endsWith('/release-matrix/outcomes'));
+  await target.selectOption(action);
+  const response = await saved;
+  expect(response.status()).toBe(200);
+  const result = await response.json();
+  expect(Object.keys(result.projection).sort()).toEqual(['lastOutcome', 'lastResultCompletedDate', 'lastResultId', 'lastRunId', 'suiteId', 'testPointId', 'workItemId']);
+  await expect(target).toHaveValue(display); await expect(target).toBeEnabled();
+  await expect(outcome(page, 'TST', 'Regression', 201, 'v22')).toHaveValue('Passed');
+  expect(azure.reads).toHaveLength(expectedReads);
+  expect(azure.writes).toHaveLength(expectedWrites);
+  expect(azure.reads.every(url => /\/testcases\/201\?|\/points\?testCaseId=201&|\/runs\/100(?:\?|\/results(?:\/1000)?\?)/i.test(url))).toBe(true);
+  await page.getByRole('button', {name: 'Zuordnung', exact: true}).click();
+  const chip = page.locator('article[data-item-key="tc:201:22"] .relations-view-outcome-chip').first();
+  await expect(chip).toHaveAttribute('aria-label', action === 'ResetToActive' ? 'Outcome: Active' : 'Outcome: NotApplicable');
+  expect(matrixReads).toEqual([]);
+});

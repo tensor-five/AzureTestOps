@@ -38,3 +38,9 @@ Die Anwendung bestätigt den Reset durch erneutes Lesen: genau derselbe Punkt, Z
 Nach einem nicht bestätigten Schreibversuch meldet die API `MATRIX_RESET_UNCONFIRMED` mit `details.pointId`. Der Client sperrt weitere Schreibversuche für diese Zelle. Eine spätere Aktualisierung mit eindeutigem Active-Punkt kann die Sperre aufheben; der Reset wird niemals automatisch wiederholt. Diagnoseereignisse verwenden `[release-matrix.write]` mit `reset-point` und `confirm-active-point`, ohne rohe Azure-Antworten oder Zugangsdaten.
 
 Bekannte Fehler vor dem Schreibversuch werden als `MATRIX_RESET_NOT_ATTEMPTED` gemeldet. Sie erlauben einen erneuten manuellen Versuch. Verlorene HTTP-Antworten und nicht eindeutig zuordenbare Server-/Proxyfehler bleiben dagegen bis zu einem bestätigenden Read gesperrt.
+
+## Gezielte Statusbestätigung und Laufzeitmessung
+
+Statusänderungen verwenden einen separaten `TestOutcomeReadPort`: konkrete Suite-Mitgliedschaft, Testpunkte mit `testCaseId`-Filter (alle Konfigurationen), konkreter Run und konkretes Result. Der Speicherpfad lädt weder die Planhistorie noch die vollständige Matrix. Nach bestätigtem Erfolg werden ausschließlich die Ausführungsfelder des betroffenen physischen Punkts in beiden Ansichten aktualisiert.
+
+Die korrelierten `[release-matrix.write-summary]`-Einträge in Browser und Server zeigen Requestzahlen und Laufzeiten. Details zu Ablauf, Sicherheitsprüfungen, reproduzierbarem Vorher-/Nachher-Vergleich und echten Azure-Messungen stehen in [Statusspeicherung: gezielte Bestätigung](../performance/status-write.md).

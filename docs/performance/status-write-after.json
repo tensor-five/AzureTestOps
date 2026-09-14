@@ -1,0 +1,454 @@
+{
+  "mode": "after",
+  "baselineCommit": "28119a49f387d20c357dde05b26bd6e28fe4318d",
+  "delayMs": 15,
+  "repeats": 3,
+  "measuredAt": "2026-09-14T19:05:35.433Z",
+  "environment": "Node v22.22.2 darwin/arm64",
+  "samples": [
+    {
+      "suiteCount": 20,
+      "historyRuns": 10,
+      "action": "Failed",
+      "repeat": 0,
+      "confirmationRequests": 10,
+      "requests": 10,
+      "confirmationMs": 106,
+      "totalMs": 106,
+      "maxConcurrent": 4,
+      "endpoints": {
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases/:id": 2,
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 2,
+        "POST /contract-org/contract-project/_apis/test/runs": 1,
+        "GET /contract-org/contract-project/_apis/test/Runs/:id/results": 1,
+        "PATCH /contract-org/contract-project/_apis/test/runs/:id/results": 1,
+        "PATCH /contract-org/contract-project/_apis/test/runs/:id": 1,
+        "GET /contract-org/contract-project/_apis/test/runs/:id": 1,
+        "GET /contract-org/contract-project/_apis/test/Runs/:id/results/:id": 1
+      }
+    },
+    {
+      "suiteCount": 20,
+      "historyRuns": 10,
+      "action": "Failed",
+      "repeat": 1,
+      "confirmationRequests": 10,
+      "requests": 10,
+      "confirmationMs": 103,
+      "totalMs": 103,
+      "maxConcurrent": 4,
+      "endpoints": {
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases/:id": 2,
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 2,
+        "POST /contract-org/contract-project/_apis/test/runs": 1,
+        "GET /contract-org/contract-project/_apis/test/Runs/:id/results": 1,
+        "PATCH /contract-org/contract-project/_apis/test/runs/:id/results": 1,
+        "PATCH /contract-org/contract-project/_apis/test/runs/:id": 1,
+        "GET /contract-org/contract-project/_apis/test/runs/:id": 1,
+        "GET /contract-org/contract-project/_apis/test/Runs/:id/results/:id": 1
+      }
+    },
+    {
+      "suiteCount": 20,
+      "historyRuns": 10,
+      "action": "Failed",
+      "repeat": 2,
+      "confirmationRequests": 10,
+      "requests": 10,
+      "confirmationMs": 99,
+      "totalMs": 99,
+      "maxConcurrent": 4,
+      "endpoints": {
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases/:id": 2,
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 2,
+        "POST /contract-org/contract-project/_apis/test/runs": 1,
+        "GET /contract-org/contract-project/_apis/test/Runs/:id/results": 1,
+        "PATCH /contract-org/contract-project/_apis/test/runs/:id/results": 1,
+        "PATCH /contract-org/contract-project/_apis/test/runs/:id": 1,
+        "GET /contract-org/contract-project/_apis/test/runs/:id": 1,
+        "GET /contract-org/contract-project/_apis/test/Runs/:id/results/:id": 1
+      }
+    },
+    {
+      "suiteCount": 20,
+      "historyRuns": 10,
+      "action": "ResetToActive",
+      "repeat": 0,
+      "confirmationRequests": 5,
+      "requests": 5,
+      "confirmationMs": 50,
+      "totalMs": 50,
+      "maxConcurrent": 2,
+      "endpoints": {
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases/:id": 2,
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 2,
+        "PATCH /contract-org/contract-project/_apis/test/Plans/:id/Suites/:id/points/:id": 1
+      }
+    },
+    {
+      "suiteCount": 20,
+      "historyRuns": 10,
+      "action": "ResetToActive",
+      "repeat": 1,
+      "confirmationRequests": 5,
+      "requests": 5,
+      "confirmationMs": 52,
+      "totalMs": 52,
+      "maxConcurrent": 2,
+      "endpoints": {
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases/:id": 2,
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 2,
+        "PATCH /contract-org/contract-project/_apis/test/Plans/:id/Suites/:id/points/:id": 1
+      }
+    },
+    {
+      "suiteCount": 20,
+      "historyRuns": 10,
+      "action": "ResetToActive",
+      "repeat": 2,
+      "confirmationRequests": 5,
+      "requests": 5,
+      "confirmationMs": 48,
+      "totalMs": 48,
+      "maxConcurrent": 2,
+      "endpoints": {
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases/:id": 2,
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 2,
+        "PATCH /contract-org/contract-project/_apis/test/Plans/:id/Suites/:id/points/:id": 1
+      }
+    },
+    {
+      "suiteCount": 100,
+      "historyRuns": 10,
+      "action": "Failed",
+      "repeat": 0,
+      "confirmationRequests": 10,
+      "requests": 10,
+      "confirmationMs": 100,
+      "totalMs": 100,
+      "maxConcurrent": 4,
+      "endpoints": {
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases/:id": 2,
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 2,
+        "POST /contract-org/contract-project/_apis/test/runs": 1,
+        "GET /contract-org/contract-project/_apis/test/Runs/:id/results": 1,
+        "PATCH /contract-org/contract-project/_apis/test/runs/:id/results": 1,
+        "PATCH /contract-org/contract-project/_apis/test/runs/:id": 1,
+        "GET /contract-org/contract-project/_apis/test/runs/:id": 1,
+        "GET /contract-org/contract-project/_apis/test/Runs/:id/results/:id": 1
+      }
+    },
+    {
+      "suiteCount": 100,
+      "historyRuns": 10,
+      "action": "Failed",
+      "repeat": 1,
+      "confirmationRequests": 10,
+      "requests": 10,
+      "confirmationMs": 100,
+      "totalMs": 100,
+      "maxConcurrent": 4,
+      "endpoints": {
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases/:id": 2,
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 2,
+        "POST /contract-org/contract-project/_apis/test/runs": 1,
+        "GET /contract-org/contract-project/_apis/test/Runs/:id/results": 1,
+        "PATCH /contract-org/contract-project/_apis/test/runs/:id/results": 1,
+        "PATCH /contract-org/contract-project/_apis/test/runs/:id": 1,
+        "GET /contract-org/contract-project/_apis/test/runs/:id": 1,
+        "GET /contract-org/contract-project/_apis/test/Runs/:id/results/:id": 1
+      }
+    },
+    {
+      "suiteCount": 100,
+      "historyRuns": 10,
+      "action": "Failed",
+      "repeat": 2,
+      "confirmationRequests": 10,
+      "requests": 10,
+      "confirmationMs": 100,
+      "totalMs": 100,
+      "maxConcurrent": 4,
+      "endpoints": {
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases/:id": 2,
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 2,
+        "POST /contract-org/contract-project/_apis/test/runs": 1,
+        "GET /contract-org/contract-project/_apis/test/Runs/:id/results": 1,
+        "PATCH /contract-org/contract-project/_apis/test/runs/:id/results": 1,
+        "PATCH /contract-org/contract-project/_apis/test/runs/:id": 1,
+        "GET /contract-org/contract-project/_apis/test/runs/:id": 1,
+        "GET /contract-org/contract-project/_apis/test/Runs/:id/results/:id": 1
+      }
+    },
+    {
+      "suiteCount": 100,
+      "historyRuns": 10,
+      "action": "ResetToActive",
+      "repeat": 0,
+      "confirmationRequests": 5,
+      "requests": 5,
+      "confirmationMs": 49,
+      "totalMs": 49,
+      "maxConcurrent": 2,
+      "endpoints": {
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases/:id": 2,
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 2,
+        "PATCH /contract-org/contract-project/_apis/test/Plans/:id/Suites/:id/points/:id": 1
+      }
+    },
+    {
+      "suiteCount": 100,
+      "historyRuns": 10,
+      "action": "ResetToActive",
+      "repeat": 1,
+      "confirmationRequests": 5,
+      "requests": 5,
+      "confirmationMs": 50,
+      "totalMs": 50,
+      "maxConcurrent": 2,
+      "endpoints": {
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases/:id": 2,
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 2,
+        "PATCH /contract-org/contract-project/_apis/test/Plans/:id/Suites/:id/points/:id": 1
+      }
+    },
+    {
+      "suiteCount": 100,
+      "historyRuns": 10,
+      "action": "ResetToActive",
+      "repeat": 2,
+      "confirmationRequests": 5,
+      "requests": 5,
+      "confirmationMs": 50,
+      "totalMs": 50,
+      "maxConcurrent": 2,
+      "endpoints": {
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases/:id": 2,
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 2,
+        "PATCH /contract-org/contract-project/_apis/test/Plans/:id/Suites/:id/points/:id": 1
+      }
+    },
+    {
+      "suiteCount": 20,
+      "historyRuns": 500,
+      "action": "Failed",
+      "repeat": 0,
+      "confirmationRequests": 10,
+      "requests": 10,
+      "confirmationMs": 100,
+      "totalMs": 100,
+      "maxConcurrent": 4,
+      "endpoints": {
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases/:id": 2,
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 2,
+        "POST /contract-org/contract-project/_apis/test/runs": 1,
+        "GET /contract-org/contract-project/_apis/test/Runs/:id/results": 1,
+        "PATCH /contract-org/contract-project/_apis/test/runs/:id/results": 1,
+        "PATCH /contract-org/contract-project/_apis/test/runs/:id": 1,
+        "GET /contract-org/contract-project/_apis/test/runs/:id": 1,
+        "GET /contract-org/contract-project/_apis/test/Runs/:id/results/:id": 1
+      }
+    },
+    {
+      "suiteCount": 20,
+      "historyRuns": 500,
+      "action": "Failed",
+      "repeat": 1,
+      "confirmationRequests": 10,
+      "requests": 10,
+      "confirmationMs": 99,
+      "totalMs": 99,
+      "maxConcurrent": 4,
+      "endpoints": {
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases/:id": 2,
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 2,
+        "POST /contract-org/contract-project/_apis/test/runs": 1,
+        "GET /contract-org/contract-project/_apis/test/Runs/:id/results": 1,
+        "PATCH /contract-org/contract-project/_apis/test/runs/:id/results": 1,
+        "PATCH /contract-org/contract-project/_apis/test/runs/:id": 1,
+        "GET /contract-org/contract-project/_apis/test/runs/:id": 1,
+        "GET /contract-org/contract-project/_apis/test/Runs/:id/results/:id": 1
+      }
+    },
+    {
+      "suiteCount": 20,
+      "historyRuns": 500,
+      "action": "Failed",
+      "repeat": 2,
+      "confirmationRequests": 10,
+      "requests": 10,
+      "confirmationMs": 100,
+      "totalMs": 100,
+      "maxConcurrent": 4,
+      "endpoints": {
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases/:id": 2,
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 2,
+        "POST /contract-org/contract-project/_apis/test/runs": 1,
+        "GET /contract-org/contract-project/_apis/test/Runs/:id/results": 1,
+        "PATCH /contract-org/contract-project/_apis/test/runs/:id/results": 1,
+        "PATCH /contract-org/contract-project/_apis/test/runs/:id": 1,
+        "GET /contract-org/contract-project/_apis/test/runs/:id": 1,
+        "GET /contract-org/contract-project/_apis/test/Runs/:id/results/:id": 1
+      }
+    },
+    {
+      "suiteCount": 20,
+      "historyRuns": 500,
+      "action": "ResetToActive",
+      "repeat": 0,
+      "confirmationRequests": 5,
+      "requests": 5,
+      "confirmationMs": 51,
+      "totalMs": 51,
+      "maxConcurrent": 2,
+      "endpoints": {
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases/:id": 2,
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 2,
+        "PATCH /contract-org/contract-project/_apis/test/Plans/:id/Suites/:id/points/:id": 1
+      }
+    },
+    {
+      "suiteCount": 20,
+      "historyRuns": 500,
+      "action": "ResetToActive",
+      "repeat": 1,
+      "confirmationRequests": 5,
+      "requests": 5,
+      "confirmationMs": 50,
+      "totalMs": 50,
+      "maxConcurrent": 2,
+      "endpoints": {
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases/:id": 2,
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 2,
+        "PATCH /contract-org/contract-project/_apis/test/Plans/:id/Suites/:id/points/:id": 1
+      }
+    },
+    {
+      "suiteCount": 20,
+      "historyRuns": 500,
+      "action": "ResetToActive",
+      "repeat": 2,
+      "confirmationRequests": 5,
+      "requests": 5,
+      "confirmationMs": 49,
+      "totalMs": 49,
+      "maxConcurrent": 2,
+      "endpoints": {
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases/:id": 2,
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 2,
+        "PATCH /contract-org/contract-project/_apis/test/Plans/:id/Suites/:id/points/:id": 1
+      }
+    },
+    {
+      "suiteCount": 100,
+      "historyRuns": 500,
+      "action": "Failed",
+      "repeat": 0,
+      "confirmationRequests": 10,
+      "requests": 10,
+      "confirmationMs": 100,
+      "totalMs": 100,
+      "maxConcurrent": 4,
+      "endpoints": {
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases/:id": 2,
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 2,
+        "POST /contract-org/contract-project/_apis/test/runs": 1,
+        "GET /contract-org/contract-project/_apis/test/Runs/:id/results": 1,
+        "PATCH /contract-org/contract-project/_apis/test/runs/:id/results": 1,
+        "PATCH /contract-org/contract-project/_apis/test/runs/:id": 1,
+        "GET /contract-org/contract-project/_apis/test/runs/:id": 1,
+        "GET /contract-org/contract-project/_apis/test/Runs/:id/results/:id": 1
+      }
+    },
+    {
+      "suiteCount": 100,
+      "historyRuns": 500,
+      "action": "Failed",
+      "repeat": 1,
+      "confirmationRequests": 10,
+      "requests": 10,
+      "confirmationMs": 103,
+      "totalMs": 103,
+      "maxConcurrent": 4,
+      "endpoints": {
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases/:id": 2,
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 2,
+        "POST /contract-org/contract-project/_apis/test/runs": 1,
+        "GET /contract-org/contract-project/_apis/test/Runs/:id/results": 1,
+        "PATCH /contract-org/contract-project/_apis/test/runs/:id/results": 1,
+        "PATCH /contract-org/contract-project/_apis/test/runs/:id": 1,
+        "GET /contract-org/contract-project/_apis/test/runs/:id": 1,
+        "GET /contract-org/contract-project/_apis/test/Runs/:id/results/:id": 1
+      }
+    },
+    {
+      "suiteCount": 100,
+      "historyRuns": 500,
+      "action": "Failed",
+      "repeat": 2,
+      "confirmationRequests": 10,
+      "requests": 10,
+      "confirmationMs": 101,
+      "totalMs": 101,
+      "maxConcurrent": 4,
+      "endpoints": {
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases/:id": 2,
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 2,
+        "POST /contract-org/contract-project/_apis/test/runs": 1,
+        "GET /contract-org/contract-project/_apis/test/Runs/:id/results": 1,
+        "PATCH /contract-org/contract-project/_apis/test/runs/:id/results": 1,
+        "PATCH /contract-org/contract-project/_apis/test/runs/:id": 1,
+        "GET /contract-org/contract-project/_apis/test/runs/:id": 1,
+        "GET /contract-org/contract-project/_apis/test/Runs/:id/results/:id": 1
+      }
+    },
+    {
+      "suiteCount": 100,
+      "historyRuns": 500,
+      "action": "ResetToActive",
+      "repeat": 0,
+      "confirmationRequests": 5,
+      "requests": 5,
+      "confirmationMs": 52,
+      "totalMs": 52,
+      "maxConcurrent": 2,
+      "endpoints": {
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases/:id": 2,
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 2,
+        "PATCH /contract-org/contract-project/_apis/test/Plans/:id/Suites/:id/points/:id": 1
+      }
+    },
+    {
+      "suiteCount": 100,
+      "historyRuns": 500,
+      "action": "ResetToActive",
+      "repeat": 1,
+      "confirmationRequests": 5,
+      "requests": 5,
+      "confirmationMs": 51,
+      "totalMs": 51,
+      "maxConcurrent": 2,
+      "endpoints": {
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases/:id": 2,
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 2,
+        "PATCH /contract-org/contract-project/_apis/test/Plans/:id/Suites/:id/points/:id": 1
+      }
+    },
+    {
+      "suiteCount": 100,
+      "historyRuns": 500,
+      "action": "ResetToActive",
+      "repeat": 2,
+      "confirmationRequests": 5,
+      "requests": 5,
+      "confirmationMs": 53,
+      "totalMs": 53,
+      "maxConcurrent": 2,
+      "endpoints": {
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/testcases/:id": 2,
+        "GET /contract-org/contract-project/_apis/test/Plans/:id/suites/:id/points": 2,
+        "PATCH /contract-org/contract-project/_apis/test/Plans/:id/Suites/:id/points/:id": 1
+      }
+    }
+  ]
+}

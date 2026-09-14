@@ -45,7 +45,7 @@ describe('matrix reset endpoint', () => {
   });
   it('reports validation failure as not attempted and permits an explicit retry', async () => {
     const fixture = setup();
-    vi.spyOn(fixture.services.testManagement, 'listTestCasesInSuite').mockRejectedValueOnce(new Error('TEST_CASES_HTTP_503'));
+    vi.spyOn(fixture.services.outcomeRead, 'isCaseInSuite').mockRejectedValueOnce(new Error('TEST_CASES_HTTP_503'));
     expect(await fixture.call(target)).toMatchObject({ status: 500, body: { code: 'MATRIX_RESET_NOT_ATTEMPTED', details: { pointId: 21201 } } });
     expect(fixture.azure.writes).toHaveLength(0);
     expect((await fixture.call(target)).status).toBe(200);

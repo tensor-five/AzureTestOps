@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { TestCaseProjection } from '../../domain/test-management/test-case-projection.js';
+import type { TestCaseOutcomeUpdate } from '../../domain/test-management/test-case-outcome-update.js';
 import { applyConfirmedOutcomes } from '../../shared/test-management/apply-confirmed-outcomes.js';
 
 import { useClientPorts } from "../../app/composition/client-ports-context.js";
@@ -33,7 +33,7 @@ const INITIAL_STATE: SnapshotState = {
 export function useActiveSetSnapshot(setId: string | null, scopeKey = setId): {
   state: SnapshotState;
   refresh(): void;
-  applyOutcome(projection: TestCaseProjection): void;
+  applyOutcome(projection: TestCaseOutcomeUpdate): void;
 } {
   const { activeSetSnapshot } = useClientPorts();
   const [state, setState] = React.useState<SnapshotState>(INITIAL_STATE);
@@ -42,8 +42,8 @@ export function useActiveSetSnapshot(setId: string | null, scopeKey = setId): {
   const generation = React.useRef(0);
   const currentScope = React.useRef(scopeKey);
   currentScope.current = scopeKey;
-  const outcomeUpdates = React.useRef<TestCaseProjection[]>([]);
-  const applyOutcome = React.useCallback((projection: TestCaseProjection) => {
+  const outcomeUpdates = React.useRef<TestCaseOutcomeUpdate[]>([]);
+  const applyOutcome = React.useCallback((projection: TestCaseOutcomeUpdate) => {
     if (currentScope.current !== scopeKey) return;
     outcomeUpdates.current = [...outcomeUpdates.current.filter(value => value.suiteId !== projection.suiteId
       || value.workItemId !== projection.workItemId), projection];

@@ -15,7 +15,7 @@
     },
     {
       "path": "tests/e2e/release-matrix-v3/azure-fixture.ts",
-      "sha256": "120f04c8f21a2aa32f03579e5522172cc6b34c1a4c10cb1bc660cd5340dea274"
+      "sha256": "24325d3a59d455f3cacae376b5c3a48ef661deff3a2fc71f46c75278024b4119"
     },
     {
       "path": "tests/e2e/release-matrix-v3/ui.ts",

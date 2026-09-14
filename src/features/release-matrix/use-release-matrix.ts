@@ -20,7 +20,7 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
         [port, setId, planId, contextIdentity]);
     const mutation = React.useSyncExternalStore(mutationStore?.subscribe ?? subscribeWithoutStore,
         mutationStore?.getSnapshot ?? getEmptyMutationState);
-    const observed = React.useRef<{ store: MatrixMutationStore; revision: number } | null>(null);
+    const accepted = React.useRef<{ store: MatrixMutationStore; readStartedAt: number } | null>(null);
     const reload = React.useCallback(async (background = false) => {
         activeRead.current?.abort();
         const controller = new AbortController();
@@ -31,19 +31,14 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
         try {
             if (!port)
                 throw new Error('Release-Matrix ist nicht verfügbar.');
-            let value: MatrixSnapshot;
-            let store: MatrixMutationStore;
-            let readStartedAt: number;
-            do {
-                readStartedAt = getMatrixMutationRevision();
-                value = await port.load(setId, controller.signal);
-                store = getMatrixMutationStore(port, setId, value.planId, value.contextIdentity);
-            } while (alive.current && version === request.current && store.getSnapshot().confirmationRevision > readStartedAt);
+            const readStartedAt = getMatrixMutationRevision();
+            const value = await port.load(setId, controller.signal);
+            const store = getMatrixMutationStore(port, setId, value.planId, value.contextIdentity);
             if (alive.current && version === request.current) {
                 store.reconcile(value, readStartedAt);
-                setSnapshot(value);
+                accepted.current = { store, readStartedAt };
+                setSnapshot(store.applyConfirmations(value, readStartedAt));
                 setError('');
-                observed.current = { store, revision: store.getSnapshot().confirmationRevision };
             }
         }
         catch (e) {
@@ -56,12 +51,11 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
         }
     }, [setId, port]);
     React.useEffect(() => {
-        const previous = observed.current;
-        if (mutationStore && previous?.store === mutationStore && previous.revision < mutation.confirmationRevision) {
-            observed.current = { store: mutationStore, revision: mutation.confirmationRevision };
-            void reload(true);
+        const read = accepted.current;
+        if (mutationStore && read?.store === mutationStore) {
+            setSnapshot(value => value ? mutationStore.applyConfirmations(value, read.readStartedAt) : value);
         }
-    }, [mutationStore, mutation.confirmationRevision, reload]);
+    }, [mutationStore, mutation.confirmationRevision]);
     React.useEffect(() => { alive.current = true; void reload(); return () => { alive.current = false; request.current++; activeRead.current?.abort(); }; }, [reload]);
     React.useEffect(() => {
         if (config.migratedFrom) matrixPreferenceStore.save(config, { scopeKey: setId });

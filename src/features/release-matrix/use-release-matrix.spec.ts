@@ -16,7 +16,7 @@ const input: MatrixWrite = { contextIdentity, planId: 1, suiteId: 21, workItemId
 async function fixture() {
     const { services } = matrixTestServices();
     const snapshot: MatrixSnapshot = { ...await loadReleaseMatrix(1, services), contextIdentity };
-    const confirmed: MatrixWriteResult = { runId: 100, projection: {
+    const confirmed = { runId: 100, projection: {
         ...snapshot.projections.find(p => p.suiteId === 21 && p.workItemId === 201)!, lastOutcome: 'Passed', lastRunId: 100,
     } };
     let resolve!: (result: MatrixWriteResult) => void;
@@ -55,27 +55,24 @@ describe('Release matrix navigation during writes', () => {
         expect(returned.result.current.snapshot?.projections[0].lastRunId).toBe(100);
         expect(f.port.record).toHaveBeenCalledTimes(1);expect(matrixPreferenceStore.save).not.toHaveBeenCalled();
     });
-    it.each(['success', 'failure'] as const)('ends loading when a confirmation refresh replaces a foreground read (%s)', async outcome => {
-        const f = await fixture();
-        const hook = await f.mount();
-        let write!: Promise<void>;
+    it.each(['success', 'failure'] as const)('does not replace a foreground read after confirmation (%s)', async outcome => {
+        const f = await fixture(), hook = await f.mount();
+        let write!: Promise<void>, foreground!: Promise<void>;
         act(() => { write = hook.result.current.record(input); });
-        let finishForeground!: (snapshot: MatrixSnapshot) => void;
-        f.port.load.mockImplementationOnce(() => new Promise(resolve => { finishForeground = resolve; }));
-        if (outcome === 'failure') f.port.load.mockRejectedValueOnce(new Error('Bestätigungsansicht nicht erreichbar.'));
-        let foreground!: Promise<void>;
+        let finish!: (snapshot: MatrixSnapshot) => void, fail!: (error: Error) => void;
+        f.port.load.mockImplementationOnce(() => new Promise((yes, no) => { finish = yes; fail = no; }));
         act(() => { foreground = hook.result.current.reload(); });
-        expect(hook.result.current.loading).toBe(true);
-
         await act(async () => { f.resolve(); await write; });
-        await waitFor(() => expect(hook.result.current.loading).toBe(false));
-        expect(f.port.load).toHaveBeenCalledTimes(3);
-        if (outcome === 'failure') expect(hook.result.current.error).toContain('Bestätigungsansicht nicht erreichbar');
-        else expect(hook.result.current.snapshot?.projections.find(p => p.suiteId === 21 && p.workItemId === 201)?.lastRunId).toBe(100);
-
-        await act(async () => { finishForeground(f.snapshot); await foreground; });
+        expect(hook.result.current.loading).toBe(true);
+        expect(f.port.load).toHaveBeenCalledTimes(2);
+        await act(async () => {
+            if (outcome === 'success') finish(f.snapshot); else fail(new Error('Read nicht erreichbar.'));
+            await foreground;
+        });
         expect(hook.result.current.loading).toBe(false);
+        expect(f.port.load).toHaveBeenCalledTimes(2);
         if (outcome === 'success') expect(hook.result.current.snapshot?.projections.find(p => p.suiteId === 21 && p.workItemId === 201)?.lastRunId).toBe(100);
+        else expect(hook.result.current.error).toContain('Read nicht erreichbar');
     });
 
     it('restores a pending cell lock and a later failure after navigating away and returning', async () => {
@@ -150,7 +147,7 @@ describe('Release matrix navigation during writes', () => {
         expect(hook.result.current.snapshot?.projections[0].lastOutcome).toBe('Blocked');
     });
 
-    it('keeps the table visible during the confirmation refresh and reports a read failure alongside the created run', async () => {
+    it('patches without reloading and keeps the table locked after an explicit refresh failure', async () => {
         const f = await fixture();
         const hook = await f.mount();
         let failRead!: (error: Error) => void;
@@ -161,7 +158,10 @@ describe('Release matrix navigation during writes', () => {
         expect(hook.result.current.loading).toBe(false);
         expect(hook.result.current.snapshot?.projections.length).toBeGreaterThan(0);
         expect(hook.result.current.status).toContain('100');
-        await act(async () => { failRead(new Error('Azure ist nicht erreichbar.')); });
+        expect(f.port.load).toHaveBeenCalledTimes(1);
+        let refresh!: Promise<void>;
+        act(() => { refresh = hook.result.current.reload(true); });
+        await act(async () => { failRead(new Error('Azure ist nicht erreichbar.')); await refresh; });
         expect(hook.result.current.snapshot?.projections.length).toBeGreaterThan(0);
         expect(hook.result.current.error).toContain('Matrix konnte nicht geladen werden');
         expect(hook.result.current.error).toContain('veraltet');
@@ -174,7 +174,7 @@ describe('Release matrix navigation during writes', () => {
         expect(hook.result.current.snapshot?.projections.find(p => p.suiteId === 21 && p.workItemId === 201)?.lastOutcome).toBe('Passed');
     });
 
-    it('keeps stale values locked while another confirmed write starts a replacement background read', async () => {
+    it('does not clear stale state or start another read when a second point is confirmed', async () => {
         const f = await fixture();
         const hook = await f.mount();
         let finishFirst!: (value: MatrixWriteResult) => void;
@@ -191,13 +191,17 @@ describe('Release matrix navigation during writes', () => {
             second = hook.result.current.record({ ...input, suiteId: 22, pointId: 22201 });
         });
         await act(async () => { finishFirst(f.confirmed); await first; });
+        await act(() => hook.result.current.reload(true));
         expect(hook.result.current.stale).toBe(true);
-        const other = { runId: 101, projection: { ...f.snapshot.projections.find(p => p.suiteId === 22 && p.workItemId === 201)!, lastRunId: 101 } };
+        const other = { runId: 101, projection: { ...f.snapshot.projections.find(p => p.suiteId === 22 && p.workItemId === 201)!, lastRunId: 101, lastOutcome: 'Passed' } };
         await act(async () => { finishSecond(other); await second; });
         expect(hook.result.current.stale).toBe(true);
         await act(() => hook.result.current.record({ ...input, outcome: 'Blocked' }));
         expect(f.port.record).toHaveBeenCalledTimes(2);
-        await act(async () => { finishRead({ ...f.snapshot, projections: [f.confirmed.projection, other.projection] }); });
+        expect(f.port.load).toHaveBeenCalledTimes(2);
+        let refresh!: Promise<void>;
+        act(() => { refresh = hook.result.current.reload(true); });
+        await act(async () => { finishRead({ ...f.snapshot, projections: [f.confirmed.projection, other.projection] }); await refresh; });
         expect(hook.result.current.stale).toBe(false);
     });
 
@@ -213,5 +217,6 @@ describe('Release matrix navigation during writes', () => {
         await act(async () => { f.resolve(); await write; finishRead(f.snapshot); });
         await waitFor(() => expect(returned.result.current.loading).toBe(false));
         expect(returned.result.current.snapshot?.projections.find(p => p.suiteId === 21 && p.workItemId === 201)?.lastRunId).toBe(100);
+        expect(f.port.load).toHaveBeenCalledTimes(2);
     });
 });

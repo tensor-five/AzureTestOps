@@ -15,4 +15,6 @@ export type TestResult = {
   outcome: Outcome;
   /** ISO timestamp; missing or unparseable values bubble up as null. */
   completedDate: string | null;
+  /** Explicit execution state, when supplied by Azure; absence is not completion evidence. */
+  state?: string;
 };

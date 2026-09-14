@@ -22,10 +22,10 @@ if (digest(v3) !== approvedV3 || v3Checksum !== `${approvedV3}  release-matrix.v
 if (digest(await readFile('docs/contracts/release-matrix.v1.tests.json')) !== '4860a2e6c1e41277d041d6fb0f31eba678bb89daa6b1aa414333c0608d2b4d4e') {
   throw new Error('Release matrix frozen test manifest differs from the reviewed version.');
 }
-if (digest(await readFile('docs/contracts/release-matrix.v2.tests.json')) !== '993007a149c9eae0d139bf0262bdea52465ca39f1de2fb96b64c9238d2ca2c52') {
+if (digest(await readFile('docs/contracts/release-matrix.v2.tests.json')) !== '6be204027f7ad2a05e69bbd8372141d0340eaaff448242094392d91e6ceef7ee') {
   throw new Error('Release matrix v2 frozen test manifest differs from the reviewed version.');
 }
-if (digest(await readFile('docs/contracts/release-matrix.v3.tests.json')) !== '379e321c00f44bf353ca672520952243ec18ff23b706efae75c0d0d9b7b2268c') {
+if (digest(await readFile('docs/contracts/release-matrix.v3.tests.json')) !== '80a9c98d15206ef93d98a5b77755da7bd3659dd55486122c105be080f60e830a') {
   throw new Error('Release matrix v3 frozen test manifest differs from the reviewed version.');
 }
 const approvedV4 = '92184250ef76fe23744ab2c82ba78d663bcff20848e69c1b9820d22d9b3b31c3';

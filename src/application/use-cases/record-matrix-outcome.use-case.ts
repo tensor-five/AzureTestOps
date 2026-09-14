@@ -1,10 +1,13 @@
 import type { MatrixOutcomeTarget, MatrixWriteResult } from '../dto/release-matrix.dto.js';
 import type { TestExecutionPort } from '../ports/test-execution.port.js';
 import { manualOutcomes } from '../../domain/release-matrix/matrix-config.js';
-import { loadTestCaseProjections, type LoadTestCaseProjectionsDeps } from './load-test-case-projections.use-case.js';
+import { ApiError } from '../dto/api-error.js';
+import type { TestOutcomeReadPort } from '../ports/test-outcome-read.port.js';
+import { readOutcomeTarget, settleOutcomeReads, validateOutcomeTargetIds } from './matrix-outcome-target.js';
 import { createOutcomeDiagnostics, type MatrixWriteDiagnostics, type MatrixWriteDiagnosticFields, type MatrixWriteStage } from './record-matrix-outcome-diagnostics.js';
 /** Each invocation creates one new manual run. Never retries the non-idempotent creation. */
-export async function recordMatrixOutcome(input: MatrixOutcomeTarget, deps: LoadTestCaseProjectionsDeps & {
+export async function recordMatrixOutcome(input: MatrixOutcomeTarget, deps: {
+    outcomeRead: TestOutcomeReadPort;
     execution: TestExecutionPort;
     diagnostics?: MatrixWriteDiagnostics;
 }): Promise<MatrixWriteResult> {
@@ -14,17 +17,16 @@ export async function recordMatrixOutcome(input: MatrixOutcomeTarget, deps: Load
     const start = (next: MatrixWriteStage) => { stage = next; emit(stage, 'start', fields); };
     start('validate-target');
     try {
-        if (!manualOutcomes.includes(input.outcome) || ![input.planId, input.suiteId, input.workItemId, input.pointId].every(n => Number.isSafeInteger(n) && n > 0))
-            throw new Error('Ungültiges Ergebnis oder Schreibziel.');
-        const ids = await deps.testManagement.listTestCasesInSuite(input.planId, input.suiteId);
-        const points = (await deps.testManagement.loadPointsForSuite(input.planId, input.suiteId)).filter(p => p.workItemId === input.workItemId && p.suiteId === input.suiteId);
-        fields = { ...fields, caseCount: ids.length, pointCount: points.length, caseFound: ids.includes(input.workItemId) };
-        if (!ids.includes(input.workItemId) || points.length !== 1 || points[0].pointId !== input.pointId)
+        validateOutcomeTargetIds(input);
+        if (!manualOutcomes.includes(input.outcome)) throw new Error('Ungültiges Ergebnis.');
+        const { caseFound, points } = await readOutcomeTarget(input, deps.outcomeRead);
+        fields = { ...fields, caseCount: caseFound ? 1 : 0, pointCount: points.length, caseFound };
+        if (!caseFound || points.length !== 1 || points[0].pointId !== input.pointId)
             throw new Error('Kein eindeutiger Testpunkt für diesen Testfall in dieser Suite.');
         emit(stage, 'complete', fields);
     } catch (error) {
         emit(stage, 'error', fields, error);
-        throw error;
+        throw new ApiError(500, 'MATRIX_WRITE_NOT_ATTEMPTED', 'Die Statusänderung wurde nicht gestartet. Das Schreibziel konnte nicht sicher geprüft werden. Bitte die Ansicht aktualisieren und erneut versuchen.', { pointId: input.pointId });
     }
     let runId: number | null = null;
     try {
@@ -33,7 +35,7 @@ export async function recordMatrixOutcome(input: MatrixOutcomeTarget, deps: Load
         fields = { ...fields, runId };
         emit(stage, 'complete', fields);
         start('find-result');
-        const loadedResults = await deps.testManagement.loadResultsForRun(runId);
+        const loadedResults = await deps.outcomeRead.loadResultsForRun(runId);
         const results = loadedResults.filter(r => r.runId === runId && r.workItemId === input.workItemId && r.pointId === input.pointId && (r.suiteId === null || r.suiteId === input.suiteId));
         fields = { ...fields, resultCount: loadedResults.length, matchingResultCount: results.length };
         if (results.length !== 1)
@@ -47,25 +49,37 @@ export async function recordMatrixOutcome(input: MatrixOutcomeTarget, deps: Load
         await deps.execution.completeRun(runId);
         emit(stage, 'complete', fields);
         start('confirm-run');
-        const runs = await deps.testManagement.listRunsForPlan(input.planId);
-        const completedRun = runs.find(run => run.runId === runId);
-        fields = { ...fields, runCount: runs.length, runFound: !!completedRun, runState: completedRun?.state };
-        if (completedRun?.state !== 'Completed') throw new Error('Der neue Durchlauf ist noch nicht als abgeschlossen bestätigt.');
+        const [target, completedRun, confirmedResult] = await settleOutcomeReads([
+            readOutcomeTarget(input, deps.outcomeRead),
+            deps.outcomeRead.loadRun(runId),
+            deps.outcomeRead.loadResult(runId, results[0].resultId),
+        ] as const);
+        fields = { ...fields, runCount: completedRun ? 1 : 0, runFound: !!completedRun, runState: completedRun?.state };
+        if (completedRun?.runId !== runId || completedRun.planId !== input.planId || completedRun.state !== 'Completed')
+            throw new Error('Der neue Durchlauf ist noch nicht als abgeschlossen bestätigt.');
         emit(stage, 'complete', fields);
         start('confirm-projection');
-        const loaded = await loadTestCaseProjections({ planId: input.planId, rootSuiteId: input.suiteId }, deps);
-        const projection = loaded.projections.find(p => p.suiteId === input.suiteId && p.workItemId === input.workItemId);
-        fields = { ...fields, projectionCount: loaded.projections.length, projectionFound: !!projection,
-            lastRunId: projection?.lastRunId, lastResultId: projection?.lastResultId, lastOutcome: projection?.lastOutcome,
-            testPointId: projection?.testPointId, runMatches: projection?.lastRunId === runId,
-            resultMatches: projection?.lastResultId === results[0].resultId, outcomeMatches: projection?.lastOutcome === input.outcome };
-        if (!projection || projection.lastRunId !== runId || projection.lastResultId !== results[0].resultId || projection.lastOutcome !== input.outcome)
-            throw new Error('Der bestehende Lesepfad bestätigt das neue Ergebnis noch nicht.');
+        const point = target.points[0];
+        const resultMatches = confirmedResult?.runId === runId && confirmedResult.resultId === results[0].resultId
+            && confirmedResult.workItemId === input.workItemId && confirmedResult.pointId === input.pointId
+            && (confirmedResult.suiteId === null || confirmedResult.suiteId === input.suiteId)
+            && confirmedResult.state === 'Completed' && confirmedResult.outcome === input.outcome
+            && confirmedResult.completedDate !== null && Number.isFinite(Date.parse(confirmedResult.completedDate));
+        const pointMatches = target.caseFound && target.points.length === 1 && point.pointId === input.pointId
+            && point.lastRunId === runId && point.lastResultId === results[0].resultId && point.lastOutcome === input.outcome;
+        fields = { ...fields, caseFound: target.caseFound, pointCount: target.points.length, pointMatches, resultMatches,
+            lastRunId: point?.lastRunId, lastResultId: point?.lastResultId, lastOutcome: point?.lastOutcome, testPointId: point?.pointId };
+        if (!pointMatches || !resultMatches || !confirmedResult) throw new Error('Der aktuelle Testpunkt bestätigt das neue Ergebnis noch nicht.');
+        const projection = { suiteId: input.suiteId, workItemId: input.workItemId, testPointId: input.pointId,
+            lastOutcome: input.outcome, lastRunId: runId, lastResultId: confirmedResult.resultId,
+            // Preserve the existing point fallback when Azure omits the suite on a result.
+            lastResultCompletedDate: confirmedResult.suiteId === null ? null : confirmedResult.completedDate };
         emit(stage, 'complete', fields);
         return { runId, projection };
     }
     catch (error) {
         emit(stage, 'error', fields, error);
-        throw new Error(runId === null ? 'Durchlauf konnte nicht sicher angelegt werden. Bitte Azure prüfen, bevor du erneut speicherst.' : `Durchlauf ${runId} wurde angelegt, Ergebnis nicht bestätigt. Bitte diesen Durchlauf in Azure prüfen; es wird nicht automatisch erneut gespeichert.`);
+        if (runId === null && error instanceof ApiError && error.code === 'MATRIX_WRITE_NOT_ATTEMPTED') throw error;
+        throw new ApiError(500, 'MATRIX_RUN_UNCONFIRMED', runId === null ? 'Durchlauf konnte nicht sicher angelegt werden. Bitte Azure prüfen, bevor du erneut speicherst.' : `Durchlauf ${runId} wurde angelegt, Ergebnis nicht bestätigt. Bitte diesen Durchlauf in Azure prüfen; es wird nicht automatisch erneut gespeichert.`, { runId, pointId: input.pointId });
     }
 }
