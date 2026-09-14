@@ -88,10 +88,12 @@ export class HttpUserPreferencesAdapter implements UserPreferencesClientPort {
       sanitizedPatch.setFilters
     );
     const colorRulePatch = sanitizeKeyedPreferencePatch(patch, "setColorRules", sanitizedPatch.setColorRules);
+    const matrixPatch = sanitizeKeyedPreferencePatch(patch, "setReleaseMatrices", sanitizedPatch.setReleaseMatrices);
     const transportPatch: UserPreferences = {
       ...sanitizedPatch,
       setLayouts: layoutPatch.values,
       setColorRules: colorRulePatch.values,
+      setReleaseMatrices: matrixPatch.values,
       setFilters: filterPatch.values
     };
 
@@ -100,6 +102,7 @@ export class HttpUserPreferencesAdapter implements UserPreferencesClientPort {
       ...sanitizedPatch,
       sets: sanitizedPatch.sets ?? this.cache.sets,
       setColorRules: mergeKeyedScope(this.cache.setColorRules, sanitizedPatch.setColorRules, colorRulePatch.touchedIds),
+      setReleaseMatrices: mergeKeyedScope(this.cache.setReleaseMatrices, sanitizedPatch.setReleaseMatrices, matrixPatch.touchedIds),
       setLayouts: mergeKeyedScope(
         this.cache.setLayouts,
         sanitizedPatch.setLayouts,
@@ -354,6 +357,7 @@ function mergeTransportPatches(
     sets: incoming.sets ?? recovery.sets,
     setLayouts: mergeTransportScope(recovery.setLayouts, incoming.setLayouts),
     setColorRules: mergeTransportScope(recovery.setColorRules, incoming.setColorRules),
+    setReleaseMatrices: mergeTransportScope(recovery.setReleaseMatrices, incoming.setReleaseMatrices),
     setFilters: mergeTransportScope(recovery.setFilters, incoming.setFilters)
   };
 }
@@ -381,6 +385,7 @@ function selectTransportPatch(
   selected.setLayouts = selectTransportScope(desired.setLayouts, affected.setLayouts);
   selected.setFilters = selectTransportScope(desired.setFilters, affected.setFilters);
   selected.setColorRules = selectTransportScope(desired.setColorRules, affected.setColorRules);
+  selected.setReleaseMatrices = selectTransportScope(desired.setReleaseMatrices, affected.setReleaseMatrices);
   return selected;
 }
 
@@ -427,6 +432,7 @@ function removeTransportFootprint(
     ...recovery,
     setLayouts: recovery.setLayouts ? { ...recovery.setLayouts } : undefined,
     setColorRules: recovery.setColorRules ? { ...recovery.setColorRules } : undefined,
+    setReleaseMatrices: recovery.setReleaseMatrices ? { ...recovery.setReleaseMatrices } : undefined,
     setFilters: recovery.setFilters ? { ...recovery.setFilters } : undefined
   };
   removeAffectedValue(remaining, applied, "themeMode");
@@ -443,6 +449,7 @@ function removeTransportFootprint(
     applied.setFilters
   );
   remaining.setColorRules = removeTransportScope(remaining.setColorRules, applied.setColorRules);
+  remaining.setReleaseMatrices = removeTransportScope(remaining.setReleaseMatrices, applied.setReleaseMatrices);
   return hasTransportValues(remaining) ? remaining : null;
 }
 
@@ -477,6 +484,7 @@ function hasTransportValues(patch: UserPreferences): boolean {
     patch.setLayouts !== undefined ||
     patch.setFilters !== undefined ||
     patch.setColorRules !== undefined ||
+    patch.setReleaseMatrices !== undefined ||
     patch.updatedAt !== undefined;
 }
 

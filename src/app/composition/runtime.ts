@@ -1,3 +1,6 @@
+import type { MatrixReadDeps } from "../../application/use-cases/load-release-matrix.use-case.js";
+import { AzureTestExecutionAdapter } from "../../adapters/azure-devops/test-management/azure-test-execution.adapter.js";
+import type { TestExecutionPort } from "../../application/ports/test-execution.port.js";
 import os from "node:os";
 import path from "node:path";
 
@@ -38,6 +41,7 @@ export type AdoRuntime = {
   testCaseHydration(): Promise<TestCaseHydrationPort>;
   savedQuery(): Promise<SavedQueryPort>;
   relations(): Promise<RelationPort>;
+  matrixServices?(context: {organization: string; project: string}): MatrixReadDeps & {execution: TestExecutionPort};
 };
 
 export type RuntimeOptions = {
@@ -110,6 +114,12 @@ export function buildRuntime(options: RuntimeOptions = {}): Runtime {
 
   const ado: AdoRuntime = {
     resolveContext,
+    matrixServices: context => ({
+      testManagement: new AzureTestManagementAdapter(httpClient, context),
+      testCatalog: new AzureTestCatalogAdapter(httpClient, context),
+      testCaseHydration: new WorkItemBackedTestCaseHydrationAdapter(new AzureWorkItemHydrationAdapter(httpClient, context)),
+      execution: new AzureTestExecutionAdapter(httpClient, context)
+    }),
     testManagement: async () => (await resolveBundle()).testManagement,
     testCatalog: async () => (await resolveBundle()).testCatalog,
     workItemHydration: async () => (await resolveBundle()).workItemHydration,

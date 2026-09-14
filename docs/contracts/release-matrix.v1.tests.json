@@ -1,0 +1,17 @@
+{
+  "contract": "release-matrix.v1.html",
+  "files": [
+    {
+      "path": "tests/e2e/release-matrix.contract.spec.ts",
+      "sha256": "3a6283b4f1cdb0a4db50bccf7cb87a8cbb8fcf02f4e0e8487eab027fc159e6ab"
+    },
+    {
+      "path": "tests/e2e/release-matrix/server.ts",
+      "sha256": "aaa09e979a95ef3cd4cb5237f102dfb73dfc06e3fff251b8132648e1fa345365"
+    },
+    {
+      "path": "tests/e2e/release-matrix/azure-fixture.ts",
+      "sha256": "4df4bcd62cd01976d9980b963a5325a84c40654bc405e584e481e3e35b592908"
+    }
+  ]
+}

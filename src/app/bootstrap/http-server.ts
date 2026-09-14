@@ -1,3 +1,4 @@
+import { registerReleaseMatrixRoutes } from "./routes/release-matrix-routes.js";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
@@ -143,6 +144,7 @@ function buildRouter(deps: RouterDeps): Router {
         adoContext: deps.deps.adoContext
       })
     : null;
+  const matrixRoutes = deps.deps.ado ? registerReleaseMatrixRoutes(deps.deps.ado, deps.deps.setRepository) : null;
   const relationsRoutes = deps.deps.ado ? registerRelationsRoutes(deps.deps.ado) : null;
 
   return async function route(req, res) {
@@ -192,6 +194,7 @@ function buildRouter(deps: RouterDeps): Router {
     if (catalogRoutes && (await catalogRoutes(method, pathname, url, req, res))) return;
     if (snapshotRoute && (await snapshotRoute(method, pathname, url, req, res))) return;
     if (snapshotDebugRoute && (await snapshotDebugRoute(method, pathname, url, req, res))) return;
+    if (matrixRoutes && (await matrixRoutes(method, pathname, req, res))) return;
     if (relationsRoutes && (await relationsRoutes(method, pathname, req, res))) return;
 
     if (method === "GET" && (pathname === "/" || pathname === "/index.html")) {
@@ -349,7 +352,8 @@ function parseUserPreferencesPatch(payload: unknown): UserPreferences | null {
   return {
     ...sanitized,
     setLayouts: layoutPatch.values,
-    setFilters: filterPatch.values
+    setFilters: filterPatch.values,
+    setReleaseMatrices: sanitizeKeyedPreferencePatch(candidate.preferences, "setReleaseMatrices", sanitized.setReleaseMatrices).values
   };
 }
 

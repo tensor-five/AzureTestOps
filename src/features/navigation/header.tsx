@@ -30,6 +30,7 @@ export type AppHeaderProps = {
   themeMode: ThemeMode;
   onToggleTheme(): void;
   setSwitcher: React.ReactNode;
+  viewSwitcher?: React.ReactNode;
   refreshControl?: React.ReactNode;
   magicSortAction?: React.ReactNode;
 };
@@ -48,6 +49,7 @@ export function AppHeader(props: AppHeaderProps): React.ReactElement {
         </div>
       </div>
       <div className="ui-shell-header-actions">
+        {props.viewSwitcher}
         <div className="ui-shell-set-picker">
           <span className="ui-shell-set-picker-label">Set</span>
           {props.setSwitcher}

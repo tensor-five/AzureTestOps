@@ -1,3 +1,4 @@
+import { outcomeDisplay } from "../../domain/test-management/outcome-display.js";
 import * as React from "react";
 import { resolveColorRule, type ColorRule } from "../../domain/color-coding/color-rule.js";
 
@@ -17,27 +18,6 @@ export type TestCaseCardProps = {
   colorRules?: readonly ColorRule[];
   onFocus?(): void;
 };
-
-type OutcomeDisplay = { slug: string; shortLabel: string };
-
-const OUTCOME_TABLE: Record<string, OutcomeDisplay> = {
-  passed: { slug: "passed", shortLabel: "✓" },
-  failed: { slug: "failed", shortLabel: "✗" },
-  blocked: { slug: "blocked", shortLabel: "■" },
-  notapplicable: { slug: "notapplicable", shortLabel: "N/A" },
-  notrun: { slug: "notrun", shortLabel: "—" }
-};
-
-function outcomeDisplay(outcome: string): OutcomeDisplay {
-  const lowered = outcome.toLowerCase();
-  if (lowered in OUTCOME_TABLE) {
-    return OUTCOME_TABLE[lowered];
-  }
-  return {
-    slug: "other",
-    shortLabel: outcome ? outcome.slice(0, 3).toUpperCase() : "—"
-  };
-}
 
 export function TestCaseCard(props: TestCaseCardProps): React.ReactElement {
   const { projection, onLinePointerDown, getWorkItemHref } = props;
