@@ -2,7 +2,7 @@ import type { TestCaseProjection } from '../../domain/test-management/test-case-
 import type { TestSuiteFlatEntry } from '../../domain/test-management/test-suite-tree.js';
 import type { ManualOutcome } from '../../domain/release-matrix/matrix-config.js';
 export type MatrixData = {
-  planId: number; suites: Array<TestSuiteFlatEntry & { suiteType: string | null }>;
+  planId: number; suites: Array<TestSuiteFlatEntry & { suiteType: string | null; tags: string[] }>;
   projections: TestCaseProjection[]; pointCounts: Record<string, number>;
 };
 export type MatrixSnapshot = MatrixData & { contextIdentity: string };

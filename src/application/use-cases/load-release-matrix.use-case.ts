@@ -1,3 +1,4 @@
+import type { TestSuiteMetadataPort } from '../ports/test-suite-metadata.port.js';
 import type { MatrixReadDiagnostics } from '../../shared/diagnostics/matrix-read-diagnostics.js';
 import type { MatrixData } from '../dto/release-matrix.dto.js';
 import type { TestCatalogPort } from '../ports/test-catalog.port.js';
@@ -7,6 +8,7 @@ import { loadTestCaseProjections, type LoadTestCaseProjectionsDeps } from './loa
 import { createMatrixReadSession } from './matrix-read-session.js';
 export type MatrixReadDeps = LoadTestCaseProjectionsDeps & {
     testCatalog: TestCatalogPort;
+    suiteMetadata: TestSuiteMetadataPort;
 };
 /** Reuses the existing suite/result aggregation without altering its matching rules. */
 export async function loadReleaseMatrix(planId: number, deps: MatrixReadDeps, options: { signal?: AbortSignal; diagnostics?: MatrixReadDiagnostics } = {}): Promise<MatrixData> {
@@ -35,6 +37,9 @@ export async function loadReleaseMatrix(planId: number, deps: MatrixReadDeps, op
         trees.set(tree.id, tree);
     }
     options.diagnostics?.progress({ canonicalRootCount: trees.size, skippedOverlappingRoots, overlappingSuiteCount });
+    const loadTags = () => deps.suiteMetadata.loadSuiteTags([...discovered]);
+    const suiteTags = await (options.diagnostics ? options.diagnostics.measure('suiteTags', { planId }, loadTags) : loadTags());
+    for (const id of discovered) if (!suiteTags.has(id)) throw new Error(`Suite-Tags unvollständig: Suite #${id} fehlt.`);
     const snapshot: MatrixData = { planId, suites: [], projections: [], pointCounts: {} };
     const suiteTypes = new Map(catalog.map(suite => [suite.id, suite.suiteType]));
     for (const root of trees.values()) {
@@ -43,7 +48,7 @@ export async function loadReleaseMatrix(planId: number, deps: MatrixReadDeps, op
                 listRunsForPlan: p => read.listRunsForPlan(p), loadResultsForRun: r => read.loadResultsForRun(r),
                 loadPointsForSuite: async (p, s) => { const result = await read.loadPointsForSuite(p, s); points.set(s, result); return result; }
             } });
-        snapshot.suites.push(...flattenSuiteTree(loaded.suiteTree).map(s => ({ ...s, suiteType: suiteTypes.get(s.id) ?? null })));
+        snapshot.suites.push(...flattenSuiteTree(loaded.suiteTree).map(s => ({ ...s, suiteType: suiteTypes.get(s.id) ?? null, tags: suiteTags.get(s.id)! })));
         snapshot.projections.push(...loaded.projections);
     }
     const canonicalSuites = new Map<number, MatrixData['suites'][number]>();

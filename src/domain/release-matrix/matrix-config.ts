@@ -3,10 +3,14 @@ export type MatrixColumn = {
     name: string;
     environment: string;
     tag: string;
-    rootSuiteId: number;
+    /** Legacy input only; v2 source selection never reads or persists this value. */
+    rootSuiteId?: number;
     visible: boolean;
 };
 export type MatrixConfig = {
+    version: 2;
+    /** Durable configuration provenance: preserves the migration explanation through repeated sanitization. */
+    migratedFrom?: 1;
     planId: number;
     catalogRootId: number;
     grouping: 'suites' | 'tags';
@@ -15,6 +19,8 @@ export type MatrixConfig = {
     mappings: Record<string, number>;
     groupOrder: string[];
     collapsed: string[];
+    /** Tag-group IDs have their own namespace; suite names are unrestricted. */
+    collapsedTags?: string[];
     search: string;
     tagFilter: string;
     suiteFilter: string;
@@ -22,7 +28,7 @@ export type MatrixConfig = {
 export const manualOutcomes = ['Passed', 'Failed', 'Blocked', 'NotApplicable', 'Inconclusive'] as const;
 export type ManualOutcome = typeof manualOutcomes[number];
 export function emptyMatrixConfig(planId: number, catalogRootId: number): MatrixConfig {
-    return { planId, catalogRootId, grouping: 'suites', tags: [], columns: [], mappings: {}, groupOrder: [], collapsed: [], search: '', tagFilter: '', suiteFilter: '' };
+    return { version: 2, planId, catalogRootId, grouping: 'suites', tags: [], columns: [], mappings: {}, groupOrder: [], collapsed: [], collapsedTags: [], search: '', tagFilter: '', suiteFilter: '' };
 }
 export function uniqueTags(value: string[]): string[] {
     const seen = new Set<string>();
@@ -41,12 +47,13 @@ export function sanitizeMatrixConfig(raw: unknown): MatrixConfig | null {
         for (const c of raw.columns) {
             if (!record(c) || !string(c.id).trim() || columns.has(string(c.id)))
                 continue;
-            columns.set(string(c.id), { id: string(c.id), name: string(c.name), environment: string(c.environment), tag: string(c.tag), rootSuiteId: positive(c.rootSuiteId) ? c.rootSuiteId : 0, visible: c.visible !== false });
+            columns.set(string(c.id), { id: string(c.id), name: string(c.name), environment: string(c.environment), tag: string(c.tag), visible: c.visible !== false });
         }
     const mappings: Record<string, number> = {};
-    if (record(raw.mappings))
+    const legacy = raw.version !== 2;
+    if (!legacy && record(raw.mappings))
         for (const [key, id] of Object.entries(raw.mappings))
             if (positive(id))
                 Object.defineProperty(mappings, key, { value: id, enumerable: true });
-    return { planId: raw.planId, catalogRootId: raw.catalogRootId, grouping: raw.grouping === 'tags' ? 'tags' : 'suites', tags: uniqueTags(strings(raw.tags)), columns: [...columns.values()], mappings, groupOrder: strings(raw.groupOrder), collapsed: strings(raw.collapsed), search: string(raw.search), tagFilter: string(raw.tagFilter), suiteFilter: string(raw.suiteFilter) };
+    return { version: 2, ...(legacy || raw.migratedFrom === 1 ? { migratedFrom: 1 as const } : {}), planId: raw.planId, catalogRootId: raw.catalogRootId, grouping: raw.grouping === 'tags' ? 'tags' : 'suites', tags: uniqueTags(strings(raw.tags)), columns: [...columns.values()], mappings, groupOrder: legacy ? [] : strings(raw.groupOrder), collapsed: legacy ? [] : strings(raw.collapsed), collapsedTags: legacy ? [] : strings(raw.collapsedTags), search: string(raw.search), tagFilter: string(raw.tagFilter), suiteFilter: string(raw.suiteFilter) };
 }

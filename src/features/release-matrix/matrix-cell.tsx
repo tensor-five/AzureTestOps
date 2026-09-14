@@ -9,6 +9,8 @@ export type MatrixCellProps = {
     pending: boolean;
     missingSuite: boolean;
     ambiguous: boolean;
+    missingSuiteReason?: string;
+    sourceDescription?: string;
     readOnlyReason?: string;
     onConfigure(): void;
     onChange(outcome: ManualOutcome): void;
@@ -20,8 +22,8 @@ export function MatrixCell(props: MatrixCellProps) {
     const pointerType = React.useRef('mouse');
     const id = React.useId();
     const p = props.projection;
-    const reason = props.missingSuite ? (props.ambiguous ? 'Mehrere gleichnamige Suites: Suite zuordnen.' : 'Suite fehlt oder Zuordnung ist ungültig.') : !p ? 'Nicht in dieser Suite' : props.readOnlyReason || (props.pointCount !== 1 ? `${props.pointCount} Testpunkte: Zum Speichern ist genau ein Testpunkt erforderlich.` : '');
-    const label = p ? `${p.lastOutcome || 'Unknown'} · ${p.title} · ${p.suitePath}${reason ? ' · ' + reason : ''}` : reason;
+    const reason = props.missingSuite ? (props.missingSuiteReason || (props.ambiguous ? 'Mehrere gleichnamige Suites: Suite zuordnen.' : 'Suite fehlt oder Zuordnung ist ungültig.')) : !p ? 'Nicht in dieser Suite' : props.readOnlyReason || (props.pointCount !== 1 ? `${props.pointCount} Testpunkte: Zum Speichern ist genau ein Testpunkt erforderlich.` : '');
+    const label = p ? `${p.lastOutcome || 'Unknown'} · ${p.title} · ${props.sourceDescription ?? p.suitePath}${reason ? ' · ' + reason : ''}` : reason;
     const { hide, updateLabel } = tooltip;
     React.useEffect(() => { updateLabel(id, label); }, [id, label, updateLabel]);
     React.useEffect(() => () => hide(id), [id, hide]);

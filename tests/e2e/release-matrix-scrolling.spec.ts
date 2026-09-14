@@ -1,9 +1,16 @@
 import { expect, test } from '@playwright/test';
-import { startMatrixServer } from './release-matrix/server.js';
-import { matrixConfig } from './release-matrix/azure-fixture.js';
+import { startMatrixServer } from './release-matrix-v2/server.js';
+import { matrixConfig } from './release-matrix-v2/azure-fixture.js';
 
 let server: Awaited<ReturnType<typeof startMatrixServer>>;
-test.beforeAll(async () => { server = await startMatrixServer(); });
+test.beforeAll(async ({ request }) => {
+    server = await startMatrixServer();
+    // The harness returns before listen completes; reset must not close that pending server.
+    await expect.poll(async () => {
+        try { return (await request.get(server.origin)).status(); }
+        catch { return 0; }
+    }).toBe(200);
+});
 test.afterAll(async () => { await server.close(); });
 
 for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 600 }]) {
