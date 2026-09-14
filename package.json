@@ -31,7 +31,7 @@
     "build:ui-shell": "esbuild src/app/bootstrap/local-ui-entry.ts --bundle --format=esm --platform=browser --outfile=dist/src/app/bootstrap/local-ui-entry.browser.js",
     "dev:local": "npm run build && npm run start:local",
     "test": "vitest run --exclude src/features/relations-view/test-suite-ticket-sorting.contract.spec.tsx",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --config=playwright.v4.config.ts",
     "lint": "tsc --noEmit",
     "check:cycles": "node ./scripts/check-cycles.mjs",
     "secrets:scan": "node ./scripts/secret-scan.mjs",

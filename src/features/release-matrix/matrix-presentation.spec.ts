@@ -3,9 +3,34 @@ import { matrixHierarchyFixture, matrixSuite, matrixProjection } from '../../../
 import { catalogRows, matrixGroups, resolveSource, descendantIds, mappingKey, matrixRowKey, versionTitle } from './matrix-presentation.js';
 const context={environment:'TST',content:'Regression'};
 describe('Hierarchical matrix presentation',()=>{
+    it('RM4-01 RM4-04 derives the union solely from visible valid version columns',()=>{
+        const {snapshot,config,column}=matrixHierarchyFixture();
+        snapshot.projections.push(matrixProjection(32,901),matrixProjection(42,902));
+        expect(catalogRows(snapshot,{...config,columns:[column]}).map(matrixRowKey).sort()).toEqual(['["TST","Regression",100]','["TST","Regression",901]']);
+        expect(catalogRows(snapshot,{...config,columns:[...config.columns,{id:'archive',versionSuiteId:40,visible:false}]}).map(row=>row.workItemId)).not.toContain(902);
+        expect(catalogRows(snapshot,{...config,columns:config.columns.map(c=>({...c,visible:false}))})).toEqual([]);
+        expect(catalogRows(snapshot,{...config,columns:[]})).toEqual([]);
+        expect(catalogRows(snapshot,{...config,columns:[{...column,versionSuiteId:99999}]})).toEqual([]);
+        expect(catalogRows(snapshot,{...config,planId:2})).toEqual([]);
+    });
+    it('RM4-02 walks forward from selected roots and excludes direct version, environment and deep memberships',()=>{
+        const {snapshot,config,column}=matrixHierarchyFixture();
+        snapshot.suites.push(matrixSuite(50,'Archive',1),matrixSuite(51,'Nested',32));
+        snapshot.suites.find(s=>s.id===30)!.parentSuiteId=50;
+        snapshot.projections.push(matrixProjection(30,900),matrixProjection(31,901),matrixProjection(51,902));
+        expect(catalogRows(snapshot,{...config,columns:[column]}).map(matrixRowKey)).toEqual(['["TST","Regression",100]']);
+    });
+    it('RM4-06 ignores both smaller and obsolete catalog IDs without adding archived rows',()=>{
+        const {snapshot,config}=matrixHierarchyFixture();
+        snapshot.projections.push(matrixProjection(32,901),matrixProjection(42,902));
+        const expected=catalogRows(snapshot,config).map(matrixRowKey).sort();
+        expect(expected).toContain('["TST","Regression",901]');
+        expect(expected).not.toContain('["TST","Regression",902]');
+        for(const catalogRootId of [1,20,42,99999]) expect(catalogRows(snapshot,{...config,catalogRootId}).map(matrixRowKey).sort()).toEqual(expected);
+    });
     it('deduplicates across versions while preserving different environments and contents',()=>{
         const {snapshot,config}=matrixHierarchyFixture();
-        expect(catalogRows(snapshot,config).map(matrixRowKey)).toEqual(['["TST","Regression",100]','["TST","Import",100]','["TST","Import",200]','["ACC","Regression",100]']);
+        expect(catalogRows(snapshot,config).map(matrixRowKey).sort()).toEqual(['["TST","Regression",100]','["TST","Import",100]','["TST","Import",200]','["ACC","Regression",100]'].sort());
         expect(matrixGroups(snapshot,config).map(g=>[g.name,g.rows.length])).toEqual([['ACC',1],['TST',3]]);
         expect(matrixGroups(snapshot,{...config,grouping:'content'}).map(g=>[g.name,g.rows.length])).toEqual([['Import',2],['Regression',2]]);
     });

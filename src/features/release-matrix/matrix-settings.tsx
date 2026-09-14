@@ -13,10 +13,7 @@ export function MatrixSettings({ snapshot, config, update }: {
     const move = (index:number,direction:number)=>{const columns=[...config.columns];[columns[index],columns[index+direction]]=[columns[index+direction],columns[index]];update({columns});};
     const describe = (suite:MatrixSnapshot['suites'][number])=>`${suite.path} (#${suite.id})`;
     return <section className="matrix-settings" aria-label="Matrix konfigurieren">
-      <label>Stammsuite<select aria-label="Stammsuite" value={config.catalogRootId} onChange={e=>update({catalogRootId:Number(e.target.value)})}>
-        {snapshot.suites.map(s=><option key={s.id} value={s.id}>{describe(s)}</option>)}
-      </select></label>
-      <p>Wähle die Versions-Suites für den Vergleich. Darunter werden Umgebung und Inhalt über ihre direkten Unterordner zugeordnet.</p>
+      <p>Wähle die Versions-Suites für den Vergleich. Die sichtbaren Versionen liefern die Testfälle. Darunter werden Umgebung und Inhalt über ihre direkten Unterordner zugeordnet.</p>
       <div className="matrix-column-settings">{config.columns.map((column,index)=><fieldset key={column.id}>
         <legend>Spalte {index+1}</legend>
         <label>Versions-Suite<select aria-label={`Versions-Suite ${index+1}`} value={column.versionSuiteId} onChange={e=>change(column.id,{versionSuiteId:Number(e.target.value)})}>

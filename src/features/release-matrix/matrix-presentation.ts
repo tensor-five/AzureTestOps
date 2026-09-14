@@ -22,6 +22,11 @@ export const matrixRowKey = (row: MatrixRow): string => JSON.stringify([row.envi
 export function versionTitle(snapshot: MatrixSnapshot, column: MatrixColumn): string {
     return snapshot.suites.find(s=>s.id===column.versionSuiteId)?.name ?? (column.versionSuiteId?`Versions-Suite #${column.versionSuiteId} ungültig`:'Versions-Suite auswählen');
 }
+export function visibleVersionColumns(snapshot: MatrixSnapshot, config: MatrixConfig): MatrixColumn[] {
+    if (snapshot.planId !== config.planId) return [];
+    const suiteIds = new Set(snapshot.suites.map(suite=>suite.id));
+    return config.columns.filter(column=>column.visible&&column.versionSuiteId>0&&suiteIds.has(column.versionSuiteId));
+}
 export function resolveSource(snapshot: MatrixSnapshot, config: MatrixConfig, row: MatrixRowContext, column: MatrixColumn) {
     const version = snapshot.planId === config.planId ? snapshot.suites.find(s=>s.id===column.versionSuiteId) : undefined;
     const environmentIds = new Set(version ? snapshot.suites.filter(s=>s.parentSuiteId===version.id&&s.name===row.environment).map(s=>s.id) : []);
@@ -35,16 +40,16 @@ export function resolveSource(snapshot: MatrixSnapshot, config: MatrixConfig, ro
         : environmentIds.size ? 'Inhaltliche Suite fehlt unter dieser Versions- und Umgebungs-Suite.' : 'Umgebungs-Suite fehlt unter dieser Version.';
     return {suite,candidates,ambiguous,reason};
 }
-/** The complete tree supplies identity; physical projections remain untouched. */
+/** Selected version roots supply direct environment/content memberships; physical projections remain untouched. */
 export function catalogRows(snapshot: MatrixSnapshot, config: MatrixConfig): MatrixRow[] {
-    const ids = descendantIds(snapshot,config.catalogRootId);
-    const suites = new Map(snapshot.suites.map(s=>[s.id,s]));
+    const versionIds = new Set(visibleVersionColumns(snapshot,config).map(column=>column.versionSuiteId));
+    const environments = new Map(snapshot.suites.filter(suite=>suite.parentSuiteId!==null&&versionIds.has(suite.parentSuiteId)).map(suite=>[suite.id,suite]));
+    const contents = new Map(snapshot.suites.filter(suite=>suite.parentSuiteId!==null&&environments.has(suite.parentSuiteId)).map(suite=>[suite.id,suite]));
     const rows = new Map<string,MatrixRow>();
     for (const projection of snapshot.projections) {
-        const content = suites.get(projection.suiteId);
-        const environment = content?.parentSuiteId == null ? undefined : suites.get(content.parentSuiteId);
-        const version = environment?.parentSuiteId == null ? undefined : suites.get(environment.parentSuiteId);
-        if (!ids.has(projection.suiteId)||!content||!environment||!version) continue;
+        const content = contents.get(projection.suiteId);
+        const environment = content?.parentSuiteId == null ? undefined : environments.get(content.parentSuiteId);
+        if (!content||!environment) continue;
         const row = {environment:environment.name,content:content.name,workItemId:projection.workItemId,title:projection.title,tags:projection.tags};
         if (!rows.has(matrixRowKey(row))) rows.set(matrixRowKey(row),row);
     }
