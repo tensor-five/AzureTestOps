@@ -262,7 +262,9 @@ function toTestPoint(value: unknown, fallbackSuiteId: number): TestPoint | null 
     configurationName: typeof configuration.name === "string" ? configuration.name : null,
     lastRunId: readNumber(lastRun.id),
     lastResultId: readNumber(lastResult.id),
-    lastOutcome: directOutcome ?? lastResultOutcome
+    lastOutcome: directOutcome ?? lastResultOutcome,
+    pointState: typeof candidate.state === 'string' ? candidate.state : null,
+    lastResetToActive: typeof candidate.lastResetToActive === 'string' ? candidate.lastResetToActive : null
   };
 }
 

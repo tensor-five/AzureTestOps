@@ -3,6 +3,7 @@ import * as React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { RelationMutationsApi } from '../../features/relations-view/use-relation-mutations.js';
+import { getMatrixMutationStore } from '../../features/release-matrix/matrix-mutation-store.js';
 import { AppShell } from './ui-client.js';
 import { WithClientPorts, buildClientPortsStub } from '../composition/test-client-ports.js';
 import { matrixTestServices } from '../../../tests/fixtures/release-matrix.js';
@@ -21,12 +22,12 @@ vi.mock('../../features/relations-view/use-relation-mutations.js', async importO
 });
 afterEach(() => { cleanup(); resetUserPreferencesCacheForTests(); localStorage.clear(); vi.restoreAllMocks(); });
 
-async function fixture() {
+async function fixture(setContext: {organization?: string; project?: string} = {}) {
     const { services, azure } = matrixTestServices();
     azure.membership[11] = [...new Set(azure.membership[11])];
     const loaded = await loadTestCaseProjections({ planId: 1, rootSuiteId: 10 }, services);
     const matrix = await loadReleaseMatrix(1, services);
-    const set = { id: 'catalog', name: 'Catalog', planId: '1', rootSuiteId: '10', queryId: 'bugs' };
+    const set = { id: 'catalog', name: 'Catalog', planId: '1', rootSuiteId: '10', queryId: 'bugs', ...setContext };
     const snapshot = { ...loaded, set, loadedAt: '2026-09-14T10:00:00Z', workItemsFromQuery: [{
         id: 501, title: 'Import bug', workItemType: 'Bug', state: 'Active', assignedTo: null, tags: [], areaPath: null, priority: null, relatedIds: [],
     }] };
@@ -47,10 +48,37 @@ async function fixture() {
     await act(async () => { view = render(<WithClientPorts ports={ports}><AppShell /></WithClientPorts>); });
     await waitFor(() => expect(view.container.querySelector('.relations-workspace')).not.toBeNull());
     const matching = view.container.querySelector('.relations-workspace')!;
-    return { matching, view, add, resolve: () => resolve(), reject: () => reject(new Error('Relation konnte nicht gespeichert werden.')) };
+    return { matching, view, add, ports, snapshot, resolve: () => resolve(), reject: () => reject(new Error('Relation konnte nicht gespeichert werden.')) };
 }
 
 describe('App navigation retains matching mutations', () => {
+    it('does not synchronize a set-bound matrix into matching loaded from another global context', async () => {
+        const f = await fixture({organization: 'other-org', project: 'other-project'});
+        const projection = {...f.snapshot.projections.find(p => p.suiteId === 11 && p.workItemId === 201)!, lastOutcome: 'Unspecified', lastRunId: null, lastResultId: null};
+        const before = f.matching.querySelector('[data-item-key="tc:201:11"] .relations-view-outcome-chip')?.textContent;
+        f.ports.releaseMatrix!.record = vi.fn(async () => ({runId: null, resetToActive: true as const, projection}));
+        const contextIdentity = 'https://dev.azure.com/other-org/other-project';
+        const store = getMatrixMutationStore(f.ports.releaseMatrix!, 'catalog', 1, contextIdentity);
+        await act(async () => { await store.record({planId: 1, suiteId: 11, workItemId: 201, pointId: 11201, contextIdentity, outcome: 'ResetToActive'}); });
+        expect(f.matching.querySelector('[data-item-key="tc:201:11"] .relations-view-outcome-chip')?.textContent).toBe(before);
+    });
+    it('applies a confirmed reset in the hidden matching view without clearing pending relations', async () => {
+        const f = await fixture();
+        let mutation!: Promise<void>;
+        act(() => { mutation = captured.current!.addRelation(201, 501); });
+        await act(async () => { fireEvent.click(screen.getByRole('button', {name: 'Release-Matrix'})); });
+        const projection = {...f.snapshot.projections.find(p => p.suiteId === 11 && p.workItemId === 201)!,
+          lastOutcome: 'Unspecified', lastRunId: null, lastResultId: null, lastResultCompletedDate: null};
+        f.ports.releaseMatrix!.record = vi.fn(async () => ({runId: null, resetToActive: true as const, projection}));
+        const store = getMatrixMutationStore(f.ports.releaseMatrix!, 'catalog', 1, 'https://dev.azure.com/contract-org/contract-project');
+        await act(async () => { await store.record({planId: 1, suiteId: 11, workItemId: 201, pointId: 11201,
+          contextIdentity: 'https://dev.azure.com/contract-org/contract-project', outcome: 'ResetToActive'}); });
+        expect(f.matching.querySelector('[data-item-key="tc:201:11"] .relations-view-outcome-chip')?.textContent).toBe('ACT');
+        expect(captured.current!.isPending(201, 501)).toBe(true);
+        await act(async () => { f.resolve(); await mutation; });
+        expect(captured.current!.isRelated(201, 501)).toBe(true);
+        expect(f.view.container.querySelector('.relations-workspace')).toBe(f.matching);
+    });
     it('keeps confirmed relation overrides when the loaded Azure snapshot has not caught up', async () => {
         const f = await fixture();
         let mutation!: Promise<void>;

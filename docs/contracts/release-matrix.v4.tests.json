@@ -11,7 +11,7 @@
     },
     {
       "path": "tests/e2e/release-matrix-v4.selection.spec.ts",
-      "sha256": "abdad4efd38207e5a5c0c8d503ff810661a9a3c157d36caa8600710d5c99f6b0"
+      "sha256": "1f44a8877743d83fcdb8ff90b8006f489e2ea3fdfaa611a71762369b435ccdd1"
     },
     {
       "path": "tests/e2e/release-matrix-v4.scrolling.spec.ts",

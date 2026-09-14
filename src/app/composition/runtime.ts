@@ -3,6 +3,8 @@ import type { MatrixReadDiagnostics } from '../../shared/diagnostics/matrix-read
 import type { MatrixReadDeps } from "../../application/use-cases/load-release-matrix.use-case.js";
 import { AzureTestExecutionAdapter } from "../../adapters/azure-devops/test-management/azure-test-execution.adapter.js";
 import type { TestExecutionPort } from "../../application/ports/test-execution.port.js";
+import type { TestPointResetPort } from '../../application/ports/test-point-reset.port.js';
+import { AzureTestPointResetAdapter } from '../../adapters/azure-devops/test-management/azure-test-point-reset.adapter.js';
 import os from "node:os";
 import path from "node:path";
 
@@ -43,7 +45,7 @@ export type AdoRuntime = {
   testCaseHydration(): Promise<TestCaseHydrationPort>;
   savedQuery(): Promise<SavedQueryPort>;
   relations(): Promise<RelationPort>;
-  matrixServices?(context: {organization: string; project: string}, options?: { signal?: AbortSignal; diagnostics?: MatrixReadDiagnostics }): MatrixReadDeps & {execution: TestExecutionPort};
+  matrixServices?(context: {organization: string; project: string}, options?: { signal?: AbortSignal; diagnostics?: MatrixReadDiagnostics }): MatrixReadDeps & {execution: TestExecutionPort; pointReset?: TestPointResetPort};
 };
 
 export type RuntimeOptions = {
@@ -122,7 +124,8 @@ export function buildRuntime(options: RuntimeOptions = {}): Runtime {
         testManagement: new AzureTestManagementAdapter(readClient, context),
         testCatalog: new AzureTestCatalogAdapter(readClient, context),
         testCaseHydration: new WorkItemBackedTestCaseHydrationAdapter(new AzureWorkItemHydrationAdapter(readClient, context)),
-        execution: new AzureTestExecutionAdapter(httpClient, context)
+        execution: new AzureTestExecutionAdapter(httpClient, context),
+        pointReset: new AzureTestPointResetAdapter(httpClient, context)
       };
     },
     testManagement: async () => (await resolveBundle()).testManagement,

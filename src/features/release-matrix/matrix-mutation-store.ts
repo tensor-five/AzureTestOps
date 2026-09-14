@@ -1,9 +1,10 @@
 import type { MatrixSnapshot, MatrixWrite } from '../../application/dto/release-matrix.dto.js';
 import type { ReleaseMatrixClientPort } from '../../application/ports/client/release-matrix-client.port.js';
+import type { TestCaseProjection } from '../../domain/test-management/test-case-projection.js';
 import { ApiError } from '../../application/dto/api-error.js';
 
 type Mutation = {
-    pending: boolean; blocked?: boolean; error?: string; runId?: number;
+    pending: boolean; reset?: boolean; unconfirmedReset?: {pointId: number; failedAt: number}; blocked?: boolean; error?: string; runId?: number;
     unconfirmed?: { runId: number; pointId: number; outcome: MatrixWrite['outcome']; failedAt: number };
 };
 export type MatrixMutationState = {
@@ -21,6 +22,14 @@ export const getMatrixMutationRevision = () => revision;
 export class MatrixMutationStore {
     private readonly mutations = new Map<string, Mutation>();
     private readonly listeners = new Set<() => void>();
+    private readonly confirmationListeners = new Set<(projection: TestCaseProjection) => void>();
+    subscribeConfirmed = (listener: (projection: TestCaseProjection) => void): (() => void) => {
+        this.confirmationListeners.add(listener);
+        return () => { this.confirmationListeners.delete(listener); };
+    };
+    private confirm(projection: TestCaseProjection) {
+        this.confirmationListeners.forEach(listener => listener(projection));
+    }
     private state = emptyMatrixMutationState;
     private confirmationRevision = 0;
 
@@ -41,6 +50,17 @@ export class MatrixMutationStore {
         for (const projection of snapshot.projections) {
             const key = `${projection.suiteId}:${projection.workItemId}`;
             const mutation = this.mutations.get(key), target = mutation?.unconfirmed;
+            const reset = mutation?.unconfirmedReset;
+            if (mutation?.blocked && reset && readStartedAt >= reset.failedAt
+                && projection.testPointId === reset.pointId && projection.lastOutcome === 'Unspecified'
+                && projection.lastRunId === null && projection.lastResultId === null
+                && snapshot.activePoints?.some(point => point.pointId === reset.pointId
+                    && point.suiteId === projection.suiteId && point.workItemId === projection.workItemId)) {
+                this.mutations.set(key, { pending: false, reset: true });
+                this.confirm(projection);
+                changed = true;
+                continue;
+            }
             if (!mutation?.blocked || !target || readStartedAt < target.failedAt || !completedRuns.has(target.runId)) continue;
             // The unchanged point fallback has no result date when Azure omits testSuite.id.
             if (projection.lastRunId !== target.runId || projection.testPointId !== target.pointId
@@ -52,6 +72,7 @@ export class MatrixMutationStore {
                 && Number.isFinite(Date.parse(result.completedDate)));
             if (!confirmedResult) continue;
             this.mutations.set(key, { pending: false, runId: target.runId });
+            this.confirm(projection);
             changed = true;
         }
         // The caller already accepts this snapshot; do not trigger another reload or repeat the write.
@@ -64,7 +85,7 @@ export class MatrixMutationStore {
             pending: new Set(entries.filter(([, value]) => value.pending).map(([key]) => key)),
             blocked: new Set(entries.filter(([, value]) => value.blocked).map(([key]) => key)),
             error: entries.flatMap(([, value]) => value.error ? [value.error] : []).join(' '),
-            status: entries.flatMap(([, value]) => value.runId ? [`Durchlauf bestätigt: ${value.runId}`] : []).join(' '),
+            status: entries.flatMap(([, value]) => value.reset ? ['Auf Active zurückgesetzt.'] : value.runId ? [`Durchlauf bestätigt: ${value.runId}`] : []).join(' '),
             confirmationRevision: this.confirmationRevision,
         };
         this.listeners.forEach(listener => listener());
@@ -78,16 +99,23 @@ export class MatrixMutationStore {
         this.publish();
         try {
             const result = await this.port.record(this.setId, input);
-            this.mutations.set(key, { pending: false, runId: result.runId });
+            this.mutations.set(key, { pending: false, runId: result.runId ?? undefined, reset: result.runId === null });
             this.confirmationRevision = ++revision;
+            this.confirm(result.projection);
         } catch (error) {
-            const blocked = error instanceof ApiError && error.code === 'MATRIX_RUN_UNCONFIRMED';
+            const lostResetResponse = input.outcome === 'ResetToActive' && (!(error instanceof ApiError)
+                || error.status >= 500 && error.code !== 'MATRIX_RESET_UNCONFIRMED' && error.code !== 'MATRIX_RESET_NOT_ATTEMPTED');
+            const resetBlocked = lostResetResponse || error instanceof ApiError && error.code === 'MATRIX_RESET_UNCONFIRMED';
+            const blocked = resetBlocked || error instanceof ApiError && error.code === 'MATRIX_RUN_UNCONFIRMED';
             const runId = error instanceof ApiError ? error.details?.runId : undefined;
             this.mutations.set(key, { pending: false,
                 blocked,
-                ...(blocked && typeof runId === 'number' && Number.isSafeInteger(runId) && runId > 0
+                ...(resetBlocked && (lostResetResponse || error instanceof ApiError && error.details?.pointId === input.pointId)
+                    ? {unconfirmedReset: {pointId: input.pointId, failedAt: ++revision}} : {}),
+                ...(!resetBlocked && blocked && typeof runId === 'number' && Number.isSafeInteger(runId) && runId > 0
                     ? { unconfirmed: { runId, pointId: input.pointId, outcome: input.outcome, failedAt: ++revision } } : {}),
-                error: error instanceof Error ? error.message : 'Durchlauf konnte nicht gespeichert werden.' });
+                error: lostResetResponse ? `Reset auf Active für Testpunkt ${input.pointId} wurde nicht bestätigt. Bitte Azure prüfen und die Ansicht aktualisieren; es wird nicht automatisch erneut gespeichert.`
+                    : error instanceof Error ? error.message : 'Statusänderung konnte nicht gespeichert werden.' });
         }
         this.publish();
     }

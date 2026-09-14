@@ -8,6 +8,9 @@ import type { MatrixWrite } from '../../../application/dto/release-matrix.dto.js
 import type { TestExecutionPort } from '../../../application/ports/test-execution.port.js';
 import { loadReleaseMatrix } from '../../../application/use-cases/load-release-matrix.use-case.js';
 import { recordMatrixOutcome } from '../../../application/use-cases/record-matrix-outcome.use-case.js';
+import { resetMatrixPoint } from '../../../application/use-cases/reset-matrix-point.use-case.js';
+import { ApiError } from '../../../application/dto/api-error.js';
+import type { MatrixWriteDiagnostics } from '../../../application/use-cases/record-matrix-outcome-diagnostics.js';
 import { readBody, parseJsonBody, writeJson } from './route-helpers.js';
 export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepositoryPort) {
     const pending = new Set<string>();
@@ -68,6 +71,15 @@ export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepository
             }
             pending.add(key);
             lock = key;
+            const writeDiagnostics: MatrixWriteDiagnostics = { event: entry => console.info('[release-matrix.write]', {
+                requestId, side: 'server', ...entry, elapsedMs: Math.round(performance.now() - writeStartedAt),
+            }) };
+            if (body.outcome === 'ResetToActive') {
+                if (!services.pointReset) throw new ApiError(500, 'MATRIX_RESET_NOT_ATTEMPTED',
+                    'Reset auf Active wurde nicht gestartet: Diese Laufzeit unterstützt den Vorgang nicht.', { pointId: body.pointId });
+                writeJson(res, 200, await resetMatrixPoint(body, { ...services, pointReset: services.pointReset, diagnostics: writeDiagnostics }));
+                return true;
+            }
             // Preserve the existing use case while exposing whether a failed write already created a run.
             const execution: TestExecutionPort = {
                 createManualRun: async (plan, point) => {
@@ -77,16 +89,13 @@ export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepository
                 completeResult: (run, result, outcome) => services.execution.completeResult(run, result, outcome),
                 completeRun: run => services.execution.completeRun(run),
             };
-            writeJson(res, 200, await recordMatrixOutcome(body, { ...services, execution, diagnostics: {
-                event: entry => console.info('[release-matrix.write]', {
-                    requestId, side: 'server', ...entry, elapsedMs: Math.round(performance.now() - writeStartedAt),
-                }),
-            } }));
+            writeJson(res, 200, await recordMatrixOutcome(body, { ...services, execution, diagnostics: writeDiagnostics }));
         }
         catch (error) {
             diagnostics?.finish(controller.signal.aborted ? 'aborted' : 'error');
             if (controller.signal.aborted) return true;
-            writeJson(res, 500, { ...(createdRunId !== null ? {code:'MATRIX_RUN_UNCONFIRMED',details:{runId:createdRunId}} : {}), message: error instanceof Error ? error.message : 'Release-Matrix konnte nicht geladen oder gespeichert werden.' });
+            writeJson(res, 500, { ...(error instanceof ApiError && (error.code === 'MATRIX_RESET_UNCONFIRMED' || error.code === 'MATRIX_RESET_NOT_ATTEMPTED') ? { code: error.code, details: error.details }
+                : createdRunId !== null ? {code:'MATRIX_RUN_UNCONFIRMED',details:{runId:createdRunId}} : {}), message: error instanceof Error ? error.message : 'Release-Matrix konnte nicht geladen oder gespeichert werden.' });
         }
         finally {
             res.removeListener?.('close', closed);

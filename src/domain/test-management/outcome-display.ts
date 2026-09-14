@@ -1,11 +1,13 @@
-type OutcomeDisplay = { slug: string; shortLabel: string };
+type OutcomeDisplay = { slug: string; shortLabel: string; label: string };
 
 const OUTCOME_TABLE: Record<string, OutcomeDisplay> = {
-  passed: { slug: "passed", shortLabel: "✓" },
-  failed: { slug: "failed", shortLabel: "✗" },
-  blocked: { slug: "blocked", shortLabel: "■" },
-  notapplicable: { slug: "notapplicable", shortLabel: "N/A" },
-  notrun: { slug: "notrun", shortLabel: "—" }
+  unspecified: { slug: "active", shortLabel: "ACT", label: "Active" },
+  active: { slug: "active", shortLabel: "ACT", label: "Active" },
+  passed: { label: "Passed", slug: "passed", shortLabel: "✓" },
+  failed: { label: "Failed", slug: "failed", shortLabel: "✗" },
+  blocked: { label: "Blocked", slug: "blocked", shortLabel: "■" },
+  notapplicable: { label: "NotApplicable", slug: "notapplicable", shortLabel: "N/A" },
+  notrun: { label: "NotRun", slug: "notrun", shortLabel: "—" }
 };
 
 export function outcomeDisplay(outcome: string): OutcomeDisplay {
@@ -15,6 +17,7 @@ export function outcomeDisplay(outcome: string): OutcomeDisplay {
   }
   return {
     slug: "other",
+    label: outcome || "Unknown",
     shortLabel: outcome ? outcome.slice(0, 3).toUpperCase() : "—"
   };
 }

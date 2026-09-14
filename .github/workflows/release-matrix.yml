@@ -14,6 +14,8 @@ on:
       - src/application/**/load-release-matrix*
       - src/application/use-cases/matrix-read-session*
       - src/application/ports/test-execution.port.ts
+      - src/application/ports/test-point-reset.port.ts
+      - src/application/use-cases/reset-matrix-point*
       - src/application/**/record-matrix-outcome*
       - src/application/ports/client/client-ports.ts
       - src/adapters/azure-devops/test-management/**
@@ -27,6 +29,9 @@ on:
       - src/app/composition/**
       - src/app/bootstrap/http-server.ts
       - src/app/bootstrap/ui-client.tsx
+      - src/app/bootstrap/use-matrix-outcome-sync*
+      - src/features/relations-view/use-active-set-snapshot*
+      - tests/fixtures/reset-active.ts
       - src/app/bootstrap/ui-client-matrix-navigation.spec.tsx
       - src/app/bootstrap/routes/release-matrix*
       - src/app/bootstrap/local-ui*.css

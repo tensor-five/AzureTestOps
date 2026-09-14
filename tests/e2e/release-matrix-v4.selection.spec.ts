@@ -180,9 +180,9 @@ test('V4-S07 RM4-07 zero runs preserves physical point Passed Failed and Unspeci
     await expect(outcome(page,'TST','Regression',201,'v22')).toHaveValue('Unspecified');
     await expect(cell(page,'TST','Regression',101).locator('.relations-view-outcome-chip')).toHaveText('✓');
     await expect(cell(page,'TST','Regression',201).locator('.relations-view-outcome-chip')).toHaveText('✗');
-    await expect(cell(page,'TST','Regression',201,'v22').locator('.relations-view-outcome-chip')).toHaveText('UNS');
+    await expect(cell(page,'TST','Regression',201,'v22').locator('.relations-view-outcome-chip')).toHaveText('ACT');
     await outcome(page,'TST','Regression',201,'v22').hover();
-    await expect(page.getByRole('tooltip')).toContainText('Unspecified');
+    await expect(page.getByRole('tooltip')).toContainText('Active');
     expect(server.azure().runs).toEqual([]);
     expect(server.azure().reads.some(url=>new URL(url).pathname.endsWith('/runs'))).toBe(true);
     expect(server.azure().writes).toEqual([]);

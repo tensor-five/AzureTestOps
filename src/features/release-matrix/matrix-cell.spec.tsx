@@ -98,3 +98,37 @@ describe('Matrix outcome tooltip', () => {
         expect(screen.getByRole('tooltip').textContent).toBe('Blocked · Export prüfen · Release / Regression');
     });
 });
+
+
+describe('Active outcome action', () => {
+    it('labels Unspecified as Active in the chip, selection and tooltip', () => {
+        render(<MatrixTooltipProvider>{cell('Unspecified')}</MatrixTooltipProvider>);
+        const select = screen.getByRole('combobox', {name: /^Active/}) as HTMLSelectElement;
+        expect(select.value).toBe('Unspecified');
+        expect(select.selectedOptions[0].textContent).toBe('Active');
+        expect(select.parentElement?.querySelector('.relations-view-outcome-chip-active')?.textContent).toBe('ACT');
+        fireEvent.mouseEnter(select.parentElement!);
+        expect(screen.getByRole('tooltip').textContent).toContain('Active');
+        expect(screen.getByRole('tooltip').textContent).not.toContain('Unspecified');
+    });
+    it('submits ResetToActive as a separate command', () => {
+        const change = vi.fn();
+        render(<MatrixTooltipProvider><MatrixCell {...defaults} onChange={change} projection={projection('Failed')} /></MatrixTooltipProvider>);
+        fireEvent.change(screen.getByRole('combobox'), {target: {value: 'ResetToActive'}});
+        expect(change).toHaveBeenCalledExactlyOnceWith('ResetToActive');
+        expect(screen.getByRole('option', {name: 'Reset to active'})).toBeTruthy();
+    });
+    it('previews reset with matching blue ACT styling and submits only on Enter', () => {
+        const change = vi.fn();
+        render(<MatrixTooltipProvider><MatrixCell {...defaults} onChange={change} projection={projection('Inconclusive')} /></MatrixTooltipProvider>);
+        const select = screen.getByRole('combobox');
+        fireEvent.keyDown(select, {key: 'ArrowDown'});
+        expect(select.parentElement?.querySelector('.relations-view-outcome-chip-active')?.textContent).toBe('ACT');
+        expect(change).not.toHaveBeenCalled();
+        fireEvent.keyDown(select, {key: 'Escape'});
+        expect(select.parentElement?.querySelector('.relations-view-outcome-chip')?.textContent).toBe('INC');
+        fireEvent.keyDown(select, {key: 'ArrowDown'});
+        fireEvent.keyDown(select, {key: 'Enter'});
+        expect(change).toHaveBeenCalledExactlyOnceWith('ResetToActive');
+    });
+});
