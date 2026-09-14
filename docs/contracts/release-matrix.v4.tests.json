@@ -1,0 +1,37 @@
+{
+  "contract": "release-matrix.v4.html",
+  "files": [
+    {
+      "path": "tests/e2e/release-matrix-v4.behavior.spec.ts",
+      "sha256": "2a73f8454a2853ba4b6145b464a13273bdba5f99fde26ab3235fb849ba0b948a"
+    },
+    {
+      "path": "tests/e2e/release-matrix-v4.hierarchy.spec.ts",
+      "sha256": "f9b6a54e111cec4a139b1c259e715cee90784c1f2fda7b64705495fae986b099"
+    },
+    {
+      "path": "tests/e2e/release-matrix-v4.selection.spec.ts",
+      "sha256": "abdad4efd38207e5a5c0c8d503ff810661a9a3c157d36caa8600710d5c99f6b0"
+    },
+    {
+      "path": "tests/e2e/release-matrix-v4.scrolling.spec.ts",
+      "sha256": "8b455cc2e15bb9d509707b51dfab4e231ff3ec9602a33823bfc87692c66e2089"
+    },
+    {
+      "path": "playwright.v4.config.ts",
+      "sha256": "56424989b340e53a059c6de69c880672942f0280a0ef4e65b9bd210e2d9fa2e6"
+    },
+    {
+      "path": "src/features/release-matrix/matrix-presentation.spec.ts",
+      "sha256": "c2c944bd7b30ddfd19ae98f3fb794734bff9fbc302eca7cea9d75db9c3d3e027"
+    },
+    {
+      "path": "src/features/release-matrix/matrix-configuration-interactions.spec.tsx",
+      "sha256": "64f6e0d7ea5e9ea99ab6cdd6a4a224bcc212e0b29c844d2ab45b3e28d896d47a"
+    },
+    {
+      "path": "tests/fixtures/matrix-hierarchy.ts",
+      "sha256": "ae4d06c0b1cfcf2f97c183038b58e23a040055eb73e6b12d9aa60162a2192ce7"
+    }
+  ]
+}

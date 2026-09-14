@@ -32,5 +32,8 @@ const approvedV4 = '92184250ef76fe23744ab2c82ba78d663bcff20848e69c1b9820d22d9b3b
 if (digest(await readFile('docs/contracts/release-matrix.v4.html')) !== approvedV4 || await readFile('docs/contracts/release-matrix.v4.sha256', 'utf8') !== `${approvedV4}  release-matrix.v4.html\n`) {
   throw new Error('Release matrix v4 contract differs from approved artifact.');
 }
+if (digest(await readFile('docs/contracts/release-matrix.v4.tests.json')) !== '822dca63d86a6c4014e4970fa9e5b2196aecf333af24799baeb1eaeb52c5ad07') {
+  throw new Error('Release matrix v4 frozen test manifest differs from reviewed version.');
+}
 await import('./check-frozen-tests.mjs');
 console.log('Verified approved release matrix contract.');

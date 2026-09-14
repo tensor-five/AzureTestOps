@@ -10,6 +10,6 @@ export function matrixHierarchyFixture() {
         matrixSuite(30,'Outside',1),matrixSuite(31,'TST',30),matrixSuite(32,'Regression',31)
     ],projections:[matrixProjection(22,100),matrixProjection(23,100),matrixProjection(23,200,'Empty',[]),matrixProjection(25,100),matrixProjection(42,100),matrixProjection(32,100)],pointCounts:{}};
     const column={id:'release',versionSuiteId:30,visible:true};
-    const config={...emptyMatrixConfig(1,10),columns:[column]};
+    const config={...emptyMatrixConfig(1,10),columns:[column,{id:'catalog-version',versionSuiteId:20,visible:true}]};
     return {snapshot,column,config};
 }

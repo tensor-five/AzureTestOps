@@ -50,6 +50,6 @@ describe('Matrix hierarchy configuration interactions',()=>{
         const update=vi.fn();render(<MatrixSettings snapshot={snapshot} config={config} update={update}/>);
         expect(screen.getByRole('combobox',{name:'Versions-Suite 1'}).textContent).toContain('#900 · ungültig');
         fireEvent.click(screen.getByRole('button',{name:'Spalte hinzufügen'}));
-        expect(update).toHaveBeenLastCalledWith({columns:[config.columns[0],expect.objectContaining({versionSuiteId:0,visible:true})]});
+        expect(update).toHaveBeenLastCalledWith({columns:[...config.columns,expect.objectContaining({versionSuiteId:0,visible:true})]});
     });
 });
