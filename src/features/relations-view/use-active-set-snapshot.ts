@@ -1,4 +1,6 @@
 import * as React from "react";
+import type { TestCaseProjection } from '../../domain/test-management/test-case-projection.js';
+import { applyConfirmedOutcomes } from '../../shared/test-management/apply-confirmed-outcomes.js';
 
 import { useClientPorts } from "../../app/composition/client-ports-context.js";
 import type { ActiveSetSnapshot } from "../../application/dto/active-set-snapshot.dto.js";
@@ -28,15 +30,30 @@ const INITIAL_STATE: SnapshotState = {
  * stream mixes named events (`progress`, `result`, `error`) and we want
  * deterministic teardown when the user triggers another refresh mid-flight.
  */
-export function useActiveSetSnapshot(setId: string | null): {
+export function useActiveSetSnapshot(setId: string | null, scopeKey = setId): {
   state: SnapshotState;
   refresh(): void;
+  applyOutcome(projection: TestCaseProjection): void;
 } {
   const { activeSetSnapshot } = useClientPorts();
   const [state, setState] = React.useState<SnapshotState>(INITIAL_STATE);
   const subscriptionRef = React.useRef<{ close(): void } | null>(null);
 
+  const generation = React.useRef(0);
+  const currentScope = React.useRef(scopeKey);
+  currentScope.current = scopeKey;
+  const outcomeUpdates = React.useRef<TestCaseProjection[]>([]);
+  const applyOutcome = React.useCallback((projection: TestCaseProjection) => {
+    if (currentScope.current !== scopeKey) return;
+    outcomeUpdates.current = [...outcomeUpdates.current.filter(value => value.suiteId !== projection.suiteId
+      || value.workItemId !== projection.workItemId), projection];
+    setState(current => current.snapshot?.set.id === setId ? { ...current, snapshot: {
+      ...current.snapshot, projections: applyConfirmedOutcomes(current.snapshot.projections, [projection])
+    } } : current);
+  }, [setId, scopeKey]);
+
   const closeSubscription = React.useCallback(() => {
+    generation.current++;
     if (subscriptionRef.current) {
       subscriptionRef.current.close();
       subscriptionRef.current = null;
@@ -45,6 +62,7 @@ export function useActiveSetSnapshot(setId: string | null): {
 
   const refresh = React.useCallback(() => {
     closeSubscription();
+    outcomeUpdates.current = [];
     if (!setId) {
       setState({ ...INITIAL_STATE });
       return;
@@ -52,7 +70,9 @@ export function useActiveSetSnapshot(setId: string | null): {
 
     setState({ snapshot: null, progress: null, isLoading: true, error: null });
 
+    const requestGeneration = generation.current;
     subscriptionRef.current = activeSetSnapshot.subscribe(setId, (event) => {
+      if (generation.current !== requestGeneration || currentScope.current !== scopeKey) return;
       if (event.type === "progress") {
         setState((current) => ({ ...current, progress: event.progress }));
         return;
@@ -60,7 +80,7 @@ export function useActiveSetSnapshot(setId: string | null): {
       if (event.type === "result") {
         setState((current) => ({
           ...current,
-          snapshot: event.snapshot,
+          snapshot: { ...event.snapshot, projections: applyConfirmedOutcomes(event.snapshot.projections, outcomeUpdates.current) },
           progress: { stage: "done", done: 1, total: 1 },
           isLoading: false,
           error: null
@@ -77,7 +97,7 @@ export function useActiveSetSnapshot(setId: string | null): {
       });
       closeSubscription();
     });
-  }, [setId, closeSubscription, activeSetSnapshot]);
+  }, [setId, scopeKey, closeSubscription, activeSetSnapshot]);
 
   React.useEffect(() => {
     refresh();
@@ -86,5 +106,5 @@ export function useActiveSetSnapshot(setId: string | null): {
     };
   }, [refresh, closeSubscription]);
 
-  return { state, refresh };
+  return { state, refresh, applyOutcome };
 }

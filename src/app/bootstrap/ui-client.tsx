@@ -22,6 +22,7 @@ import { useSetManagement } from "../../features/set-management/use-set-manageme
 import { SetDropdown } from "../../features/set-management/set-dropdown.js";
 import { SetManagerDialog } from "../../features/set-management/set-manager-dialog.js";
 import { useAdoContext } from "../../features/ado-context/use-ado-context.js";
+import { useMatrixOutcomeSync } from "./use-matrix-outcome-sync.js";
 import { useActiveSetSnapshot } from "../../features/relations-view/use-active-set-snapshot.js";
 import { RefreshProgressBar } from "../../features/relations-view/refresh-progress-bar.js";
 import { RelationsPane } from "../../features/relations-view/relations-pane.js";
@@ -104,10 +105,16 @@ function HydratedAppShell(props: {
   const matrixProject = activeSet?.project ?? adoContextState.context?.project;
   const matrixContextIdentity = matrixOrganization && matrixProject
     ? buildAdoBaseUrl({ organization: matrixOrganization, project: matrixProject }).toLowerCase() : undefined;
+  // Matching reads the global ADO context; a set-bound matrix may intentionally use another one.
+  const matchingContextIdentity = adoContextState.context
+    ? buildAdoBaseUrl(adoContextState.context).toLowerCase() : undefined;
   const ports = useClientPorts();
-  const { state: snapshotState, refresh: refreshSnapshot } = useActiveSetSnapshot(
-    setManagement.activeSetId
+  const { state: snapshotState, refresh: refreshSnapshot, applyOutcome } = useActiveSetSnapshot(
+    setManagement.activeSetId, JSON.stringify([setManagement.activeSetId, activeSet?.planId, matchingContextIdentity])
   );
+
+  useMatrixOutcomeSync(ports.releaseMatrix, setManagement.activeSetId, Number(activeSet?.planId),
+    matrixContextIdentity === matchingContextIdentity ? matchingContextIdentity : undefined, applyOutcome);
 
   const handleThemeToggle = React.useCallback(() => {
     setThemeMode((current) => nextThemeMode(current));

@@ -2,6 +2,7 @@ import type { MatrixReadDiagnostics } from '../../shared/diagnostics/matrix-read
 import type { MatrixData, MatrixResultEvidence } from '../dto/release-matrix.dto.js';
 import type { TestCatalogPort } from '../ports/test-catalog.port.js';
 import type { TestPoint } from '../../domain/test-management/test-point.js';
+import { isActiveTestPoint } from '../../domain/test-management/active-test-point.js';
 import { flattenSuiteTree, type TestSuiteNode } from '../../domain/test-management/test-suite-tree.js';
 import { loadTestCaseProjections, type LoadTestCaseProjectionsDeps } from './load-test-case-projections.use-case.js';
 import { createMatrixReadSession } from './matrix-read-session.js';
@@ -72,6 +73,8 @@ export async function loadReleaseMatrix(planId: number, deps: MatrixReadDeps, op
     // Only current run/case evidence is needed by the client; do not transmit the full run history.
     const currentResults = new Set(snapshot.projections.map(p => `${p.lastRunId}:${p.workItemId}`));
     snapshot.resultEvidence = [...rawResults.values()].filter(result => currentResults.has(`${result.runId}:${result.workItemId}`));
+    snapshot.activePoints = [...points.values()].flat().filter(isActiveTestPoint)
+        .map(({ pointId, suiteId, workItemId }) => ({ pointId, suiteId, workItemId }));
     for (const [suiteId, list] of points)
         for (const point of list) {
             const key = `${suiteId}:${point.workItemId}`;

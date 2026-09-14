@@ -11,8 +11,13 @@ export type MatrixData = {
   completedRunIds?: number[];
   /** Raw result identities for the currently projected run/case pairs; absent means unconfirmed. */
   resultEvidence?: MatrixResultEvidence[];
+  /** Physical points freshly confirmed Ready/Active, with cleared execution references. */
+  activePoints?: Array<{ pointId: number; suiteId: number; workItemId: number }>;
 };
 export type MatrixSnapshot = MatrixData & { contextIdentity: string };
 export type MatrixOutcomeTarget = { planId: number; suiteId: number; workItemId: number; pointId: number; outcome: ManualOutcome };
-export type MatrixWrite = MatrixOutcomeTarget & { contextIdentity: string };
+export type MatrixResetTarget = Omit<MatrixOutcomeTarget, 'outcome'> & { outcome: 'ResetToActive' };
+export type MatrixWrite = (MatrixOutcomeTarget | MatrixResetTarget) & { contextIdentity: string };
 export type MatrixWriteResult = { runId: number; projection: TestCaseProjection };
+export type MatrixResetResult = { runId: null; resetToActive: true; projection: TestCaseProjection };
+export type MatrixActionResult = MatrixWriteResult | MatrixResetResult;

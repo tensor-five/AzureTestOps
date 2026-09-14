@@ -19,4 +19,7 @@ export type TestPoint = {
    * was archived or its results endpoint dropped the `testSuite.id` link.
    */
   lastOutcome: string | null;
+  /** Execution state of the physical point, distinct from the work-item state. */
+  pointState?: string | null;
+  lastResetToActive?: string | null;
 };

@@ -8,6 +8,7 @@ import {
   type TestCaseProjectionKey
 } from "./test-case-projection.js";
 import { NOT_RUN } from "./outcome.js";
+import { isActiveTestPoint } from './active-test-point.js';
 
 export type OutcomeAggregatorInput = {
   /** Flat suite entries inside the active set (root + descendants). */
@@ -38,7 +39,7 @@ export function aggregateTestCaseProjections(
 
   for (const suite of input.suiteEntries) {
     const caseIds = input.testCasesBySuiteId.get(suite.id) ?? [];
-    const pointByWorkItemId = indexFirstPointByWorkItem(
+    const pointsByWorkItemId = indexPointsByWorkItem(
       input.pointsBySuiteId.get(suite.id) ?? []
     );
 
@@ -48,8 +49,11 @@ export function aggregateTestCaseProjections(
         continue;
       }
 
-      const point = pointByWorkItemId.get(workItemId) ?? null;
-      const latestResult = latestResultByKey.get(projectionKey(workItemId, suite.id)) ?? null;
+      const pointEntry = pointsByWorkItemId.get(workItemId);
+      const point = pointEntry?.first ?? null;
+      // A reset must not hide another configuration's result for the same case.
+      const active = pointEntry?.count === 1 && isActiveTestPoint(point);
+      const latestResult = active ? null : latestResultByKey.get(projectionKey(workItemId, suite.id)) ?? null;
 
       // Fallback to point.lastOutcome — Azure sometimes drops `testSuite.id` on results.
       const fallbackOutcome = point?.lastOutcome ?? NOT_RUN;
@@ -70,9 +74,9 @@ export function aggregateTestCaseProjections(
         configurationId: point?.configurationId ?? null,
         configurationName: point?.configurationName ?? null,
         lastOutcome: latestResult ? latestResult.outcome : fallbackOutcome,
-        lastResultId: latestResult?.resultId ?? point?.lastResultId ?? null,
+        lastResultId: active ? null : latestResult?.resultId ?? point?.lastResultId ?? null,
         lastResultCompletedDate: latestResult?.completedDate ?? null,
-        lastRunId: latestResult?.runId ?? point?.lastRunId ?? null
+        lastRunId: active ? null : latestResult?.runId ?? point?.lastRunId ?? null
       });
     }
   }
@@ -109,12 +113,12 @@ function buildLatestResultIndex(
   return latest;
 }
 
-function indexFirstPointByWorkItem(points: TestPoint[]): Map<number, TestPoint> {
-  const byWorkItem = new Map<number, TestPoint>();
+function indexPointsByWorkItem(points: TestPoint[]): Map<number, { first: TestPoint; count: number }> {
+  const byWorkItem = new Map<number, { first: TestPoint; count: number }>();
   for (const point of points) {
-    if (!byWorkItem.has(point.workItemId)) {
-      byWorkItem.set(point.workItemId, point);
-    }
+    const entry = byWorkItem.get(point.workItemId);
+    if (entry) entry.count++;
+    else byWorkItem.set(point.workItemId, { first: point, count: 1 });
   }
   return byWorkItem;
 }

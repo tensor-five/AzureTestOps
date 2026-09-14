@@ -14,6 +14,8 @@ export type FilterFacet = {
   label: string;
   options: readonly FacetOption[];
   selected: readonly string[];
+  /** Presentation only: callbacks and stored selections keep the raw value. */
+  formatValue?(value: string): string;
 };
 
 export type FilterQuickAction = {
@@ -53,7 +55,7 @@ export function FilterBar(props: FilterBarProps): React.ReactElement {
   const [expanded, setExpanded] = React.useState(false);
   const activeCount = countActive(props);
   const activeFacetValues = props.facets.flatMap((facet) =>
-    facet.selected.map((value) => ({ kind: facet.kind, label: facet.label, value }))
+    facet.selected.map((value) => ({ kind: facet.kind, label: facet.label, value, displayValue: facet.formatValue?.(value) ?? value }))
   );
   const activeQuickActions = (props.quickActions ?? []).filter(
     (action) => action.pressed && action.showActiveChip !== false
@@ -133,9 +135,9 @@ export function FilterBar(props: FilterBarProps): React.ReactElement {
               className="filter-bar-active-chip"
               key={`${entry.kind}:${entry.value}`}
               onClick={() => props.onToggleFacetValue(entry.kind, entry.value)}
-              aria-label={`Remove ${entry.label} filter ${entry.value}`}
+              aria-label={`Remove ${entry.label} filter ${entry.displayValue}`}
             >
-              <span>{entry.value}</span>
+              <span>{entry.displayValue}</span>
               <span aria-hidden="true">×</span>
             </button>
           ))}
@@ -195,7 +197,8 @@ function FacetPopover(props: {
   const normalizedSearch = search.trim().toLocaleLowerCase();
   const visibleOptions = normalizedSearch.length === 0
     ? facet.options
-    : facet.options.filter((option) => option.value.toLocaleLowerCase().includes(normalizedSearch));
+    : facet.options.filter((option) => option.value.toLocaleLowerCase().includes(normalizedSearch)
+      || facet.formatValue?.(option.value).toLocaleLowerCase().includes(normalizedSearch));
   const allVisibleSelected = visibleOptions.length > 0 && visibleOptions.every((option) =>
     selectedSet.has(option.value)
   );
@@ -253,7 +256,7 @@ function FacetPopover(props: {
                           checked={checked}
                           onChange={() => props.onToggle(option.value)}
                         />
-                        <span className="filter-bar-facet-option-label">{option.value}</span>
+                        <span className="filter-bar-facet-option-label">{facet.formatValue?.(option.value) ?? option.value}</span>
                         <span className="filter-bar-facet-option-count">{option.count}</span>
                       </label>
                     </li>

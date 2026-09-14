@@ -3,6 +3,7 @@ import type { SetColorRulesApi } from "../color-coding/use-set-color-rules.js";
 import { useColorRuleEditor } from "../color-coding/use-color-rule-editor.js";
 
 import type { TestCaseProjection } from "../../domain/test-management/test-case-projection.js";
+import { outcomeDisplay } from '../../domain/test-management/outcome-display.js';
 import type { WorkItem } from "../../domain/work-items/work-item.js";
 import {
   FilterBar,
@@ -258,6 +259,7 @@ function facet<T>(
     kind,
     label,
     options: buildFacetOptions(values, rows, readValues),
+    ...(kind === 'lastOutcomes' ? { formatValue: (value: string) => outcomeDisplay(value).label } : {}),
     selected: selected ?? []
   };
 }

@@ -97,7 +97,7 @@ export function MatrixTable({ snapshot, config, groups, pending, blocked, stale,
                         <MatrixCell projection={projection} pointCount={snapshot.pointCounts[key] ?? 0}
                           pending={pending.has(key)} missingSuite={!source.suite} ambiguous={source.ambiguous} missingSuiteReason={source.reason}
                           sourceDescription={source.suite ? `${source.suite.path} · Suite #${source.suite.id}` : undefined}
-                          readOnlyReason={stale ? 'Angezeigter Stand veraltet. Bitte die Matrix vor weiteren Änderungen aktualisieren.' : blocked?.has(key) ? 'Der angelegte Durchlauf ist nicht bestätigt. Bitte diesen Durchlauf in Azure prüfen.' : undefined}
+                          readOnlyReason={stale ? 'Angezeigter Stand veraltet. Bitte die Matrix vor weiteren Änderungen aktualisieren.' : blocked?.has(key) ? 'Die letzte Statusänderung ist nicht bestätigt. Bitte Azure prüfen und die Ansicht aktualisieren.' : undefined}
                           onConfigure={onConfigure}
                           onChange={outcome => {
                             if (projection?.testPointId) void record({

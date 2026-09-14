@@ -648,7 +648,7 @@
   color: var(--color-text);
 }
 
-.relations-view-outcome-chip-failed,
+.relations-view-outcome-chip-notapplicable,
 .relations-view-type-chip-bug,
 .relations-view-state-chip-active,
 .relations-view-state-chip-committed,
@@ -766,4 +766,15 @@
 .relations-view-card[data-color-rule-color] {
   border-left: var(--space-1) solid var(--color-rule-applied);
   background: color-mix(in srgb, var(--color-rule-applied) 9%, var(--color-surface));
+}
+
+.relations-view-outcome-chip-active {
+  border-color: var(--color-rule-blue);
+  background: color-mix(in srgb, var(--color-rule-blue) 18%, var(--color-surface-elevated));
+  color: var(--color-text);
+}
+.relations-view-outcome-chip-failed {
+  border-color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 18%, var(--color-surface-elevated));
+  color: var(--color-text);
 }

@@ -69,7 +69,7 @@ export function TestCaseCard(props: TestCaseCardProps): React.ReactElement {
       )}
       <span
         className={`relations-view-outcome-chip relations-view-outcome-chip-${display.slug}`}
-        aria-label={`Outcome: ${projection.lastOutcome || "Unknown"}`}
+        aria-label={`Outcome: ${display.label}`}
       >
         {display.shortLabel}
       </span>
@@ -103,7 +103,7 @@ export function TestCaseCard(props: TestCaseCardProps): React.ReactElement {
 function buildTooltip(p: TestCaseProjection): string {
   const lines = [
     `#${p.workItemId} — ${p.title}`,
-    `Outcome: ${p.lastOutcome || "—"}`,
+    `Outcome: ${outcomeDisplay(p.lastOutcome).label}`,
     `State: ${p.state || "—"}`,
     `Assigned: ${p.assignedTo ?? "—"}`,
     `Suite: ${p.suitePath}`

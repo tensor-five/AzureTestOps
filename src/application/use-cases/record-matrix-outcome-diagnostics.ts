@@ -1,4 +1,4 @@
-export type MatrixWriteStage = 'validate-target' | 'create-run' | 'find-result' | 'complete-result' | 'complete-run' | 'confirm-run' | 'confirm-projection';
+export type MatrixWriteStage = 'validate-target' | 'create-run' | 'find-result' | 'complete-result' | 'complete-run' | 'confirm-run' | 'confirm-projection' | 'reset-point' | 'confirm-active-point';
 type EventKind = 'start' | 'complete' | 'error';
 type FieldName = 'planId' | 'suiteId' | 'workItemId' | 'pointId' | 'runId' | 'resultId'
     | 'caseCount' | 'pointCount' | 'resultCount' | 'matchingResultCount' | 'runCount' | 'projectionCount'
@@ -12,7 +12,7 @@ export interface MatrixWriteDiagnostics {
 
 const numericFields = new Set<FieldName>(['planId', 'suiteId', 'workItemId', 'pointId', 'runId', 'resultId', 'caseCount', 'pointCount', 'resultCount', 'matchingResultCount', 'runCount', 'projectionCount', 'lastRunId', 'lastResultId', 'testPointId', 'httpStatus']);
 const booleanFields = new Set<FieldName>(['caseFound', 'runFound', 'projectionFound', 'pointMatches', 'outcomeMatches', 'runMatches', 'resultMatches']);
-const outcomes = new Set(['Passed', 'Failed', 'Blocked', 'NotApplicable', 'Inconclusive', 'Unspecified', 'NotRun', 'Paused']);
+const outcomes = new Set(['Passed', 'Failed', 'Blocked', 'NotApplicable', 'Inconclusive', 'Unspecified', 'NotRun', 'Paused', 'ResetToActive']);
 const states = new Set(['Unspecified', 'NotStarted', 'InProgress', 'Waiting', 'Completed', 'Aborted', 'NeedsInvestigation']);
 
 /** A fixed allowlist keeps diagnostics independent of credentials and Azure text. */
@@ -34,7 +34,7 @@ export function createOutcomeDiagnostics(sink?: MatrixWriteDiagnostics) {
                 }
             }
             if (error instanceof Error) {
-                const match = /^(?:Azure konnte den Testlauf nicht speichern \(HTTP ([1-5]\d{2})\)\.|(?:SUITE_TREE|TEST_CASES|POINTS|RUNS|RESULTS)_HTTP_([1-5]\d{2}))$/.exec(error.message);
+                const match = /^(?:Azure konnte den Testlauf nicht speichern \(HTTP ([1-5]\d{2})\)\.|(?:SUITE_TREE|TEST_CASES|POINTS|RUNS|RESULTS|POINT_RESET)_HTTP_([1-5]\d{2}))$/.exec(error.message);
                 if (match) fields.httpStatus = Number(match[1] ?? match[2]);
             }
             sink.event({ stage, event, fields });

@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createRoot } from "react-dom/client";
 
 import { FilterBar, toggleStringList, type FilterFacet } from "./filter-bar.js";
+import { outcomeDisplay } from '../../domain/test-management/outcome-display.js';
 
 let cleanup: (() => void) | null = null;
 
@@ -51,6 +52,29 @@ function bar(overrides: Partial<React.ComponentProps<typeof FilterBar>> = {}): R
 }
 
 describe("FilterBar", () => {
+  it('displays and searches Active while toggles and bulk selection preserve the raw outcome', () => {
+    const onToggle = vi.fn(), onReplace = vi.fn();
+    const container = render(bar({
+      facets: [{ kind: 'lastOutcomes', label: 'Outcome', selected: ['Unspecified'],
+        options: [{ value: 'Unspecified', count: 3 }, { value: 'Failed', count: 1 }],
+        formatValue: value => outcomeDisplay(value).label }],
+      onToggleFacetValue: onToggle, onReplaceFacetValues: onReplace,
+    }));
+    const chip = container.querySelector<HTMLButtonElement>('.filter-bar-active-chip')!;
+    expect(chip.textContent).toBe('Active×');
+    expect(chip.getAttribute('aria-label')).toBe('Remove Outcome filter Active');
+    act(() => chip.click());
+    expect(onToggle).toHaveBeenCalledWith('lastOutcomes', 'Unspecified');
+    act(() => container.querySelector<HTMLButtonElement>('.filter-bar-toggle')?.click());
+    setReactInputValue(container.querySelector<HTMLInputElement>('.filter-bar-facet-search')!, 'active');
+    expect(container.querySelector('.filter-bar-facet-option-label')?.textContent).toBe('Active');
+    expect(container.querySelectorAll('.filter-bar-facet-option')).toHaveLength(1);
+    act(() => container.querySelector<HTMLInputElement>('.filter-bar-facet-option input')?.click());
+    expect(onToggle).toHaveBeenLastCalledWith('lastOutcomes', 'Unspecified');
+    act(() => container.querySelector<HTMLButtonElement>('.filter-bar-facet-bulk')?.click());
+    expect(onReplace).toHaveBeenCalledWith('lastOutcomes', []);
+    expect(container.textContent).not.toContain('Unspecified');
+  });
   it("forwards search changes and clears the query from the inline button", () => {
     const onTitleQueryChange = vi.fn();
     const container = render(bar({ titleQuery: "login", onTitleQueryChange }));
