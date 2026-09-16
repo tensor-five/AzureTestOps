@@ -8,17 +8,24 @@ import { useReleaseMatrix } from './use-release-matrix.js';
 import { MatrixTable } from './matrix-table.js';
 import { MatrixSettings } from './matrix-settings.js';
 import './release-matrix.css';
-export function ReleaseMatrixPane({ setId, planId, rootSuiteId, contextIdentity, getWorkItemHref }: {
+export type MatrixRefreshState = { refresh(): void; loading: boolean; pending: boolean; lastUpdatedAt: number | null };
+export function ReleaseMatrixPane({ setId, planId, rootSuiteId, contextIdentity, getWorkItemHref, onRefreshStateChange }: {
     setId: string;
     planId: number;
     rootSuiteId: number;
     contextIdentity?: string;
     getWorkItemHref?: (workItemId: number) => string | null;
+    onRefreshStateChange?: (state: MatrixRefreshState | null) => void;
 }) {
     const ports = useClientPorts();
     const model = useReleaseMatrix(setId, planId, rootSuiteId, ports.releaseMatrix, contextIdentity);
     const { config, snapshot, update } = model;
     const [settings, setSettings] = React.useState(false);
+    React.useEffect(() => {
+        onRefreshStateChange?.({ refresh: () => { void model.reload(); }, loading: model.loading,
+            pending: model.pending.size > 0, lastUpdatedAt: model.lastUpdatedAt });
+    }, [onRefreshStateChange, model.reload, model.loading, model.pending.size, model.lastUpdatedAt]);
+    React.useEffect(() => () => onRefreshStateChange?.(null), [onRefreshStateChange]);
     const groups = snapshot ? matrixGroups(snapshot, config) : [];
     const columns = config.columns.filter(c => c.visible);
     const hasVersionSelection = snapshot ? visibleVersionColumns(snapshot, config).length > 0 : columns.some(column=>column.versionSuiteId>0);
@@ -37,7 +44,6 @@ export function ReleaseMatrixPane({ setId, planId, rootSuiteId, contextIdentity,
       <label>In Testsuite<select aria-label="In Testsuite" value={config.suiteFilter} onChange={e => update({ suiteFilter: e.target.value })}><option value="">Alle Testsuites</option>{snapshot?.suites.map(s => <option key={s.id} value={s.id}>{s.path} (#{s.id})</option>)}</select></label>
       <button type="button" onClick={() => update({ search: '', tagFilter: '', suiteFilter: '' })}>Filter zurücksetzen</button>
       <button type="button" onClick={() => setSettings(v => !v)} aria-expanded={settings}>Spalten &amp; Gruppierung</button>
-      <button type="button" disabled={model.loading || model.pending.size > 0} onClick={() => void model.reload()}>Matrix aktualisieren</button>
     </div>
     <NotificationToast notification={model.notification}/>
     {model.pending.size > 0 && <div role="status">Neuer Durchlauf wird gespeichert …</div>}

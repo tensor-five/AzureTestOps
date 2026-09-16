@@ -1,4 +1,5 @@
 import * as React from "react";
+import { LastUpdatedLabel } from "./last-updated-label.js";
 
 import {
   iconForThemeMode,
@@ -33,6 +34,7 @@ export type AppHeaderProps = {
   viewSwitcher?: React.ReactNode;
   refreshControl?: React.ReactNode;
   magicSortAction?: React.ReactNode;
+  lastUpdatedAt?: number | null;
 };
 
 /**
@@ -46,6 +48,7 @@ export function AppHeader(props: AppHeaderProps): React.ReactElement {
       <div className="ui-shell-brand-row">
         <div className="ui-shell-brand">
           <h1>AzureTestOps</h1>
+          <LastUpdatedLabel timestamp={props.lastUpdatedAt ?? null} />
         </div>
       </div>
       <div className="ui-shell-header-actions">
