@@ -10,6 +10,8 @@ The eight theme-aware preset colors remain available in the Color dropdown. The 
 
 Rule rows have keyboard-operable Up/Down controls and announce moves to assistive technology. The ordered rule list remains the saved precedence: the first matching rule colors each card. For each rule, the editor shows raw matches, the number actually colored after earlier rules take precedence, and any overlap; counts use the items remaining after the active column filters. The editor scrolls internally when many rules are present so the cards stay reachable. An optional 60-character label is saved with each rule. In the Work Items column, the winning rule's label appears at the far right of a colored Bug card; rules without a saved label show their literal value. One switch in the Work Items color panel hides or shows all Bug labels for the active Set, with visible as the default. The switch only changes label visibility, not the rule color or matching behavior.
 
+Bug cards keep labels at the right edge of the title row. Long titles truncate with an ellipsis before labels lose space; longer labels wrap within their own pill when a narrow column requires it.
+
 Rules are personal to the active Set. The legacy-named Bug list applies to all Work Item cards. Preset and custom colors tint the card and add a rail; status/outcome chips and relation conflict styling remain independent. The applied rule is exposed in the card tooltip and accessible description.
 
 ## C4 component view
