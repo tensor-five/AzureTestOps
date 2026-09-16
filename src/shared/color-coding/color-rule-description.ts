@@ -17,5 +17,6 @@ const COMPARISON_LABELS: Record<ColorRule["comparison"], string> = {
 /** The same explanation is used by card tooltips and assistive technology. */
 export function describeColorRule(rule: ColorRule | undefined): string | undefined {
   if (!rule) return undefined;
-  return `Color rule: ${FIELD_LABELS[rule.field]} ${COMPARISON_LABELS[rule.comparison]} “${rule.value}” (${colorRuleColorLabel(rule.color)})`;
+  const name = rule.label?.trim();
+  return `Color rule${name ? ` “${name}”` : ""}: ${FIELD_LABELS[rule.field]} ${COMPARISON_LABELS[rule.comparison]} “${rule.value}” (${colorRuleColorLabel(rule.color)})`;
 }

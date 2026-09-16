@@ -22,4 +22,11 @@ describe("color rule preference sanitizing", () => {
       .map((color, index) => ({ ...rule, id: `invalid-${index}`, color }));
     expect(sanitizeSetColorRules({ testCases: [custom, ...invalid] })).toEqual({ testCases: [custom] });
   });
+  it("keeps rule names and the shared label visibility setting per set", () => {
+    expect(sanitizeSetColorRules({ bugs: [{ ...rule, label: "  Login-Probleme  " }], showBugLabels: false }))
+      .toEqual({ bugs: [{ ...rule, label: "Login-Probleme" }], showBugLabels: false });
+    expect(sanitizeSetColorRules({ showBugLabels: true })).toEqual({ showBugLabels: true });
+    expect(sanitizeSetColorRules({ bugs: [{ ...rule, label: "   " }], showBugLabels: "false" }))
+      .toEqual({ bugs: [rule] });
+  });
 });

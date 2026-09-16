@@ -11,7 +11,9 @@ const initialRule: ColorRule = { id: "login", field: "title", comparison: "conta
 
 function StatefulRow(): React.ReactElement {
   const [rule, setRule] = React.useState(initialRule);
-  return <ColorRuleRow rule={rule} index={0} onChange={setRule} onDelete={() => {}} />;
+  return <ColorRuleRow rule={rule} index={0} count={{ matches: 0, applied: 0 }}
+    canMoveUp={false} canMoveDown={false} onMoveUp={() => {}} onMoveDown={() => {}}
+    onChange={setRule} onDelete={() => {}} />;
 }
 
 describe("color rule custom color editor", () => {

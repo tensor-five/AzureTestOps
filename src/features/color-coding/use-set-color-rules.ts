@@ -8,7 +8,9 @@ export type SetColorRulesApi = {
   scopeKey: string | null;
   testCases: readonly ColorRule[];
   bugs: readonly ColorRule[];
-  setRules(column: keyof SetColorRules, rules: ColorRule[]): void;
+  showBugLabels: boolean;
+  setRules(column: "testCases" | "bugs", rules: ColorRule[]): void;
+  setShowBugLabels(showBugLabels: boolean): void;
 };
 
 export function useSetColorRules(setId: string | null): SetColorRulesApi {
@@ -21,16 +23,23 @@ export function useSetColorRules(setId: string | null): SetColorRulesApi {
     if (state.setId !== setId) setState({ setId, value: load(setId) });
   }, [setId, state.setId]);
 
-  const setRules = React.useCallback((column: keyof SetColorRules, rules: ColorRule[]) => {
+  const update = React.useCallback((patch: Partial<SetColorRules>) => {
     if (!setId) return;
-    const value = { ...current.current.value, [column]: rules };
+    const value = { ...current.current.value, ...patch };
     const next = { setId, value };
     current.current = next;
     setState(next);
     colorRulePreferenceStore.save(value, { scopeKey: setId });
   }, [setId]);
 
-  return { scopeKey: setId, testCases: scoped.value.testCases ?? EMPTY_RULES, bugs: scoped.value.bugs ?? EMPTY_RULES, setRules };
+  const setRules = React.useCallback((column: "testCases" | "bugs", rules: ColorRule[]) => {
+    update({ [column]: rules });
+  }, [update]);
+
+  const setShowBugLabels = React.useCallback((showBugLabels: boolean) => update({ showBugLabels }), [update]);
+
+  return { scopeKey: setId, testCases: scoped.value.testCases ?? EMPTY_RULES, bugs: scoped.value.bugs ?? EMPTY_RULES,
+    showBugLabels: scoped.value.showBugLabels !== false, setRules, setShowBugLabels };
 }
 
 function load(setId: string | null): SetColorRules {
