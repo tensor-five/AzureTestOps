@@ -102,3 +102,37 @@ test("the rule controls and the right-edge label fit a narrow work item column",
     - element.querySelector(".relations-view-card-rule-label")!.getBoundingClientRect().right);
   expect(rightGap).toBeLessThanOrEqual(20);
 });
+
+test("a long title shortens while the complete label stays on the same row", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.getByRole("button", { name: /^Work Items/ }).click();
+  await workItems(page).getByRole("button", { name: "Toggle Work items color rules" }).click();
+  const longLabel = "KundenrelevanterSynchronisierungsfehlerBeiDerAnmeldung";
+  await addRule(page, "Title", "Login", longLabel);
+  const card = workItemCard(page, 501);
+  await card.locator(".relations-view-card-title").evaluate(element => {
+    element.textContent = "Anmeldung schlägt nach einer sehr langen Synchronisierung wiederholt fehl";
+  });
+
+  const label = card.locator(".relations-view-card-rule-label");
+  await expect(label).toHaveText(longLabel);
+  const metrics = await card.evaluate(element => {
+    const cardRect = element.getBoundingClientRect();
+    const labelElement = element.querySelector<HTMLElement>(".relations-view-card-rule-label")!;
+    const labelRect = labelElement.getBoundingClientRect();
+    const titleElement = element.querySelector<HTMLElement>(".relations-view-card-title")!;
+    const titleRect = titleElement.getBoundingClientRect();
+    return {
+      labelInside: labelRect.left >= cardRect.left && labelRect.right <= cardRect.right + 1,
+      labelUnclipped: labelElement.scrollWidth <= labelElement.clientWidth + 1
+        && labelElement.scrollHeight <= labelElement.clientHeight + 1,
+      labelWrapped: labelRect.height > 25,
+      titleTruncated: titleElement.scrollWidth > titleElement.clientWidth,
+      sameRow: Math.abs((titleRect.top + titleRect.bottom) / 2 - (labelRect.top + labelRect.bottom) / 2) < 1,
+      rightGap: cardRect.right - labelRect.right
+    };
+  });
+  expect(metrics).toEqual({ labelInside: true, labelUnclipped: true, labelWrapped: true,
+    titleTruncated: true, sameRow: true, rightGap: expect.any(Number) });
+  expect(metrics.rightGap).toBeLessThanOrEqual(20);
+});

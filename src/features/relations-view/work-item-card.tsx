@@ -25,6 +25,9 @@ export function WorkItemCard(props: WorkItemCardProps): React.ReactElement {
   const { workItem, onLinePointerDown, getWorkItemHref } = props;
   const colorRule = resolveColorRule(workItem, props.colorRules ?? []);
   const colorDescription = describeColorRule(colorRule);
+  const visibleRuleLabel = colorRule && workItem.workItemType.trim().toLowerCase() === "bug" && props.showBugLabels !== false
+    ? colorRuleVisibleLabel(colorRule)
+    : null;
   const itemKey = workItemItemKey(workItem.id);
   const typeSlug = workItemTypeSlug(workItem.workItemType);
   const stateLabel = workItem.state.trim();
@@ -105,12 +108,14 @@ export function WorkItemCard(props: WorkItemCardProps): React.ReactElement {
       >
         {stateLabel || "—"}
       </span>
-      <span className="relations-view-card-title">
-        <HighlightedText text={workItem.title} query={titleHighlightQuery} />
+      <span className="relations-view-card-content">
+        <span className="relations-view-card-title">
+          <HighlightedText text={workItem.title} query={titleHighlightQuery} />
+        </span>
+        {visibleRuleLabel ? (
+          <span className="relations-view-card-rule-label">{visibleRuleLabel}</span>
+        ) : null}
       </span>
-      {colorRule && workItem.workItemType.trim().toLowerCase() === "bug" && props.showBugLabels !== false ? (
-        <span className="relations-view-card-rule-label">{colorRuleVisibleLabel(colorRule)}</span>
-      ) : null}
     </article>
   );
 }
