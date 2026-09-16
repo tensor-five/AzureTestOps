@@ -18,6 +18,7 @@ export type WorkItemColumnProps = {
   unfilteredCount: number;
   filterBar?: React.ReactNode;
   colorRules?: readonly ColorRule[];
+  showBugLabels?: boolean;
   onLinePointerDown?: (itemKey: string, event: React.PointerEvent<HTMLElement>) => void;
   /** Persists the drag-and-drop ordering per Set; absent → fixed id sort. */
   order?: WorkItemOrderApi;
@@ -371,6 +372,7 @@ export function WorkItemColumn(props: WorkItemColumnProps): React.ReactElement {
               <li key={workItem.id} className={className} data-work-item-id={workItem.id}>
               <WorkItemCard
                 colorRules={props.colorRules}
+                showBugLabels={props.showBugLabels}
                 workItem={workItem}
                 onLinePointerDown={props.onLinePointerDown}
                 getWorkItemHref={props.getWorkItemHref}

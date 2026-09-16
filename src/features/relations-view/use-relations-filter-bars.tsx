@@ -22,14 +22,19 @@ export function useRelationsFilterBars(options: {
   colorRules: SetColorRulesApi;
   projections: readonly TestCaseProjection[];
   workItems: readonly WorkItem[];
+  matchingTestCases: readonly TestCaseProjection[];
+  matchingWorkItems: readonly WorkItem[];
   testCaseFacets: ReturnType<typeof extractTestCaseFacets>;
   workItemFacets: ReturnType<typeof extractWorkItemFacets>;
   visibleTestCaseCount: number;
   visibleWorkItemCount: number;
 }): { testCaseFilterBar: React.ReactElement; workItemFilterBar: React.ReactElement } {
   const { filters, colorRules } = options;
-  const testCaseColors = useColorRuleEditor({ label: "Test cases", scopeKey: colorRules.scopeKey, rules: colorRules.testCases, onChange: rules => colorRules.setRules("testCases", rules) });
-  const workItemColors = useColorRuleEditor({ label: "Work items", scopeKey: colorRules.scopeKey, rules: colorRules.bugs, onChange: rules => colorRules.setRules("bugs", rules) });
+  const testCaseColors = useColorRuleEditor({ label: "Test cases", scopeKey: colorRules.scopeKey, rules: colorRules.testCases,
+    subjects: options.matchingTestCases, onChange: rules => colorRules.setRules("testCases", rules) });
+  const workItemColors = useColorRuleEditor({ label: "Work items", scopeKey: colorRules.scopeKey, rules: colorRules.bugs,
+    subjects: options.matchingWorkItems, onChange: rules => colorRules.setRules("bugs", rules),
+    showLabels: colorRules.showBugLabels, onShowLabelsChange: colorRules.setShowBugLabels });
   const toggleTestCaseFacet = React.useCallback(
     (kind: FilterFacetKind, value: string) => {
       const current = filters.testCaseFilter;

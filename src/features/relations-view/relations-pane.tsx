@@ -123,6 +123,8 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
     colorRules,
     projections,
     workItems,
+    matchingTestCases: derived.filteredProjections,
+    matchingWorkItems: derived.filteredWorkItems,
     testCaseFacets: derived.testCaseFacets,
     workItemFacets: derived.workItemFacets,
     visibleTestCaseCount: derived.filteredProjections.length,
@@ -392,6 +394,7 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
         />
         <WorkItemColumn
           colorRules={colorRules.bugs}
+          showBugLabels={colorRules.showBugLabels}
           workItems={derived.filteredWorkItems}
           allWorkItems={props.snapshot.workItemsFromQuery}
           unfilteredCount={props.snapshot.workItemsFromQuery.length}

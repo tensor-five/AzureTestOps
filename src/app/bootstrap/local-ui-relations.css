@@ -591,6 +591,23 @@
   font-weight: var(--font-medium);
 }
 
+.relations-view-card-rule-label {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-left: auto;
+  padding: var(--space-0-5) var(--space-2);
+  border: 1px solid color-mix(in srgb, var(--color-rule-applied) 45%, var(--color-border));
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-rule-applied) 15%, var(--color-surface));
+  color: var(--color-text);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+}
+
 .relations-view-card-line-anchor {
   position: absolute;
   top: 0;

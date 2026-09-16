@@ -4,6 +4,7 @@ import { resolveColorRule, type ColorRule } from "../../domain/color-coding/colo
 import type { WorkItem } from "../../domain/work-items/work-item.js";
 import { describeColorRule } from "../../shared/color-coding/color-rule-description.js";
 import { customColorRuleStyle } from "../../shared/color-coding/color-rule-style.js";
+import { colorRuleVisibleLabel } from "../../shared/color-coding/color-rule-visible-label.js";
 import { exactWorkItemIdHighlightQuery, normalizeWorkItemSearchQuery } from "../../shared/search/exact-work-item-id-query.js";
 import { HighlightedText } from "../../shared/search/highlighted-text.js";
 import { FocusIcon } from "./focus-icon.js";
@@ -16,6 +17,7 @@ export type WorkItemCardProps = {
   getWorkItemHref?: (workItemId: number) => string | null;
   highlightQuery?: string;
   colorRules?: readonly ColorRule[];
+  showBugLabels?: boolean;
   onFocus?(): void;
 };
 
@@ -106,6 +108,9 @@ export function WorkItemCard(props: WorkItemCardProps): React.ReactElement {
       <span className="relations-view-card-title">
         <HighlightedText text={workItem.title} query={titleHighlightQuery} />
       </span>
+      {colorRule && workItem.workItemType.trim().toLowerCase() === "bug" && props.showBugLabels !== false ? (
+        <span className="relations-view-card-rule-label">{colorRuleVisibleLabel(colorRule)}</span>
+      ) : null}
     </article>
   );
 }
