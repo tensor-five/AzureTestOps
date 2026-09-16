@@ -18,9 +18,10 @@ type MatrixTableProps = {
   update(patch: Partial<MatrixConfig>): void;
   record(input: MatrixWrite): Promise<void>;
   onConfigure(): void;
+  getWorkItemHref?: (workItemId: number) => string | null;
 };
 
-export function MatrixTable({ snapshot, config, groups, pending, blocked, stale, update, record, onConfigure }: MatrixTableProps) {
+export function MatrixTable({ snapshot, config, groups, pending, blocked, stale, update, record, onConfigure, getWorkItemHref }: MatrixTableProps) {
   const columns = config.columns.filter(column => column.visible);
   const combined = config.separateEnvironments === false;
   const grouping = effectiveMatrixGrouping(config);
@@ -98,9 +99,14 @@ export function MatrixTable({ snapshot, config, groups, pending, blocked, stale,
                   </div>
                 </th>
               </tr>
-              {!collapsed && group.rows.map(row => (
-                <tr key={matrixRowKey(row)} data-matrix-row={matrixRowKey(row)}>
-                  <td className="matrix-case-id-cell" aria-label={`Testfall-ID ${row.workItemId}`}>#{row.workItemId}</td>
+              {!collapsed && group.rows.map(row => {
+                const href = getWorkItemHref?.(row.workItemId);
+                return <tr key={matrixRowKey(row)} data-matrix-row={matrixRowKey(row)}>
+                  <td className="matrix-case-id-cell" aria-label={`Testfall-ID ${row.workItemId}`}>
+                    {href ? <a href={href} target="_blank" rel="noreferrer noopener"
+                      aria-label={`Testfall #${row.workItemId} in Azure DevOps öffnen (neuer Tab)`}>#{row.workItemId}</a>
+                      : `#${row.workItemId}`}
+                  </td>
                   <th scope="row" className="matrix-case-title" title={`#${row.workItemId} ${row.title}`}>{row.title}</th>
                   {!combined && <td className="matrix-context-cell">{grouping === 'environment' ? row.content : row.environment}</td>}
                   {columns.map(column => {
@@ -125,8 +131,8 @@ export function MatrixTable({ snapshot, config, groups, pending, blocked, stale,
                       </td>
                     );
                   })}
-                </tr>
-              ))}
+                </tr>;
+              })}
             </tbody>
           );
         })}

@@ -8,11 +8,12 @@ import { useReleaseMatrix } from './use-release-matrix.js';
 import { MatrixTable } from './matrix-table.js';
 import { MatrixSettings } from './matrix-settings.js';
 import './release-matrix.css';
-export function ReleaseMatrixPane({ setId, planId, rootSuiteId, contextIdentity }: {
+export function ReleaseMatrixPane({ setId, planId, rootSuiteId, contextIdentity, getWorkItemHref }: {
     setId: string;
     planId: number;
     rootSuiteId: number;
     contextIdentity?: string;
+    getWorkItemHref?: (workItemId: number) => string | null;
 }) {
     const ports = useClientPorts();
     const model = useReleaseMatrix(setId, planId, rootSuiteId, ports.releaseMatrix, contextIdentity);
@@ -47,7 +48,7 @@ export function ReleaseMatrixPane({ setId, planId, rootSuiteId, contextIdentity 
     {snapshot && hasRows && !groups.length && !model.loading && !model.stale && <div className="matrix-empty">Keine Testfälle für diese Filter.</div>}
     {snapshot && columns.length > 0 && <MatrixTable
       snapshot={snapshot} config={config} groups={groups} pending={model.pending} blocked={model.blocked} stale={model.stale || model.loading}
-      update={update} record={model.record} onConfigure={() => setSettings(true)}
+      update={update} record={model.record} onConfigure={() => setSettings(true)} getWorkItemHref={getWorkItemHref}
     />}
   </section></MatrixTooltipProvider>;
 }

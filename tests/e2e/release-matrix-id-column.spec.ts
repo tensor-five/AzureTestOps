@@ -20,6 +20,10 @@ test('keeps ID, title and the selected row context in distinct ordered columns',
   await expect(row.getByRole('rowheader')).toHaveText('CSV importieren');
   await expect(row.locator('.matrix-case-id-cell')).toHaveText('#201');
   await expect(row.locator('.matrix-case-id-cell')).toHaveAttribute('aria-label', 'Testfall-ID 201');
+  const caseLink = row.getByRole('link', { name: 'Testfall #201 in Azure DevOps öffnen (neuer Tab)' });
+  await expect(caseLink).toHaveAttribute('href', 'https://dev.azure.com/contract-org/contract-project/_workitems/edit/201');
+  await expect(caseLink).toHaveAttribute('target', '_blank');
+  await expect(caseLink).toHaveAttribute('rel', 'noreferrer noopener');
   expect(await row.locator(':scope > *').evaluateAll(elements => elements.slice(0, 3).map(element => element.textContent?.trim()))).toEqual([
     '#201', 'CSV importieren', 'Regression'
   ]);
@@ -38,6 +42,20 @@ test('keeps ID, title and the selected row context in distinct ordered columns',
   expect(await combined.locator(':scope > *').evaluateAll(elements => elements.slice(0, 2).map(element => element.textContent?.trim()))).toEqual([
     '#201', 'CSV importieren'
   ]);
+  expect(server.azure().writes).toEqual([]);
+});
+
+test('uses the active set context for work-item links', async ({ page }) => {
+  await server.patch({ sets: [{
+    id: 'matrix-set', name: 'Matrix Set', planId: '1', rootSuiteId: '1', queryId: 'empty',
+    organization: 'set-org', project: 'Release Project'
+  }] });
+  await page.reload();
+  await open(page);
+
+  const caseLink = rows(page, 'TST', 'Regression', 201)
+    .getByRole('link', { name: 'Testfall #201 in Azure DevOps öffnen (neuer Tab)' });
+  await expect(caseLink).toHaveAttribute('href', 'https://dev.azure.com/set-org/Release%20Project/_workitems/edit/201');
   expect(server.azure().writes).toEqual([]);
 });
 

@@ -103,8 +103,10 @@ function HydratedAppShell(props: {
   const activeSet = setManagement.sets.find(set => set.id === setManagement.activeSetId);
   const matrixOrganization = activeSet?.organization ?? adoContextState.context?.organization;
   const matrixProject = activeSet?.project ?? adoContextState.context?.project;
-  const matrixContextIdentity = matrixOrganization && matrixProject
-    ? buildAdoBaseUrl({ organization: matrixOrganization, project: matrixProject }).toLowerCase() : undefined;
+  const matrixAdoContext = matrixOrganization && matrixProject
+    ? { organization: matrixOrganization, project: matrixProject } : null;
+  const matrixContextIdentity = matrixAdoContext
+    ? buildAdoBaseUrl(matrixAdoContext).toLowerCase() : undefined;
   // Matching reads the global ADO context; a set-bound matrix may intentionally use another one.
   const matchingContextIdentity = adoContextState.context
     ? buildAdoBaseUrl(adoContextState.context).toLowerCase() : undefined;
@@ -151,6 +153,10 @@ function HydratedAppShell(props: {
       ? (workItemId: number) => ports.workItemDeepLink.buildHref(context, workItemId)
       : undefined;
   }, [adoContextState.context, ports.workItemDeepLink]);
+
+  const getMatrixWorkItemHref = matrixAdoContext
+    ? (workItemId: number) => ports.workItemDeepLink.buildHref(matrixAdoContext, workItemId)
+    : undefined;
 
   const getSuiteHref = React.useMemo<((suiteId: number) => string | null) | undefined>(() => {
     const set = snapshotState.snapshot?.set;
@@ -221,6 +227,7 @@ function HydratedAppShell(props: {
           planId={Number(activeSet?.planId)}
           rootSuiteId={Number(activeSet?.rootSuiteId)}
           contextIdentity={matrixContextIdentity}
+          getWorkItemHref={getMatrixWorkItemHref}
         /> : <p>Wähle ein Set für die Release-Matrix.</p>)}
       </div>
       <AppFooter />
