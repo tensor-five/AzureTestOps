@@ -31,7 +31,15 @@
 .ui-shell-brand {
   display: inline-flex;
   align-items: center;
+  gap: var(--space-2);
   min-width: 0;
+}
+
+.ui-shell-last-updated {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--font-regular);
+  white-space: nowrap;
 }
 
 .ui-shell-brand h1 {

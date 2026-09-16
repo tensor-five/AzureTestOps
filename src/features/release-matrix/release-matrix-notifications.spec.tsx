@@ -6,6 +6,7 @@ import { matrixHierarchyFixture } from '../../../tests/fixtures/matrix-hierarchy
 import type { ReleaseMatrixClientPort } from '../../application/ports/client/release-matrix-client.port.js';
 import { ApiError } from '../../application/dto/api-error.js';
 import { ReleaseMatrixPane } from './release-matrix-pane.js';
+import type { MatrixRefreshState } from './release-matrix-pane.js';
 
 let port: ReleaseMatrixClientPort;
 let fixture: ReturnType<typeof matrixHierarchyFixture>;
@@ -25,11 +26,13 @@ async function mountMatrix(failure: boolean) {
       return {runId: 100, projection: {...projection, lastRunId:100, lastResultId:1000, lastOutcome:'Passed'}};
     })
   };
-  const view = render(<ReleaseMatrixPane setId="catalog" planId={1} rootSuiteId={10} contextIdentity={fixture.snapshot.contextIdentity}/>);
+  let refreshState: MatrixRefreshState | null = null;
+  const view = render(<ReleaseMatrixPane setId="catalog" planId={1} rootSuiteId={10} contextIdentity={fixture.snapshot.contextIdentity}
+    onRefreshStateChange={state => { refreshState = state; }}/>);
   await waitFor(() => expect(screen.queryByText('Matrix wird geladen …')).toBeNull());
   const select = [...view.container.querySelectorAll<HTMLSelectElement>('.matrix-cell-control select')].find(select => !select.disabled)!;
   expect(select).toBeDefined();
-  return {view, select};
+  return {view, select, refresh: () => (refreshState as MatrixRefreshState).refresh()};
 }
 
 describe('Matrix notification integration', () => {
@@ -49,11 +52,11 @@ describe('Matrix notification integration', () => {
   });
 
   it('announces repeated load failures again for five seconds', async () => {
-    await mountMatrix(false);
+    const {refresh} = await mountMatrix(false);
     vi.mocked(port.load).mockRejectedValue(new Error('Verbindung unterbrochen'));
     vi.useFakeTimers();
     for (let attempt = 0; attempt < 2; attempt++) {
-      await act(async () => fireEvent.click(screen.getByRole('button', {name:'Matrix aktualisieren'})));
+      await act(async () => refresh());
       expect(screen.getByRole('alert').textContent).toContain('Verbindung unterbrochen');
       act(() => vi.advanceTimersByTime(5000));
       expect(screen.queryByRole('alert')).toBeNull();

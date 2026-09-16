@@ -25,7 +25,7 @@ it.each([false, true])('shows a filter-membership failure through the notificati
   expect(view.container.querySelectorAll('.notification-toast')).toHaveLength(1);
   expect(screen.queryByText('Matrix wird geladen …')).toBeNull();
   expect(screen.queryByText('Keine Testfälle für diese Filter.')).toBeNull();
-  expect(screen.getByRole('button', { name: 'Matrix aktualisieren' })).not.toHaveProperty('disabled', true);
+  expect(screen.queryByRole('button', { name: 'Matrix aktualisieren' })).toBeNull();
   expect(port.load).toHaveBeenCalledTimes(1);
   expect(port.record).not.toHaveBeenCalled();
   if (port.loadMembership) expect(port.loadMembership).toHaveBeenCalledTimes(1);
