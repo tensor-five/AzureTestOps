@@ -1,6 +1,6 @@
-import { COLOR_RULE_COLORS, type ColorRuleColor } from "../../domain/color-coding/color-rule.js";
+import { COLOR_RULE_COLORS, isCustomColorRuleColor, type ColorRuleColor, type ColorRulePreset } from "../../domain/color-coding/color-rule.js";
 
-const COLOR_LABELS: Record<ColorRuleColor, string> = {
+const COLOR_LABELS: Record<ColorRulePreset, string> = {
   blue: "Blue",
   orange: "Orange",
   green: "Green",
@@ -17,5 +17,5 @@ export const COLOR_RULE_PALETTE = COLOR_RULE_COLORS.map(value => ({
 }));
 
 export function colorRuleColorLabel(color: ColorRuleColor): string {
-  return COLOR_LABELS[color];
+  return isCustomColorRuleColor(color) ? `Custom ${color.toUpperCase()}` : COLOR_LABELS[color];
 }

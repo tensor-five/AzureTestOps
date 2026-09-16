@@ -4,6 +4,7 @@ import { resolveColorRule, type ColorRule } from "../../domain/color-coding/colo
 
 import type { TestCaseProjection } from "../../domain/test-management/test-case-projection.js";
 import { describeColorRule } from "../../shared/color-coding/color-rule-description.js";
+import { customColorRuleStyle } from "../../shared/color-coding/color-rule-style.js";
 import { exactWorkItemIdHighlightQuery, normalizeWorkItemSearchQuery } from "../../shared/search/exact-work-item-id-query.js";
 import { HighlightedText } from "../../shared/search/highlighted-text.js";
 import { FocusIcon } from "./focus-icon.js";
@@ -48,6 +49,7 @@ export function TestCaseCard(props: TestCaseCardProps): React.ReactElement {
       data-relations-anchor="left"
       data-item-key={itemKey}
       data-color-rule-color={colorRule?.color}
+      style={customColorRuleStyle(colorRule?.color)}
       aria-description={colorDescription}
       title={[buildTooltip(projection), colorDescription].filter(Boolean).join("\n")}
     >

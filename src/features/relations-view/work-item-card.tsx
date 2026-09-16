@@ -3,6 +3,7 @@ import { resolveColorRule, type ColorRule } from "../../domain/color-coding/colo
 
 import type { WorkItem } from "../../domain/work-items/work-item.js";
 import { describeColorRule } from "../../shared/color-coding/color-rule-description.js";
+import { customColorRuleStyle } from "../../shared/color-coding/color-rule-style.js";
 import { exactWorkItemIdHighlightQuery, normalizeWorkItemSearchQuery } from "../../shared/search/exact-work-item-id-query.js";
 import { HighlightedText } from "../../shared/search/highlighted-text.js";
 import { FocusIcon } from "./focus-icon.js";
@@ -50,6 +51,7 @@ export function WorkItemCard(props: WorkItemCardProps): React.ReactElement {
       data-relations-anchor="right"
       data-item-key={itemKey}
       data-color-rule-color={colorRule?.color}
+      style={customColorRuleStyle(colorRule?.color)}
       aria-description={colorDescription}
       title={[buildTooltip(workItem), colorDescription].filter(Boolean).join("\n")}
     >

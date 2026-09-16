@@ -6,7 +6,9 @@ Approved behavior: [contract v1](../contracts/color-coding.v1.html), independent
 
 Each column has a palette icon immediately after its filter icon. Both editors start collapsed. Each rule has one field, comparison, literal value and color. Title supports Contains, Does not contain, Starts with and Equals; State and whole Tag support Equals. First match wins. Empty values do not match. Collapsing an editor retains both rules and applied colors.
 
-Rules are personal to the active Set. The Bug list only applies to Bug cards. The four theme-aware colors tint the card and add a rail; status/outcome chips and relation conflict styling remain independent. The applied rule is exposed in the card tooltip and accessible description.
+The eight theme-aware preset colors remain available in the Color dropdown. The adjacent custom-color control switches the rule to a native color picker and displays its exact six-digit hex value. The preset control returns to the palette. Custom colors are validated as `#RRGGBB`, saved with the rule through lowdb, and applied immediately to both the rule preview and matching cards. The tooltip and accessible description include the hex value.
+
+Rules are personal to the active Set. The legacy-named Bug list applies to all Work Item cards. Preset and custom colors tint the card and add a rail; status/outcome chips and relation conflict styling remain independent. The applied rule is exposed in the card tooltip and accessible description.
 
 ## C4 component view
 

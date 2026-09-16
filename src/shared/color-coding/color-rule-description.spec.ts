@@ -23,4 +23,8 @@ describe("color rule description", () => {
   it("adds no explanation when no rule applies", () => {
     expect(describeColorRule(undefined)).toBeUndefined();
   });
+  it("includes a custom color in the accessible rule description", () => {
+    expect(describeColorRule({ id: "custom", field: "title", comparison: "contains", value: "Login", color: "#3a7fc2" }))
+      .toBe("Color rule: Title contains “Login” (Custom #3A7FC2)");
+  });
 });
