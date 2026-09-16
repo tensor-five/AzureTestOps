@@ -310,12 +310,16 @@
   align-items: center;
 }
 .color-rule-color-field {
-  display: grid;
-  grid-template-columns: calc(var(--space-8) + var(--space-1)) minmax(0, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
   align-items: center;
   min-width: 0;
 }
+.color-rule-color-field select { flex: 1 1 5rem; }
+.color-rule-color-field input[type="color"] { width: calc(var(--space-8) + var(--space-1)); flex: 0 0 auto; padding: var(--space-1); cursor: pointer; }
+.color-rule-color-field .color-rule-hex { font-size: var(--text-xs); color: var(--color-text-secondary); }
+.color-rule-color-field button { flex: 0 0 auto; }
 .color-rule-preview {
   width: calc(var(--space-8) + var(--space-1));
   min-height: calc(var(--space-8) + var(--space-1));

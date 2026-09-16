@@ -1,5 +1,6 @@
 export const COLOR_RULE_COLORS = ["blue", "orange", "green", "violet", "red", "teal", "yellow", "gray"] as const;
-export type ColorRuleColor = typeof COLOR_RULE_COLORS[number];
+export type ColorRulePreset = typeof COLOR_RULE_COLORS[number];
+export type ColorRuleColor = ColorRulePreset | `#${string}`;
 
 /** Ordered, single-predicate presentation rules. No framework or persistence dependencies. */
 export type ColorRule = {
@@ -21,7 +22,11 @@ export function resolveColorRule(subject: ColorRuleSubject, rules: readonly Colo
 }
 
 export function isColorRuleColor(value: unknown): value is ColorRuleColor {
-  return typeof value === "string" && COLOR_RULE_COLORS.some(color => color === value);
+  return typeof value === "string" && (COLOR_RULE_COLORS.some(color => color === value) || isCustomColorRuleColor(value));
+}
+
+export function isCustomColorRuleColor(value: unknown): value is `#${string}` {
+  return typeof value === "string" && /^#[0-9a-fA-F]{6}$/.test(value);
 }
 
 function matchesColorRule(subject: ColorRuleSubject, rule: ColorRule): boolean {

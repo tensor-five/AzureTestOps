@@ -16,4 +16,10 @@ describe("color rule preference sanitizing", () => {
     const rules = colors.map((color, index) => ({ ...rule, id: `color-${index}`, color }));
     expect(sanitizeSetColorRules({ bugs: rules })).toEqual({ bugs: rules });
   });
+  it("persists valid custom hex colors and discards unsafe or incomplete values", () => {
+    const custom = { ...rule, id: "custom", color: "#3A7fC2" };
+    const invalid = ["#fff", "#1234567", "#12gg45", "red; color: blue", "var(--color-primary)"]
+      .map((color, index) => ({ ...rule, id: `invalid-${index}`, color }));
+    expect(sanitizeSetColorRules({ testCases: [custom, ...invalid] })).toEqual({ testCases: [custom] });
+  });
 });

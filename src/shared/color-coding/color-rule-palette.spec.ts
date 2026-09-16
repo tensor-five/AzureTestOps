@@ -17,4 +17,7 @@ describe("color rule palette", () => {
       COLOR_RULE_PALETTE.map(color => color.label)
     );
   });
+  it("describes custom colors with their hex value", () => {
+    expect(colorRuleColorLabel("#3a7fc2")).toBe("Custom #3A7FC2");
+  });
 });
