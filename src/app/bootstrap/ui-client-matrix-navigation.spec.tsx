@@ -42,7 +42,7 @@ async function fixture(setContext: {organization?: string; project?: string} = {
         relationMutations: { add, remove: vi.fn(async () => {}) },
         workItemDeepLink: { buildHref: () => '#case' }, testSuiteDeepLink: { buildHref: () => '#suite' },
     });
-    ports.releaseMatrix = { load: async () => ({ ...matrix, contextIdentity: 'https://dev.azure.com/contract-org/contract-project' }), record: vi.fn() };
+    ports.releaseMatrix = { load: vi.fn(async () => ({ ...matrix, contextIdentity: 'https://dev.azure.com/contract-org/contract-project' })), record: vi.fn() };
     installUserPreferencesPort(ports.userPreferences);
     let view!: ReturnType<typeof render>;
     await act(async () => { view = render(<WithClientPorts ports={ports}><AppShell /></WithClientPorts>); });
@@ -52,6 +52,27 @@ async function fixture(setContext: {organization?: string; project?: string} = {
 }
 
 describe('App navigation retains matching mutations', () => {
+    it('uses the header refresh for the matrix and shows the current view update time', async () => {
+        const f = await fixture();
+        const matchingTime = f.view.container.querySelector<HTMLTimeElement>('.ui-shell-brand time');
+        expect(matchingTime?.dateTime).toBe(new Date(f.snapshot.loadedAt).toISOString());
+        const subscribe = vi.mocked(f.ports.activeSetSnapshot.subscribe);
+        expect(subscribe).toHaveBeenCalledTimes(1);
+
+        await act(async () => { fireEvent.click(screen.getByRole('button', {name: 'Release-Matrix'})); });
+        await waitFor(() => expect(screen.getByRole<HTMLButtonElement>('button', {name: 'Refresh release matrix'}).disabled).toBe(false));
+        expect(screen.queryByRole('button', {name: 'Matrix aktualisieren'})).toBeNull();
+        expect(f.view.container.querySelector('.ui-shell-brand time')?.textContent).toContain('Aktualisiert');
+        const load = vi.mocked(f.ports.releaseMatrix!.load);
+        expect(load).toHaveBeenCalledTimes(1);
+
+        await act(async () => { fireEvent.click(screen.getByRole('button', {name: 'Refresh release matrix'})); });
+        expect(load).toHaveBeenCalledTimes(2);
+        expect(subscribe).toHaveBeenCalledTimes(1);
+
+        await act(async () => { fireEvent.click(screen.getByRole('button', {name: 'Zuordnung'})); });
+        expect(f.view.container.querySelector<HTMLTimeElement>('.ui-shell-brand time')?.dateTime).toBe(new Date(f.snapshot.loadedAt).toISOString());
+    });
     it('does not synchronize a set-bound matrix into matching loaded from another global context', async () => {
         const f = await fixture({organization: 'other-org', project: 'other-project'});
         const projection = {...f.snapshot.projections.find(p => p.suiteId === 11 && p.workItemId === 201)!, lastOutcome: 'Unspecified', lastRunId: null, lastResultId: null};

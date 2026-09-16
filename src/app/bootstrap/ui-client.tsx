@@ -1,4 +1,4 @@
-import { ReleaseMatrixPane } from "../../features/release-matrix/release-matrix-pane.js";
+import { ReleaseMatrixPane, type MatrixRefreshState } from "../../features/release-matrix/release-matrix-pane.js";
 import { buildAdoBaseUrl } from "../../shared/azure-devops/azure-rest-client.js";
 import * as React from "react";
 import { createRoot } from "react-dom/client";
@@ -90,6 +90,7 @@ function HydratedAppShell(props: {
   const [view, setView] = React.useState<"matching" | "matrix">("matching");
   const [isSetManagerOpen, setSetManagerOpen] = React.useState(false);
   const [magicSortControl, setMagicSortControl] = React.useState<MagicSortController | null>(null);
+  const [matrixRefresh, setMatrixRefresh] = React.useState<MatrixRefreshState | null>(null);
 
   React.useEffect(() => {
     applyThemeMode(themeMode);
@@ -111,9 +112,15 @@ function HydratedAppShell(props: {
   const matchingContextIdentity = adoContextState.context
     ? buildAdoBaseUrl(adoContextState.context).toLowerCase() : undefined;
   const ports = useClientPorts();
+  const matchingScopeKey = JSON.stringify([setManagement.activeSetId, activeSet?.planId, matchingContextIdentity]);
   const { state: snapshotState, refresh: refreshSnapshot, applyOutcome } = useActiveSetSnapshot(
-    setManagement.activeSetId, JSON.stringify([setManagement.activeSetId, activeSet?.planId, matchingContextIdentity])
+    setManagement.activeSetId, matchingScopeKey
   );
+  const [matchingUpdate, setMatchingUpdate] = React.useState<{ scope: string; timestamp: number | null }>({ scope: '', timestamp: null });
+  React.useEffect(() => {
+    const timestamp = snapshotState.snapshot ? Date.parse(snapshotState.snapshot.loadedAt) : NaN;
+    if (Number.isFinite(timestamp)) setMatchingUpdate({ scope: matchingScopeKey, timestamp });
+  }, [matchingScopeKey, snapshotState.snapshot]);
 
   useMatrixOutcomeSync(ports.releaseMatrix, setManagement.activeSetId, Number(activeSet?.planId),
     matrixContextIdentity === matchingContextIdentity ? matchingContextIdentity : undefined, applyOutcome);
@@ -170,18 +177,18 @@ function HydratedAppShell(props: {
       <button
         type="button"
         className="relations-workspace-refresh-button"
-        onClick={refreshSnapshot}
-        disabled={!setManagement.activeSetId || snapshotState.isLoading}
-        aria-label="Refresh active set"
+        onClick={view === "matrix" ? matrixRefresh?.refresh : refreshSnapshot}
+        disabled={!setManagement.activeSetId || (view === "matrix" ? !matrixRefresh || matrixRefresh.loading || matrixRefresh.pending : snapshotState.isLoading)}
+        aria-label={view === "matrix" ? "Refresh release matrix" : "Refresh active set"}
       >
         <span aria-hidden="true">↻</span>
         <span>Refresh</span>
       </button>
-      <RefreshProgressBar
+      {view === "matching" && <RefreshProgressBar
         progress={snapshotState.progress}
         isLoading={snapshotState.isLoading}
         error={snapshotState.error}
-      />
+      />}
     </div>
   );
 
@@ -191,7 +198,8 @@ function HydratedAppShell(props: {
         preflightStatus={preflightStatus}
         themeMode={themeMode}
         onToggleTheme={handleThemeToggle}
-        refreshControl={view === "matching" ? refreshControl : null}
+        refreshControl={refreshControl}
+        lastUpdatedAt={view === "matrix" ? matrixRefresh?.lastUpdatedAt : matchingUpdate.scope === matchingScopeKey ? matchingUpdate.timestamp : null}
         magicSortAction={view === "matching" ? magicSortAction : null}
         viewSwitcher={<nav aria-label="Ansichten" className="matrix-navigation">
           <button type="button" aria-pressed={view === "matching"} onClick={() => setView("matching")}>Zuordnung</button>
@@ -228,6 +236,7 @@ function HydratedAppShell(props: {
           rootSuiteId={Number(activeSet?.rootSuiteId)}
           contextIdentity={matrixContextIdentity}
           getWorkItemHref={getMatrixWorkItemHref}
+          onRefreshStateChange={setMatrixRefresh}
         /> : <p>Wähle ein Set für die Release-Matrix.</p>)}
       </div>
       <AppFooter />

@@ -16,6 +16,7 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
     const [error, setError] = React.useState('');
     const [readNotification, setReadNotification] = React.useState<TransientNotification | null>(null);
     const [loading, setLoading] = React.useState(true);
+    const [lastUpdatedAt, setLastUpdatedAt] = React.useState<number | null>(null);
     const [membershipGeneration, setMembershipGeneration] = React.useState(0);
     const alive = React.useRef(true);
     const request = React.useRef(0);
@@ -53,6 +54,7 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
                 accepted.current = { store, readStartedAt, selectedKey };
                 setMembershipGeneration(version);
                 setSnapshot(store.applyConfirmations(value, readStartedAt));
+                setLastUpdatedAt(cached?.loadedAt ?? Date.now());
                 setError('');
             }
         }
@@ -106,5 +108,5 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
     return { config, update, snapshot: membership.snapshot, stale, error: [error, membership.error, mutationError, staleMessage].filter(Boolean).join(' '),
         notification,
         tagCatalog: tagCatalog.tags, loadTags: tagCatalog.load, tagsLoading: tagCatalog.loading,
-        status: mutation.status, loading: loading || membership.loading, pending: mutation.pending, blocked: mutation.blocked, record, reload };
+        status: mutation.status, loading: loading || membership.loading, pending: mutation.pending, blocked: mutation.blocked, record, reload, lastUpdatedAt };
 }
