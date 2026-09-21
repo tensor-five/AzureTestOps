@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { matrixHierarchyFixture } from '../../../tests/fixtures/matrix-hierarchy.js';
 import type { ReleaseMatrixClientPort } from '../../application/ports/client/release-matrix-client.port.js';
+import type { MatrixActionResult } from '../../application/dto/release-matrix.dto.js';
 import { ApiError } from '../../application/dto/api-error.js';
 import { ReleaseMatrixPane } from './release-matrix-pane.js';
 import type { MatrixRefreshState } from './release-matrix-pane.js';
@@ -36,6 +37,27 @@ async function mountMatrix(failure: boolean) {
 }
 
 describe('Matrix notification integration', () => {
+  it('does not render a saving hint while an outcome update is pending', async () => {
+    fixture = matrixHierarchyFixture();
+    const projection = fixture.snapshot.projections.find(p => p.suiteId === 22 && p.workItemId === 100)!;
+    projection.testPointId = 22100;
+    fixture.snapshot.pointCounts['22:100'] = 1;
+    let finishRecord: ((value: MatrixActionResult) => void) | undefined;
+    port = {
+      load: vi.fn(async () => fixture.snapshot),
+      record: vi.fn(() => new Promise<MatrixActionResult>(resolve => { finishRecord = resolve; }))
+    };
+    const view = render(<ReleaseMatrixPane setId="catalog" planId={1} rootSuiteId={10} contextIdentity={fixture.snapshot.contextIdentity}/>);
+    await waitFor(() => expect(screen.queryByText('Matrix wird geladen …')).toBeNull());
+    const select = [...view.container.querySelectorAll<HTMLSelectElement>('.matrix-cell-control select')].find(element => !element.disabled)!;
+
+    await act(async () => fireEvent.change(select, {target: {value:'Passed'}}));
+
+    expect(port.record).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Neuer Durchlauf wird gespeichert …')).toBeNull();
+    await act(async () => finishRecord?.({runId: 100, projection: {...projection, lastRunId:100, lastResultId:1000, lastOutcome:'Passed'}}));
+  });
+
   it.each([false, true])('removes the overlay after its deadline and preserves outcome/blocking state (error: %s)', async failure => {
     const {view, select} = await mountMatrix(failure);
     vi.useFakeTimers();
