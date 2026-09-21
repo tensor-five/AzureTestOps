@@ -46,7 +46,6 @@ export function ReleaseMatrixPane({ setId, planId, rootSuiteId, contextIdentity,
       <button type="button" onClick={() => setSettings(v => !v)} aria-expanded={settings}>Spalten &amp; Gruppierung</button>
     </div>
     <NotificationToast notification={model.notification}/>
-    {model.pending.size > 0 && <div role="status">Neuer Durchlauf wird gespeichert …</div>}
     {model.loading && <div role="status">Matrix wird geladen …</div>}
     {settings && snapshot && <MatrixSettings snapshot={snapshot} config={config} update={update}/>}
     {!hasVersionSelection && <div className="matrix-empty">Versionsspalten auswählen: Öffne „Spalten &amp; Gruppierung“ und wähle mindestens eine gültige Versions-Suite zum Anzeigen.</div>}
