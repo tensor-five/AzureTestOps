@@ -7,6 +7,7 @@ import { MatrixSourcePicker } from './matrix-source-picker.js';
 import { MatrixCell } from './matrix-cell.js';
 import { moveVisibleMatrixGroup } from './matrix-group-order.js';
 import { useMatrixTitleColumnResize } from './use-matrix-title-column-resize.js';
+import { focusAdjacentMatrixOutcome } from './matrix-outcome-navigation.js';
 
 type MatrixTableProps = {
   snapshot: MatrixSnapshot;
@@ -53,7 +54,11 @@ export function MatrixTable({ snapshot, config, groups, pending, blocked, stale,
 
   return (
     <div className="matrix-scroll" data-matrix-scroll="">
-      <table aria-label="Release-Matrix" style={tableStyle}>
+      <table aria-label="Release-Matrix" style={tableStyle} onKeyDown={event => {
+        if (event.key === 'Tab' && !event.altKey && !event.ctrlKey && !event.metaKey &&
+            event.target instanceof HTMLSelectElement && event.target.closest('.matrix-cell-control') &&
+            focusAdjacentMatrixOutcome(event.target, event.shiftKey ? -1 : 1)) event.preventDefault();
+      }}>
         <colgroup>
           <col className="matrix-id-col" />
           <col className="matrix-title-col" />
