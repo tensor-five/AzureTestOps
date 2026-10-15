@@ -38,6 +38,8 @@ import { registerRelationsRoutes } from "./routes/relations-routes.js";
 import { renderRootHtml } from "./bootstrap-html.js";
 import { writeFaviconSvg } from "./favicon-svg.js";
 import type { AdoRuntime } from "../composition/runtime.js";
+import type { ViewSnapshotCachePort } from '../../application/ports/view-snapshot-cache.port.js';
+import { InMemoryViewSnapshotCacheAdapter } from '../../adapters/persistence/memory/in-memory-view-snapshot-cache.adapter.js';
 
 const ADO_CSRF_HEADER = "x-ado-csrf-token";
 
@@ -62,6 +64,7 @@ export type HttpServerOptions = {
   azLoginRunner?: AzLoginRunner;
   preflightContext?: PreflightContext;
   distRootPath?: string;
+  snapshotCache?: ViewSnapshotCachePort;
 };
 
 const compiledFileDir = path.dirname(fileURLToPath(import.meta.url));
@@ -77,7 +80,8 @@ export function createHttpServer(options: HttpServerOptions): HttpServer {
     azLoginRunner,
     preflightContext: options.preflightContext,
     csrfToken,
-    distRootPath
+    distRootPath,
+    snapshotCache: options.snapshotCache ?? new InMemoryViewSnapshotCacheAdapter()
   });
 
   const server = createServer((req, res) => {
@@ -122,6 +126,7 @@ type RouterDeps = {
   preflightContext?: PreflightContext;
   csrfToken: string;
   distRootPath: string;
+  snapshotCache: ViewSnapshotCachePort;
 };
 
 type Router = (req: IncomingMessage, res: ServerResponse) => Promise<void>;
@@ -134,7 +139,8 @@ function buildRouter(deps: RouterDeps): Router {
     ? registerActiveSetSnapshotStreamRoute({
         ado: deps.deps.ado,
         setRepository: deps.deps.setRepository,
-        adoContext: deps.deps.adoContext
+        adoContext: deps.deps.adoContext,
+        snapshotCache: deps.snapshotCache
       })
     : null;
   const snapshotDebugRoute = deps.deps.ado
@@ -144,8 +150,8 @@ function buildRouter(deps: RouterDeps): Router {
         adoContext: deps.deps.adoContext
       })
     : null;
-  const matrixRoutes = deps.deps.ado ? registerReleaseMatrixRoutes(deps.deps.ado, deps.deps.setRepository) : null;
-  const relationsRoutes = deps.deps.ado ? registerRelationsRoutes(deps.deps.ado) : null;
+  const matrixRoutes = deps.deps.ado ? registerReleaseMatrixRoutes(deps.deps.ado, deps.deps.setRepository, deps.snapshotCache) : null;
+  const relationsRoutes = deps.deps.ado ? registerRelationsRoutes(deps.deps.ado, deps.snapshotCache) : null;
 
   return async function route(req, res) {
     const method = req.method ?? "GET";

@@ -22,6 +22,8 @@ Bei wiederverwendeten Ergebnissen steht „Gespeicherter Stand“ neben „Daten
 
 Die vorhandene Tabelle kann bis zum nächsten Refresh weiter angezeigt werden und entsprechend älter werden. Es gibt kein neues automatisches Polling. Ihr Alter bleibt im Header sichtbar. „Refresh“ liest Suites, Points, Work Items und Run-Liste erneut; innerhalb der Quellenfrist dürfen unveränderte abgeschlossene Ergebnisse wiederverwendet werden.
 
+Auch nach einem [Browser-Neuladen wird ein vorhandener vollständiger Server-Snapshot sofort angezeigt](reload-snapshot-preview.md), während ein frischer Read im Hintergrund läuft. Die hier beschriebene 60-Sekunden-Grenze betrifft die Ergebniswiederverwendung im frischen Read; der deutlich als alt gekennzeichnete vollständige Vorschau-Snapshot hat eigene, begrenzte Aufbewahrung.
+
 ## C4: Komponenten des Lesepfads
 
 ```mermaid

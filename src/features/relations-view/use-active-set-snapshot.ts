@@ -82,6 +82,14 @@ export function useActiveSetSnapshot(setId: string | null, scopeKey = setId): {
         setState((current) => ({ ...current, progress: event.progress }));
         return;
       }
+      if (event.type === 'cached') {
+        setState(current => current.snapshot ? current : { ...current, snapshot: {
+          ...event.snapshot,
+          freshness: { sourceReadAt: event.snapshot.freshness?.sourceReadAt ?? event.snapshot.loadedAt, cacheUsed: true },
+          projections: applyConfirmedOutcomes(event.snapshot.projections, outcomeUpdates.current)
+        } });
+        return;
+      }
       if (event.type === "result") {
         snapshotScope.current = scopeKey;
         setState((current) => ({

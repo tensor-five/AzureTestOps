@@ -6,7 +6,11 @@ test.beforeAll(async()=>{server=await startMatrixServer();});
 test.afterAll(async()=>{await server?.close();});
 test.beforeEach(async({page})=>{await server.reset();await page.goto(server.origin);});
 test('returning to the matrix reuses its recent read and explicit refresh gets current Azure data',async({page})=>{
- let reads=0;page.on('request',r=>{if(/\/release-matrix\?/.test(r.url()))reads++;});
+ let reads=0;page.on('request',r=>{
+  const url=new URL(r.url());
+  // Cache-only previews are Azure-free; count only complete matrix reads.
+  if(r.method()==='GET'&&/\/release-matrix$/.test(url.pathname)&&url.searchParams.get('cache')!=='only')reads++;
+ });
  await open(page);await expect(outcome(page,'TST','Regression',201)).toHaveValue('Failed');
  await page.getByRole('button',{name:'Zuordnung',exact:true}).click();await open(page);
  await expect(outcome(page,'TST','Regression',201)).toHaveValue('Failed');expect(reads).toBe(1);

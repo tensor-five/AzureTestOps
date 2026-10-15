@@ -7,6 +7,7 @@ import type { SnapshotProgressEvent } from "../../use-cases/load-active-set-snap
  * underlying transport (SSE today) into these typed events.
  */
 export type ActiveSetSnapshotStreamEvent =
+  | { type: "cached"; snapshot: ActiveSetSnapshot }
   | { type: "progress"; progress: SnapshotProgressEvent }
   | { type: "result"; snapshot: ActiveSetSnapshot }
   | { type: "error"; message: string };

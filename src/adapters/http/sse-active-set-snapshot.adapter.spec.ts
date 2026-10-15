@@ -98,6 +98,33 @@ describe("SseActiveSetSnapshotAdapter", () => {
     expect(events).toHaveLength(count);
   });
 
+  it('forwards cached previews while leaving the stream and diagnostics open for the fresh result', () => {
+    const log = vi.spyOn(console, 'info').mockImplementation(() => {});
+    const events: ActiveSetSnapshotStreamEvent[] = [];
+    new SseActiveSetSnapshotAdapter().subscribe('set', event => events.push(event));
+    const source = StubEventSource.lastInstance!;
+    source.dispatch('cached', { snapshot: { set: { id: 'set' }, suiteTree: { id: 1 }, projections: [], workItemsFromQuery: [],
+      loadedAt: '2026-10-15T10:00:00Z', freshness: { sourceReadAt: '2026-10-15T09:59:00Z', cacheUsed: true } } });
+    expect(events[0]).toMatchObject({ type: 'cached', snapshot: { freshness: { sourceReadAt: '2026-10-15T09:59:00Z' } } });
+    expect(source.closed).toBe(false);
+    expect(log.mock.calls.map(call => call[1].event)).toEqual(['start']);
+    source.dispatch('progress', { stage: 'test-cases', done: 0, total: 1 });
+    source.dispatch('result', { snapshot: { set: { id: 'set' }, suiteTree: { id: 1 }, projections: [], workItemsFromQuery: [], loadedAt: '2026-10-15T10:01:00Z' } });
+    expect(events.map(event => event.type)).toEqual(['cached', 'progress', 'result']);
+    expect(source.closed).toBe(true);
+    expect(log.mock.calls.at(-1)?.[1].event).toBe('complete');
+  });
+
+  it('ignores malformed previews without suppressing later progress and errors', () => {
+    const events: ActiveSetSnapshotStreamEvent[] = [];
+    new SseActiveSetSnapshotAdapter().subscribe('set', event => events.push(event));
+    const source = StubEventSource.lastInstance!;
+    source.dispatch('cached', { snapshot: null });
+    source.dispatch('progress', { stage: 'context', done: 0, total: 1 });
+    source.dispatch('error', { message: 'Fresh read failed' });
+    expect(events.map(event => event.type)).toEqual(['progress', 'error']);
+  });
+
   it('cleans up diagnosis if EventSource construction fails without logging the exception', () => {
     const log = vi.spyOn(console, 'info').mockImplementation(() => {});
     vi.stubGlobal('EventSource', class { constructor() { throw new Error('private-token'); } });

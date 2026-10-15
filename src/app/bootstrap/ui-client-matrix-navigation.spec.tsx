@@ -29,7 +29,7 @@ vi.mock('../../features/relations-view/use-relation-mutations.js', async importO
         return result;
     } };
 });
-afterEach(() => { cleanup(); resetUserPreferencesCacheForTests(); localStorage.clear(); vi.restoreAllMocks(); });
+afterEach(() => { cleanup(); resetUserPreferencesCacheForTests(); localStorage.clear(); window.history.replaceState(null, '', '/'); vi.restoreAllMocks(); });
 
 async function fixture(setContext: {organization?: string; project?: string} = {}) {
     const { services, azure } = matrixTestServices();

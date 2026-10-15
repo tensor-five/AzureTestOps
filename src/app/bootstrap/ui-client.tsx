@@ -1,5 +1,6 @@
 import { ReleaseMatrixPane, type MatrixRefreshState } from "../../features/release-matrix/release-matrix-pane.js";
 import { snapshotDataTimestamp } from '../../shared/ui/snapshot-data-timestamp.js';
+import { useViewNavigation } from '../../features/navigation/use-view-navigation.js';
 import { buildAdoBaseUrl } from "../../shared/azure-devops/azure-rest-client.js";
 import * as React from "react";
 import { createRoot } from "react-dom/client";
@@ -88,7 +89,7 @@ function HydratedAppShell(props: {
       props.preferenceSyncStatus.loadError !== null
     )
   );
-  const [view, setView] = React.useState<"matching" | "matrix">("matching");
+  const { view, selectView, matchingVisited } = useViewNavigation();
   const [isSetManagerOpen, setSetManagerOpen] = React.useState(false);
   const [magicSortControl, setMagicSortControl] = React.useState<MagicSortController | null>(null);
   const [matrixRefresh, setMatrixRefresh] = React.useState<MatrixRefreshState | null>(null);
@@ -115,7 +116,7 @@ function HydratedAppShell(props: {
   const ports = useClientPorts();
   const matchingScopeKey = JSON.stringify([setManagement.activeSetId, activeSet?.planId, activeSet?.rootSuiteId, activeSet?.queryId, matchingContextIdentity]);
   const { state: snapshotState, refresh: refreshSnapshot, applyOutcome } = useActiveSetSnapshot(
-    setManagement.activeSetId, matchingScopeKey
+    matchingVisited ? setManagement.activeSetId : null, matchingScopeKey
   );
   const matchingTimestamp = snapshotDataTimestamp(snapshotState.snapshot?.freshness,
     snapshotState.snapshot ? Date.parse(snapshotState.snapshot.loadedAt) : null);
@@ -203,8 +204,8 @@ function HydratedAppShell(props: {
         cachedData={view === "matrix" ? matrixRefresh?.cachedData : snapshotState.snapshot?.freshness?.cacheUsed}
         magicSortAction={view === "matching" ? magicSortAction : null}
         viewSwitcher={<nav aria-label="Ansichten" className="matrix-navigation">
-          <button type="button" aria-pressed={view === "matching"} onClick={() => setView("matching")}>Zuordnung</button>
-          <button type="button" aria-pressed={view === "matrix"} onClick={() => setView("matrix")}>Release-Matrix</button>
+          <button type="button" aria-pressed={view === "matching"} onClick={() => selectView("matching")}>Zuordnung</button>
+          <button type="button" aria-pressed={view === "matrix"} onClick={() => selectView("matrix")}>Release-Matrix</button>
         </nav>}
         setSwitcher={
           <SetDropdown

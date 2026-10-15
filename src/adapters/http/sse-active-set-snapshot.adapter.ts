@@ -41,6 +41,18 @@ export class SseActiveSetSnapshotAdapter implements ActiveSetSnapshotClientPort 
       source.close();
     };
 
+    source.addEventListener("cached", (event) => {
+      if (closed) return;
+      try {
+        const payload = JSON.parse((event as MessageEvent).data) as { snapshot?: ActiveSetSnapshot };
+        const snapshot = payload.snapshot;
+        if (!snapshot?.set || !snapshot.suiteTree || !Array.isArray(snapshot.projections)
+          || !Array.isArray(snapshot.workItemsFromQuery) || typeof snapshot.loadedAt !== 'string') return;
+        diagnostics.addCount('snapshotPreviewHits');
+        onEvent({ type: "cached", snapshot });
+      } catch { /* An unusable preview never interrupts the authoritative fresh read. */ }
+    });
+
     source.addEventListener("progress", (event) => {
       if (closed) return;
       try {

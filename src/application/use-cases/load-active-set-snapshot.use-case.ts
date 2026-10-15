@@ -28,6 +28,8 @@ export type SnapshotProgressEvent = {
 };
 
 export type LoadActiveSetSnapshotInput = {
+  /** Immutable read configuration already resolved by the server composition. */
+  resolvedSet?: Set;
   /**
    * Override the active set. When omitted, the repository's active id is used;
    * the use case throws if neither is available.
@@ -80,7 +82,7 @@ export async function loadActiveSetSnapshot(
       throw new AdoContextMissingError();
     }
   }
-  const set = await resolveSet(input.setId, deps.setRepository);
+  const set = input.resolvedSet ?? await resolveSet(input.setId, deps.setRepository);
   onProgress({ stage: "context", done: 1, total: 1, message: set.name });
 
   const planId = parsePositiveInt(set.planId, "planId", set.id);
