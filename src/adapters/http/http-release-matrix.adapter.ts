@@ -10,7 +10,7 @@ export class HttpReleaseMatrixAdapter implements ReleaseMatrixClientPort {
             const query = new URLSearchParams();
             if (versionSuiteIds) query.set('versions', JSON.stringify(versionSuiteIds));
             if (flatVersionSuiteIds?.length) query.set('flatVersions', JSON.stringify(flatVersionSuiteIds));
-            const snapshot = await jsonFetch<MatrixSnapshot>(this.path(setId) + (query.size ? `?${query}` : ''), { method: 'GET', signal, headers: { 'x-matrix-request-id': requestId } });
+            const snapshot = await diagnostics.measure('response', {}, () => jsonFetch<MatrixSnapshot>(this.path(setId) + (query.size ? `?${query}` : ''), { method: 'GET', signal, headers: { 'x-matrix-request-id': requestId } }));
             diagnostics.progress({ planId: snapshot.planId, suiteCount: snapshot.suites.length, projectionCount: snapshot.projections.length });
             diagnostics.finish('complete');
             return snapshot;

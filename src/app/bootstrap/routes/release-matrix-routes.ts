@@ -1,6 +1,7 @@
 import { MatrixWriteHttpMetrics } from '../../../shared/azure-devops/matrix-write-http-metrics.js';
 import { randomUUID } from 'node:crypto';
 import { createMatrixReadDiagnostics } from '../../../shared/diagnostics/matrix-read-diagnostics.js';
+import { isViewReadRequestId } from '../../../shared/diagnostics/view-read-diagnostics.js';
 import { buildAdoBaseUrl } from "../../../shared/azure-devops/azure-rest-client.js";
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { AdoRuntime } from '../../composition/runtime.js';
@@ -29,7 +30,7 @@ export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepository
         let createdRunId: number | null = null;
         const reading = !match[2] && method === 'GET';
         const providedId = req.headers?.['x-matrix-request-id'];
-        const requestId = typeof providedId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(providedId) ? providedId : randomUUID();
+        const requestId = isViewReadRequestId(providedId) ? providedId : randomUUID();
         const writeStartedAt = performance.now();
         const writeMetrics = match[2] && method === 'POST' ? new MatrixWriteHttpMetrics() : undefined;
         const diagnostics = reading ? createMatrixReadDiagnostics(requestId, 'server') : undefined;

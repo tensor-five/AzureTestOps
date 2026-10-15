@@ -44,7 +44,7 @@ export type AdoRuntime = {
    * Resolved lazily on each call so a context change at runtime takes effect
    * without restarting the server.
    */
-  snapshotServices?(context: {organization: string; project: string}, signal: AbortSignal): Pick<LoadActiveSetSnapshotDeps,
+  snapshotServices?(context: {organization: string; project: string}, signal: AbortSignal, diagnostics?: MatrixReadDiagnostics): Pick<LoadActiveSetSnapshotDeps,
     'testManagement' | 'testCaseHydration' | 'workItemHydration' | 'savedQuery'>;
   resolveContext(): Promise<{ organization: string; project: string }>;
   testManagement(): Promise<TestManagementReadPort>;
@@ -126,8 +126,8 @@ export function buildRuntime(options: RuntimeOptions = {}): Runtime {
 
   const ado: AdoRuntime = {
     resolveContext,
-    snapshotServices: (context, signal) => {
-      const readClient = createMatrixReadHttpClient(httpClient, {signal});
+    snapshotServices: (context, signal, diagnostics) => {
+      const readClient = createMatrixReadHttpClient(httpClient, {signal, diagnostics});
       const workItemHydration = new AzureWorkItemHydrationAdapter(readClient, context);
       return {testManagement: new AzureTestManagementAdapter(readClient, context),
         workItemHydration,
