@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { readNumber, toTestPoint, toTestResult, toTestRun } from './test-management-mappers.js';
+
+it('preserves detailed run change markers and ignores unusable markers', () => {
+  expect(toTestRun({ id: 10, revision: '3', lastUpdatedDate: '2026-10-15T10:00:00Z' }, 1))
+    .toMatchObject({ revision: 3, lastUpdatedDate: '2026-10-15T10:00:00Z' });
+  const invalid = toTestRun({ id: 10, revision: 'invalid', lastUpdatedDate: 'not-a-date' }, 1);
+  expect(invalid).not.toHaveProperty('revision');
+  expect(invalid).not.toHaveProperty('lastUpdatedDate');
+});
 describe('shared Azure test mappings', () => {
   it('preserves explicit result completion and never infers it when absent', () => {
     const raw = { id: 5, testRun: { id: 10 }, testCase: { id: 201 }, outcome: 'Passed' };

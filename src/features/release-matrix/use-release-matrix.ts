@@ -1,4 +1,5 @@
 import { matrixSnapshotCache } from './matrix-snapshot-cache.js';
+import { snapshotDataTimestamp } from '../../shared/ui/snapshot-data-timestamp.js';
 import { useMatrixSuiteMembership } from './use-matrix-suite-membership.js';
 import { useMatrixTagCatalog } from './use-matrix-tag-catalog.js';
 import * as React from 'react';
@@ -17,6 +18,7 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
     const [readNotification, setReadNotification] = React.useState<TransientNotification | null>(null);
     const [loading, setLoading] = React.useState(true);
     const [lastUpdatedAt, setLastUpdatedAt] = React.useState<number | null>(null);
+    const [cachedData, setCachedData] = React.useState(false);
     const [membershipGeneration, setMembershipGeneration] = React.useState(0);
     const alive = React.useRef(true);
     const request = React.useRef(0);
@@ -38,7 +40,6 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
         activeRead.current = controller;
         const version = ++request.current;
         if (!background || reuseCache) setLoading(true);
-        if (!background) setSnapshot(null);
         try {
             if (!port)
                 throw new Error('Release-Matrix ist nicht verfügbar.');
@@ -57,7 +58,8 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
                 accepted.current = { store, readStartedAt, selectedKey };
                 setMembershipGeneration(version);
                 setSnapshot(store.applyConfirmations(value, readStartedAt));
-                setLastUpdatedAt(cached?.loadedAt ?? Date.now());
+                setLastUpdatedAt(snapshotDataTimestamp(value.freshness, cached?.loadedAt ?? (value.loadedAt ? Date.parse(value.loadedAt) : Date.now())));
+                setCachedData(Boolean(cached || value.freshness?.cacheUsed));
                 setError('');
             }
         }
@@ -111,5 +113,6 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
     return { config, update, snapshot: membership.snapshot, stale, error: [error, membership.error, mutationError, staleMessage].filter(Boolean).join(' '),
         notification,
         tagCatalog: tagCatalog.tags, loadTags: tagCatalog.load, tagsLoading: tagCatalog.loading,
-        status: mutation.status, loading: loading || membership.loading, pending: mutation.pending, blocked: mutation.blocked, record, reload, lastUpdatedAt };
+        status: mutation.status, loading: loading || membership.loading, pending: mutation.pending, blocked: mutation.blocked, record, reload, lastUpdatedAt,
+        cachedData, readFailed: Boolean(error || membership.error) };
 }

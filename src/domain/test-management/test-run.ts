@@ -8,4 +8,7 @@ export type TestRun = {
   totalTests: number;
   passedTests: number;
   isAutomated: boolean;
+  /** Optional change markers returned when detailed run metadata is available. */
+  revision?: number;
+  lastUpdatedDate?: string;
 };

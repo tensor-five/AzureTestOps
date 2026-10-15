@@ -3,12 +3,14 @@ import * as React from "react";
 import { act } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { createRoot } from "react-dom/client";
+import { fireEvent } from '@testing-library/react';
 
 import { RelationsPane } from "./relations-pane.js";
 import { clearSetLayoutPreferenceForTests } from "./set-layout-preference-store.js";
 import { clearSetFilterPreferenceForTests } from "../filters/set-filter-preference-store.js";
 import * as preferencesClient from "../../shared/user-preferences/user-preferences.client.js";
 import type { ActiveSetSnapshot } from "../../application/dto/active-set-snapshot.dto.js";
+import type { RelationLinkRequest } from '../../application/dto/relation-link.dto.js';
 import {
   WithClientPorts,
   buildClientPortsStub
@@ -96,6 +98,7 @@ function makeNestedSnapshot(): ActiveSetSnapshot {
 function render(ui: React.ReactElement): {
   container: HTMLDivElement;
   rerender(next: React.ReactElement): void;
+  removeRelation(link: RelationLinkRequest): Promise<void>;
   unmount(): void;
 } {
   clearSetLayoutPreferenceForTests();
@@ -103,6 +106,7 @@ function render(ui: React.ReactElement): {
   vi.spyOn(preferencesClient, "getCachedUserPreferences").mockReturnValue({});
   vi.spyOn(preferencesClient, "persistUserPreferencesPatch").mockReturnValue();
 
+  const removeRelation = vi.fn(async (_link: RelationLinkRequest) => undefined);
   const ports = buildClientPortsStub({
     adoContext: {
       getContext: async () => null,
@@ -111,7 +115,7 @@ function render(ui: React.ReactElement): {
     },
     relationMutations: {
       add: async () => undefined,
-      remove: async () => undefined
+      remove: removeRelation
     }
   });
 
@@ -123,6 +127,7 @@ function render(ui: React.ReactElement): {
   });
   return {
     container,
+    removeRelation,
     rerender: (next) => {
       act(() => {
         root.render(<WithClientPorts ports={ports}>{next}</WithClientPorts>);
@@ -139,6 +144,29 @@ function render(ui: React.ReactElement): {
 }
 
 describe("RelationsPane", () => {
+  it('keeps visible retained relations selectable and deletable during a refresh and after its read fails', async () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 160, 40));
+    const snapshot = makeSnapshot();
+    const pane = (isLoading: boolean, error: string | null, visibleSnapshot: ActiveSetSnapshot | null = snapshot) => (
+      <RelationsPane setId="set-1" snapshot={visibleSnapshot} isLoading={isLoading} error={error} hasActiveSet />
+    );
+    const harness = render(pane(false, null));
+    const line = () => harness.container.querySelector<SVGGElement>('.relations-view-line')!;
+    act(() => { fireEvent.pointerDown(line()); });
+    expect(line().classList.contains('relations-view-line-selected')).toBe(true);
+    harness.rerender(pane(true, null));
+    expect(line().classList.contains('relations-view-line-selected')).toBe(true);
+    harness.rerender(pane(false, 'Azure ist nicht erreichbar.'));
+    expect(line().classList.contains('relations-view-line-selected')).toBe(true);
+    act(() => { fireEvent.keyDown(window, { key: 'Escape' }); });
+    act(() => { fireEvent.pointerDown(line()); });
+    expect(line().classList.contains('relations-view-line-selected')).toBe(true);
+    await act(async () => { fireEvent.keyDown(window, { key: 'Delete' }); });
+    expect(harness.removeRelation).toHaveBeenCalledExactlyOnceWith({ sourceId: 101, targetId: 501 });
+    expect(harness.container.querySelector('.relations-view-line')).toBeNull();
+    harness.unmount();
+  });
+
   it("shows a 'select set' notice when no active set is configured", () => {
     const harness = render(
       <RelationsPane

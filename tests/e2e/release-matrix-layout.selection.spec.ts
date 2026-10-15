@@ -105,7 +105,7 @@ test('V4-S04 RM4-01 RM4-04 a selected suite leaving the plan removes its unique 
     await open(page);
     await expect(rows(page, 'TST', 'Data Import', 999)).toHaveCount(1);
     server.azure().foreignSuites.add(30);
-    await page.getByRole('button', { name: 'Matrix aktualisieren', exact: true }).click();
+    await page.getByRole('button', { name: 'Refresh release matrix', exact: true }).click();
     await expect(rows(page, 'TST', 'Data Import', 999)).toHaveCount(0);
     await expect(page.locator('[data-matrix-row]')).toHaveCount(12);
     await expect(cell(page, 'TST', 'Regression', 201, 'v22').getByRole('button')).toHaveAccessibleName(/ungültig|nicht.*Plan|Versions-Suite.*fehlt/i);

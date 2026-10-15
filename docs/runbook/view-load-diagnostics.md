@@ -26,6 +26,8 @@ Es genügen die Diagnosezeilen mit den beiden Präfixen; andere Terminalausgaben
 
 ## Auswertung
 
+Die Ansichten teilen inzwischen einen begrenzten [Historiencache](shared-history-cache.md). `historyRunsReused` und `historyRunsFetched` zeigen dessen Wirkung; der Header kennzeichnet das Alter der tatsächlich verwendeten Quellen und gespeicherte Datenstände. Ein Refresh lädt die aktuelle Run-Liste, darf unveränderte abgeschlossene Ergebnisse innerhalb ihrer Quellenfrist aber wiederverwenden.
+
 `timestamp` ist UTC; `elapsedMs` ist die Gesamtdauer seit Beginn dieses Datenabrufs in Millisekunden. `side` unterscheidet Browser und Server. Browsermessungen enden nach Empfang und Verarbeitung des Datenpakets, vor dem anschließenden React-Rendering. Sie messen keine Zeit bis zum fertig gezeichneten Bildschirm. Beim Zurückwechseln zu einer noch gültig gecachten Matrix entsteht keine neue HTTP-Abfrage und entsprechend kein neuer Read-Log.
 
 Jede Abschlussmeldung und jede `pending`-Meldung enthält `operations`. Pro Operation stehen dort:

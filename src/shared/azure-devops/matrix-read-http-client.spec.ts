@@ -59,4 +59,30 @@ describe('matrix request HTTP sharing', () => {
         await read.get(url); expect(client.get).toHaveBeenCalledWith(url, { signal: controller.signal });
         controller.abort(); expect(() => read.get(url)).toThrow();
     });
+    it('combines request and call cancellation while keeping distinct consumer transports independent', async () => {
+        const request = new AbortController(), first = new AbortController(), second = new AbortController();
+        const transports: Array<{ signal: AbortSignal; resolve(value: { status: number; json: object }): void }> = [];
+        const client = { get: vi.fn((_url: string, options?: { signal?: AbortSignal }) => new Promise<{status: number; json: object}>((resolve, reject) => {
+            const signal = options!.signal!;
+            transports.push({ signal, resolve });
+            signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+        })) };
+        const read = createMatrixReadHttpClient(client, { signal: request.signal });
+        const cancelled = read.get(url, { signal: first.signal }).catch(error => error);
+        const independent = read.get(url, { signal: second.signal });
+        expect(client.get).toHaveBeenCalledTimes(2);
+        first.abort();
+        expect(await cancelled).toMatchObject({ name: 'AbortError' });
+        expect(transports[1].signal.aborted).toBe(false);
+        transports[1].resolve({ status: 200, json: {} });
+        await expect(independent).resolves.toMatchObject({ status: 200 });
+        second.abort();
+        expect(() => read.get(url, { signal: second.signal })).toThrow();
+        expect(request.signal.aborted).toBe(false);
+        const third = new AbortController();
+        const interrupted = read.get(url, { signal: third.signal }).catch(error => error);
+        request.abort();
+        expect(await interrupted).toMatchObject({ name: 'AbortError' });
+        expect(third.signal.aborted).toBe(false);
+    });
 });

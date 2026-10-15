@@ -7,12 +7,14 @@ import { flattenSuiteTree, type TestSuiteNode } from '../../domain/test-manageme
 import { loadTestCaseProjections, type LoadTestCaseProjectionsDeps } from './load-test-case-projections.use-case.js';
 import { createMatrixReadSession } from './matrix-read-session.js';
 import { createMatrixColumnHierarchy } from '../../domain/release-matrix/matrix-column-hierarchy.js';
+import { combineDataFreshness } from '../services/data-freshness.js';
 export type MatrixReadDeps = LoadTestCaseProjectionsDeps & {
     testCatalog: TestCatalogPort;
 };
 /** Reuses the existing suite/result aggregation without altering its matching rules. */
 export async function loadReleaseMatrix(planId: number, deps: MatrixReadDeps, options: { signal?: AbortSignal; diagnostics?: MatrixReadDiagnostics; versionSuiteIds?: readonly number[]; flatVersionSuiteIds?: readonly number[] } = {}): Promise<MatrixData> {
     options.signal?.throwIfAborted();
+    const startedAt = new Date().toISOString();
     const catalog = await (options.diagnostics ? options.diagnostics.measure('catalog', { planId }, () => deps.testCatalog.listSuitesForPlan(planId)) : deps.testCatalog.listSuitesForPlan(planId));
     const ids = new Set(catalog.map(s => s.id));
     const roots = catalog.filter(s => s.parentSuiteId === null || !ids.has(s.parentSuiteId));
@@ -41,7 +43,7 @@ export async function loadReleaseMatrix(planId: number, deps: MatrixReadDeps, op
     options.diagnostics?.progress({ canonicalRootCount: trees.size, skippedOverlappingRoots, overlappingSuiteCount });
     for (const id of ids) if (!discovered.has(id))
         throw new Error(`Suite-Baum unvollständig: Suite #${id} fehlt in der geladenen Hierarchie.`);
-    const snapshot: MatrixData = { planId, suites: [], projections: [], pointCounts: {}, suiteMemberships: {} };
+    const snapshot: MatrixData = { planId, suites: [], projections: [], pointCounts: {}, suiteMemberships: {}, freshness: combineDataFreshness(startedAt, []) };
     const suiteTypes = new Map(catalog.map(suite => [suite.id, suite.suiteType]));
     const allSuites = [...trees.values()].flatMap(flattenSuiteTree);
     const hierarchy = createMatrixColumnHierarchy(allSuites);
@@ -53,6 +55,7 @@ export async function loadReleaseMatrix(planId: number, deps: MatrixReadDeps, op
     const includedSuiteIds = selections ? new Set(selections.flatMap(column => hierarchy(column).contents.map(entry => entry.suite.id))) : undefined;
     for (const root of trees.values()) {
         const loaded = await loadTestCaseProjections({ planId, rootSuiteId: root.id, includedSuiteIds }, session);
+        snapshot.freshness = combineDataFreshness(startedAt, [snapshot.freshness, loaded.freshness]);
         for (const run of loaded.runs) if (run.state === 'Completed') completedRunIds.add(run.runId);
         for (const result of loaded.results) rawResults.set(`${result.runId}:${result.resultId}`, result);
         for (const [suite, list] of loaded.pointsBySuiteId) points.set(suite, list);
@@ -83,5 +86,6 @@ export async function loadReleaseMatrix(planId: number, deps: MatrixReadDeps, op
         }
     options.signal?.throwIfAborted();
     options.diagnostics?.progress({ projectionCount: snapshot.projections.length, pointCount: [...points.values()].reduce((total, list) => total + list.length, 0) });
+    snapshot.loadedAt = new Date().toISOString();
     return snapshot;
 }

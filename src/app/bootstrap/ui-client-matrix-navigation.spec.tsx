@@ -3,6 +3,7 @@ import * as React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { RelationMutationsApi } from '../../features/relations-view/use-relation-mutations.js';
+import type { SetManagementApi } from '../../features/set-management/use-set-management.js';
 import { getMatrixMutationStore } from '../../features/release-matrix/matrix-mutation-store.js';
 import { AppShell } from './ui-client.js';
 import { WithClientPorts, buildClientPortsStub } from '../composition/test-client-ports.js';
@@ -11,7 +12,15 @@ import { loadTestCaseProjections } from '../../application/use-cases/load-test-c
 import { loadReleaseMatrix } from '../../application/use-cases/load-release-matrix.use-case.js';
 import { installUserPreferencesPort, resetUserPreferencesCacheForTests } from '../../shared/user-preferences/user-preferences.client.js';
 
-const captured = vi.hoisted(() => ({ current: null as RelationMutationsApi | null }));
+const captured = vi.hoisted(() => ({ current: null as RelationMutationsApi | null, setManagement: null as SetManagementApi | null }));
+vi.mock('../../features/set-management/use-set-management.js', async importOriginal => {
+    const actual = await importOriginal<typeof import('../../features/set-management/use-set-management.js')>();
+    return { ...actual, useSetManagement: () => {
+        const result = actual.useSetManagement();
+        captured.setManagement = result;
+        return result;
+    } };
+});
 vi.mock('../../features/relations-view/use-relation-mutations.js', async importOriginal => {
     const actual = await importOriginal<typeof import('../../features/relations-view/use-relation-mutations.js')>();
     return { ...actual, useRelationMutations: (...args: Parameters<typeof actual.useRelationMutations>) => {
@@ -48,10 +57,67 @@ async function fixture(setContext: {organization?: string; project?: string} = {
     await act(async () => { view = render(<WithClientPorts ports={ports}><AppShell /></WithClientPorts>); });
     await waitFor(() => expect(view.container.querySelector('.relations-workspace')).not.toBeNull());
     const matching = view.container.querySelector('.relations-workspace')!;
-    return { matching, view, add, ports, snapshot, resolve: () => resolve(), reject: () => reject(new Error('Relation konnte nicht gespeichert werden.')) };
+    return { matching, view, add, ports, snapshot, matrix, resolve: () => resolve(), reject: () => reject(new Error('Relation konnte nicht gespeichert werden.')) };
 }
 
 describe('App navigation retains matching mutations', () => {
+    it('clears the previous matrix data when the active set changes its root suite before a failed reload', async () => {
+        const f = await fixture();
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Release-Matrix' })); });
+        const previousPane = screen.getByRole('region', { name: 'Release-Matrix Ansicht' });
+        expect(screen.getByLabelText('In Testsuite').querySelectorAll('option').length).toBeGreaterThan(1);
+        let reject!: (error: Error) => void;
+        vi.mocked(f.ports.releaseMatrix!.load).mockImplementationOnce(() => new Promise((_resolve, fail) => { reject = fail; }));
+        vi.mocked(f.ports.setManagement.update).mockResolvedValueOnce({ ...f.snapshot.set, rootSuiteId: '20' });
+        await act(async () => { await captured.setManagement!.update(f.snapshot.set.id, { rootSuiteId: '20' }); });
+        expect(screen.getByRole('region', { name: 'Release-Matrix Ansicht' })).not.toBe(previousPane);
+        expect(screen.getByLabelText('In Testsuite').querySelectorAll('option')).toHaveLength(1);
+        expect(f.view.container.querySelector('.ui-shell-brand time')).toBeNull();
+        await act(async () => { reject(new Error('Der neue Suite-Baum ist nicht erreichbar.')); });
+        expect(screen.getByLabelText('In Testsuite').querySelectorAll('option')).toHaveLength(1);
+        expect(f.view.container.querySelector('.ui-shell-brand time')).toBeNull();
+    });
+    it('shows the old matching data and source age during refresh and a failed reload', async () => {
+        const f = await fixture();
+        let emit!: Parameters<typeof f.ports.activeSetSnapshot.subscribe>[1];
+        const subscribe = vi.mocked(f.ports.activeSetSnapshot.subscribe);
+        subscribe.mockImplementationOnce((_id, callback) => { emit = callback; return { close: vi.fn() }; });
+        const previousTime = f.view.container.querySelector<HTMLTimeElement>('.ui-shell-brand time')!.dateTime;
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Refresh active set' })); });
+        expect(f.view.container.querySelector('.relations-workspace')).toBe(f.matching);
+        expect(f.view.container.querySelector('.ui-shell-data-state')?.textContent).toBe('Wird aktualisiert …');
+        expect(f.view.container.querySelector<HTMLTimeElement>('.ui-shell-brand time')!.dateTime).toBe(previousTime);
+        act(() => emit({ type: 'result', snapshot: { ...f.snapshot, loadedAt: '2026-09-14T10:00:45Z',
+            freshness: { sourceReadAt: f.snapshot.loadedAt, cacheUsed: true } } }));
+        expect(f.view.container.querySelector('.ui-shell-data-state')?.textContent).toBe('Gespeicherter Stand');
+        expect(f.view.container.querySelector<HTMLTimeElement>('.ui-shell-brand time')!.dateTime).toBe(previousTime);
+        subscribe.mockImplementationOnce((_id, callback) => { emit = callback; return { close: vi.fn() }; });
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Refresh active set' })); });
+        act(() => emit({ type: 'error', message: 'Azure ist nicht erreichbar.' }));
+        expect(f.view.container.querySelector('.relations-workspace')).toBe(f.matching);
+        expect(f.view.container.querySelector('.ui-shell-data-state')?.textContent).toContain('Aktualisierung fehlgeschlagen · Alter Stand');
+        expect(f.view.container.querySelector<HTMLTimeElement>('.ui-shell-brand time')!.dateTime).toBe(previousTime);
+    });
+    it('shows cached matrix source time and preserves it while its refresh is pending or failed', async () => {
+        const f = await fixture();
+        const load = vi.mocked(f.ports.releaseMatrix!.load);
+        load.mockResolvedValue({ ...f.matrix, contextIdentity: 'https://dev.azure.com/contract-org/contract-project',
+            loadedAt: '2026-10-15T07:00:45Z', freshness: { sourceReadAt: '2026-10-15T07:00:00Z', cacheUsed: true } });
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Release-Matrix' })); });
+        await waitFor(() => expect(f.view.container.querySelector('.ui-shell-data-state')?.textContent).toBe('Gespeicherter Stand'));
+        const pane = screen.getByRole('region', { name: 'Release-Matrix Ansicht' });
+        const timestamp = f.view.container.querySelector<HTMLTimeElement>('.ui-shell-brand time')!.dateTime;
+        expect(timestamp).toBe('2026-10-15T07:00:00.000Z');
+        let reject!: (error: Error) => void;
+        load.mockImplementationOnce(() => new Promise((_resolve, fail) => { reject = fail; }));
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Refresh release matrix' })); });
+        expect(screen.getByRole('region', { name: 'Release-Matrix Ansicht' })).toBe(pane);
+        expect(f.view.container.querySelector('.ui-shell-data-state')?.textContent).toBe('Wird aktualisiert …');
+        await act(async () => { reject(new Error('Azure ist nicht erreichbar.')); });
+        expect(screen.getByRole('region', { name: 'Release-Matrix Ansicht' })).toBe(pane);
+        expect(f.view.container.querySelector('.ui-shell-data-state')?.textContent).toContain('Aktualisierung fehlgeschlagen · Alter Stand');
+        expect(f.view.container.querySelector<HTMLTimeElement>('.ui-shell-brand time')!.dateTime).toBe(timestamp);
+    });
     it('uses the header refresh for the matrix and shows the current view update time', async () => {
         const f = await fixture();
         const matchingTime = f.view.container.querySelector<HTMLTimeElement>('.ui-shell-brand time');

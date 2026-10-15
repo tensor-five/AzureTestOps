@@ -23,8 +23,8 @@ export interface TestManagementReadPort {
   loadPointsForSuite(planId: number, suiteId: number): Promise<TestPoint[]>;
 
   /** Returns all Test Runs that belong to the given Plan (with skip/top paging). */
-  listRunsForPlan(planId: number): Promise<TestRun[]>;
+  listRunsForPlan(planId: number, signal?: AbortSignal): Promise<TestRun[]>;
 
   /** Returns all Test Results for the given Run (with skip/top paging). */
-  loadResultsForRun(runId: number): Promise<TestResult[]>;
+  loadResultsForRun(runId: number, signal?: AbortSignal): Promise<TestResult[]>;
 }

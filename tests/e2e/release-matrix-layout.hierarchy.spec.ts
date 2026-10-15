@@ -35,7 +35,7 @@ test('V4-H02 RM3-02 renames a selected version by ID and disambiguates equal tit
     await open(page);
     server.azure().suites.find(s => s.id === 20)!.name = 'Release 2.1.0 vollständiger Titel';
     server.azure().suites.find(s => s.id === 50)!.name = 'Release 2.1.0 vollständiger Titel';
-    await page.getByRole('button', { name: 'Matrix aktualisieren', exact: true }).click();
+    await page.getByRole('button', { name: 'Refresh release matrix', exact: true }).click();
     await expect(page.getByRole('columnheader', { name: 'Release 2.1.0 vollständiger Titel', exact: true })).toBeVisible();
     await expect(outcome(page, 'TST', 'Regression', 201)).toHaveValue('Failed');
     await settings(page).click();
@@ -155,13 +155,14 @@ for (const failure of ['tree-error', 'incomplete-tree'] as const) {
 test('V4-H11 RM3-11 failed tree refresh marks retained results stale and blocks writes until recovery', async ({ page }) => {
     await open(page); await expect(outcome(page, 'TST', 'Regression', 201)).toHaveValue('Failed');
     server.azure().control.failTree = true;
-    await page.getByRole('button', { name: 'Matrix aktualisieren', exact: true }).click();
+    await page.getByRole('button', { name: 'Refresh release matrix', exact: true }).click();
     await expect(page.getByRole('alert')).toContainText(/Laden|Baum|Hierarchie|Suite/i);
     await expect(page.locator('[data-matrix-row] select:enabled')).toHaveCount(0);
-    if (await outcome(page, 'TST', 'Regression', 201).count()) await expect(page.getByRole('alert')).toContainText(/veraltet/i);
+    if (await outcome(page, 'TST', 'Regression', 201).count())
+        await expect(page.locator('.ui-shell-data-state')).toHaveText('Aktualisierung fehlgeschlagen · Alter Stand');
     expect(server.azure().writes).toEqual([]);
     server.azure().control.failTree = false;
-    await page.getByRole('button', { name: 'Matrix aktualisieren', exact: true }).click();
+    await page.getByRole('button', { name: 'Refresh release matrix', exact: true }).click();
     await expect(outcome(page, 'TST', 'Regression', 201)).toBeEnabled();
 });
 
@@ -170,11 +171,11 @@ test('V4-H12 RM3-14 changing or removing all ancestor and concrete Suite tags ch
     await open(page);
     const rowKeys = await page.locator('[data-matrix-row]').evaluateAll(elements => elements.map(e => e.getAttribute('data-matrix-row')));
     for (const suite of server.azure().suites) server.azure().suiteTags[suite.id] = ['TST', '2.2.0', 'Regression'];
-    await page.getByRole('button', { name: 'Matrix aktualisieren', exact: true }).click();
+    await page.getByRole('button', { name: 'Refresh release matrix', exact: true }).click();
     await expect(outcome(page, 'TST', 'Regression', 201)).toHaveValue('Failed');
     await expect(outcome(page, 'TST', 'Regression', 201, 'v22')).toHaveValue('Passed');
     for (const suite of server.azure().suites) server.azure().suiteTags[suite.id] = [];
-    await page.getByRole('button', { name: 'Matrix aktualisieren', exact: true }).click();
+    await page.getByRole('button', { name: 'Refresh release matrix', exact: true }).click();
     await expect(outcome(page, 'TST', 'Regression', 201)).toHaveValue('Failed');
     expect(await page.locator('[data-matrix-row]').evaluateAll(elements => elements.map(e => e.getAttribute('data-matrix-row')))).toEqual(rowKeys);
     const before = structuredClone(server.azure().suiteTags);

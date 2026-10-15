@@ -1,5 +1,6 @@
 import { toTestPoint, toTestRun, toTestResult, readNumber } from "./test-management-mappers.js";
 import { requestWithRetry } from "../../../shared/utils/retry.js";
+import { combinedAbortSignal } from '../../../shared/utils/combined-abort-signal.js';
 import {
   buildAdoBaseUrl,
   type AdoOrgProjectContext,
@@ -104,13 +105,14 @@ export class AzureTestManagementAdapter implements TestManagementReadPort {
     return all;
   }
 
-  public async listRunsForPlan(planId: number): Promise<TestRun[]> {
+  public async listRunsForPlan(planId: number, signal?: AbortSignal): Promise<TestRun[]> {
+    const readSignal = combinedAbortSignal(this.httpClient.signal, signal);
     const all: TestRun[] = [];
     let skip = 0;
 
     while (true) {
       const url = `${this.baseUrl}/_apis/test/runs?planId=${planId}&$top=${this.runsPageSize}&$skip=${skip}&includeRunDetails=true&api-version=${API_VERSION_71}`;
-      const { response } = await requestWithRetry(() => this.httpClient.get(url), {signal: this.httpClient.signal});
+      const { response } = await requestWithRetry(() => this.httpClient.get(url, { signal: readSignal }), {signal: readSignal});
       if (response.status !== 200) {
         throw new Error(`RUNS_HTTP_${response.status}`);
       }
@@ -137,27 +139,29 @@ export class AzureTestManagementAdapter implements TestManagementReadPort {
     return all;
   }
 
-  public async loadResultsForRun(runId: number): Promise<TestResult[]> {
+  public async loadResultsForRun(runId: number, signal?: AbortSignal): Promise<TestResult[]> {
+    const readSignal = combinedAbortSignal(this.httpClient.signal, signal);
     const all: TestResult[] = [];
+    const seen = new Set<number>();
     let skip = 0;
 
     while (true) {
       const url = `${this.baseUrl}/_apis/test/Runs/${runId}/results?$top=${this.resultsPageSize}&$skip=${skip}&detailsToInclude=Point&api-version=${API_VERSION_71}`;
-      const { response } = await requestWithRetry(() => this.httpClient.get(url), {signal: this.httpClient.signal});
+      const { response } = await requestWithRetry(() => this.httpClient.get(url, { signal: readSignal }), {signal: readSignal});
       if (response.status !== 200) {
         throw new Error(`RESULTS_HTTP_${response.status}`);
       }
 
-      const value = readArray((response.json as { value?: unknown }).value);
-      if (value.length === 0) {
-        break;
-      }
+      const value = (response.json as { value?: unknown } | null)?.value;
+      if (!Array.isArray(value)) throw new Error('RESULTS_INVALID_RESPONSE');
+      if (value.length === 0) break;
 
       for (const raw of value) {
         const result = toTestResult(raw);
-        if (result) {
-          all.push(result);
-        }
+        if (!result || result.runId !== runId) throw new Error('RESULTS_INVALID_RESPONSE');
+        if (seen.has(result.resultId)) throw new Error('RESULTS_REPEATED_PAGE');
+        seen.add(result.resultId);
+        all.push(result);
       }
 
       if (value.length < this.resultsPageSize) {

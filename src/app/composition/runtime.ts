@@ -36,7 +36,9 @@ import type { UserPreferencesPort } from "../../application/ports/user-preferenc
 import type { WorkItemHydrationPort } from "../../application/ports/work-item-hydration.port.js";
 import { AzureCliTokenProvider } from "../../shared/azure-devops/azure-cli-token-provider.js";
 import { FetchAzureRestClient } from "../../shared/azure-devops/fetch-azure-rest-client.js";
-import type { AzureRestHttpClient } from "../../shared/azure-devops/azure-rest-client.js";
+import { buildAdoBaseUrl, type AzureRestHttpClient } from "../../shared/azure-devops/azure-rest-client.js";
+import { InMemoryTestResultHistoryAdapter } from '../../adapters/persistence/memory/in-memory-test-result-history.adapter.js';
+import { historyInvalidatingTestWrites } from '../../adapters/persistence/memory/history-invalidating-test-writes.js';
 
 export type AdoRuntime = {
   /**
@@ -45,7 +47,7 @@ export type AdoRuntime = {
    * without restarting the server.
    */
   snapshotServices?(context: {organization: string; project: string}, signal: AbortSignal, diagnostics?: MatrixReadDiagnostics): Pick<LoadActiveSetSnapshotDeps,
-    'testManagement' | 'testCaseHydration' | 'workItemHydration' | 'savedQuery'>;
+    'testManagement' | 'testResultHistory' | 'testCaseHydration' | 'workItemHydration' | 'savedQuery'>;
   resolveContext(): Promise<{ organization: string; project: string }>;
   testManagement(): Promise<TestManagementReadPort>;
   testCatalog(): Promise<TestCatalogPort>;
@@ -94,6 +96,7 @@ export function buildRuntime(options: RuntimeOptions = {}): Runtime {
   const preflight = new AzureCliPreflightAdapter();
 
   const httpClient = options.httpClient ?? buildDefaultHttpClient();
+  const testResultHistory = new InMemoryTestResultHistoryAdapter();
 
   let cached: { key: string; bundle: ResolvedAdoBundle } | null = null;
 
@@ -130,6 +133,7 @@ export function buildRuntime(options: RuntimeOptions = {}): Runtime {
       const readClient = createMatrixReadHttpClient(httpClient, {signal, diagnostics});
       const workItemHydration = new AzureWorkItemHydrationAdapter(readClient, context);
       return {testManagement: new AzureTestManagementAdapter(readClient, context),
+        testResultHistory: testResultHistory.forContext(buildAdoBaseUrl(context).toLowerCase(), diagnostics),
         workItemHydration,
         testCaseHydration: new WorkItemBackedTestCaseHydrationAdapter(workItemHydration),
         savedQuery: new AzureSavedQueryAdapter(readClient, context)};
@@ -137,14 +141,18 @@ export function buildRuntime(options: RuntimeOptions = {}): Runtime {
     matrixServices: (context, options) => {
       const writeClient = options?.writeMetrics ? options.writeMetrics.wrap(httpClient) : httpClient;
       const readClient = options && !options.writeMetrics ? createMatrixReadHttpClient(httpClient, options) : writeClient;
+      const contextKey = buildAdoBaseUrl(context).toLowerCase();
+      const writes = historyInvalidatingTestWrites(new AzureTestExecutionAdapter(writeClient, context),
+        new AzureTestPointResetAdapter(writeClient, context), planId => testResultHistory.beginWrite(contextKey, planId));
       return {
         testManagement: new AzureTestManagementAdapter(readClient, context),
+        testResultHistory: testResultHistory.forContext(contextKey, options?.diagnostics),
         testCatalog: new AzureTestCatalogAdapter(readClient, context),
         caseTags: new AzureTestCaseTagsAdapter(readClient, context),
         testCaseHydration: new WorkItemBackedTestCaseHydrationAdapter(new AzureWorkItemHydrationAdapter(readClient, context)),
-        execution: new AzureTestExecutionAdapter(writeClient, context),
+        execution: writes.execution,
         outcomeRead: new AzureTestOutcomeReadAdapter(readClient, context),
-        pointReset: new AzureTestPointResetAdapter(writeClient, context)
+        pointReset: writes.pointReset
       };
     },
     testManagement: async () => (await resolveBundle()).testManagement,

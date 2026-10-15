@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   loadTestCaseProjections,
@@ -131,5 +131,45 @@ describe("loadTestCaseProjections", () => {
     const result = await loadTestCaseProjections({ planId: 9, rootSuiteId: 1 }, deps);
     expect(result.projections).toHaveLength(1);
     expect(result.projections[0].lastOutcome).toBe("NotRun");
+  });
+
+  function timingHarness() {
+    const tree: TestSuiteNode = { id: 1, name: 'Root', parentSuiteId: null, path: 'Root', children: [] };
+    const deps: LoadTestCaseProjectionsDeps = {
+      testManagement: { loadSuiteTree: async () => tree, listTestCasesInSuite: vi.fn(async () => [101]),
+        loadPointsForSuite: vi.fn(async () => []), listRunsForPlan: vi.fn(async () => []), loadResultsForRun: vi.fn(async () => []) },
+      testCaseHydration: { hydrateTestCases: async () => new Map() }
+    };
+    return deps;
+  }
+
+  it('starts history as soon as real membership is known, while point reads are still pending', async () => {
+    const deps = timingHarness();
+    let finishPoints!: (points: TestPoint[]) => void;
+    vi.mocked(deps.testManagement.loadPointsForSuite).mockImplementation(() => new Promise(resolve => { finishPoints = resolve; }));
+    const pending = loadTestCaseProjections({ planId: 1, rootSuiteId: 1 }, deps);
+    await vi.waitFor(() => expect(deps.testManagement.listRunsForPlan).toHaveBeenCalledOnce());
+    finishPoints([]);
+    await pending;
+  });
+
+  it('does not load history for an empty membership or an explicitly empty suite selection', async () => {
+    const deps = timingHarness();
+    vi.mocked(deps.testManagement.listTestCasesInSuite).mockResolvedValue([]);
+    await loadTestCaseProjections({ planId: 1, rootSuiteId: 1 }, deps);
+    await loadTestCaseProjections({ planId: 1, rootSuiteId: 1, includedSuiteIds: new Set() }, deps);
+    expect(deps.testManagement.listRunsForPlan).not.toHaveBeenCalled();
+    expect(deps.testManagement.loadResultsForRun).not.toHaveBeenCalled();
+  });
+
+  it('observes an early history rejection before slower point reads finish', async () => {
+    const deps = timingHarness();
+    let finishPoints!: (points: TestPoint[]) => void;
+    vi.mocked(deps.testManagement.loadPointsForSuite).mockImplementation(() => new Promise(resolve => { finishPoints = resolve; }));
+    vi.mocked(deps.testManagement.listRunsForPlan).mockRejectedValue(new Error('history unavailable'));
+    const pending = loadTestCaseProjections({ planId: 1, rootSuiteId: 1 }, deps);
+    await vi.waitFor(() => expect(deps.testManagement.listRunsForPlan).toHaveBeenCalledOnce());
+    finishPoints([]);
+    await expect(pending).rejects.toThrow('history unavailable');
   });
 });

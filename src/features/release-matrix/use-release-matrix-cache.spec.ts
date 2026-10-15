@@ -16,6 +16,25 @@ function fixture(){
  return {snapshot,port,mount};
 }
 describe('matrix navigation and selection reads',()=>{
+ it('retains the original source age and table while refreshing cached history, including failure',async()=>{
+  const f=fixture();
+  const sourceReadAt='2026-10-15T07:00:00Z';
+  Object.assign(f.snapshot,{loadedAt:'2026-10-15T07:00:45Z',freshness:{sourceReadAt,cacheUsed:true}});
+  const hook=await f.mount();
+  expect(hook.result.current.lastUpdatedAt).toBe(Date.parse(sourceReadAt));
+  expect(hook.result.current.cachedData).toBe(true);
+  let fail!:(error:Error)=>void;
+  f.port.load.mockImplementationOnce(()=>new Promise((_resolve,reject)=>{fail=reject;}));
+  let refresh!:Promise<void>;
+  act(()=>{refresh=hook.result.current.reload();});
+  expect(hook.result.current.snapshot).toEqual(f.snapshot);
+  expect(hook.result.current.loading).toBe(true);
+  await act(async()=>{fail(new Error('offline'));await refresh;});
+  expect(hook.result.current.snapshot).toEqual(f.snapshot);
+  expect(hook.result.current.lastUpdatedAt).toBe(Date.parse(sourceReadAt));
+  expect(hook.result.current.readFailed).toBe(true);
+  expect(hook.result.current.stale).toBe(true);
+ });
  it('reloads on a hierarchy change and never reuses a snapshot with the wrong content depth',async()=>{
   const f=fixture(),hook=await f.mount();
   const column={id:'release',versionSuiteId:20,visible:true};

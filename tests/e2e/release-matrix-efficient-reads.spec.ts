@@ -10,7 +10,11 @@ test('returning to the matrix reuses its recent read and explicit refresh gets c
  await open(page);await expect(outcome(page,'TST','Regression',201)).toHaveValue('Failed');
  await page.getByRole('button',{name:'Zuordnung',exact:true}).click();await open(page);
  await expect(outcome(page,'TST','Regression',201)).toHaveValue('Failed');expect(reads).toBe(1);
- server.azure().results.find(r=>r.testSuite.id===22&&r.testCase.id===201)!.outcome='Blocked';
+ const changed=server.azure().results.find(r=>r.testSuite.id===22&&r.testCase.id===201)!;
+ changed.outcome='Blocked';
+ // A changed run marker makes the external update immediately visible through incremental history loading.
+ const changedRun=server.azure().runs.find(run=>run.id===changed.testRun.id)!;
+ changedRun.revision=(changedRun.revision??0)+1;
  await page.getByRole('button',{name:'Refresh release matrix',exact:true}).click();
  await expect(outcome(page,'TST','Regression',201)).toHaveValue('Blocked');expect(reads).toBe(2);
 });

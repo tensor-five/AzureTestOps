@@ -11,8 +11,8 @@ export function observeTestManagementReads(deps: LoadTestCaseProjectionsDeps, di
             loadSuiteTree: (planId, suiteId) => diagnostics.measure('tree', { planId, suiteId }, () => read.loadSuiteTree(planId, suiteId)),
             listTestCasesInSuite: (planId, suiteId) => diagnostics.measure('cases', { planId, suiteId }, () => read.listTestCasesInSuite(planId, suiteId)),
             loadPointsForSuite: (planId, suiteId) => diagnostics.measure('points', { planId, suiteId }, () => read.loadPointsForSuite(planId, suiteId)),
-            listRunsForPlan: planId => diagnostics.measure('runs', { planId }, () => read.listRunsForPlan(planId)),
-            loadResultsForRun: runId => diagnostics.measure('results', { runId }, () => read.loadResultsForRun(runId)),
+            listRunsForPlan: (planId, signal) => diagnostics.measure('runs', { planId }, () => read.listRunsForPlan(planId, signal)),
+            loadResultsForRun: (runId, signal) => diagnostics.measure('results', { runId }, () => read.loadResultsForRun(runId, signal)),
         },
         testCaseHydration: { hydrateTestCases: ids => diagnostics.measure('hydrate', {}, () => deps.testCaseHydration.hydrateTestCases(ids)) },
     };

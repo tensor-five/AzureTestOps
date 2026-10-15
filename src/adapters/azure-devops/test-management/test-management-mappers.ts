@@ -57,7 +57,10 @@ export function toTestRun(value: unknown, requestedPlanId: number | null = null)
     completedDate: typeof candidate.completedDate === "string" ? candidate.completedDate : null,
     totalTests: readNumber(candidate.totalTests) ?? 0,
     passedTests: readNumber(candidate.passedTests) ?? 0,
-    isAutomated: candidate.isAutomated === true
+    isAutomated: candidate.isAutomated === true,
+    ...(readNumber(candidate.revision) !== null ? { revision: readNumber(candidate.revision)! } : {}),
+    ...(typeof candidate.lastUpdatedDate === 'string' && Number.isFinite(Date.parse(candidate.lastUpdatedDate))
+      ? { lastUpdatedDate: candidate.lastUpdatedDate } : {})
   };
 }
 

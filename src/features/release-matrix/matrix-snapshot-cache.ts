@@ -1,5 +1,6 @@
 import type { MatrixSnapshot } from '../../application/dto/release-matrix.dto.js';
 import type { ReleaseMatrixClientPort } from '../../application/ports/client/release-matrix-client.port.js';
+import { snapshotDataTimestamp } from '../../shared/ui/snapshot-data-timestamp.js';
 export type CachedMatrixSnapshot = {setId: string; snapshot: MatrixSnapshot; readStartedAt: number; loadedAt: number};
 const MAX_AGE_MS = 60_000;
 const MAX_ENTRIES = 16;
@@ -13,7 +14,8 @@ export function matrixSnapshotCache(port: ReleaseMatrixClientPort) {
     get(key: string, now = Date.now()): CachedMatrixSnapshot | undefined {
       const entry = cache.get(key);
       if (!entry) return undefined;
-      if (now - entry.loadedAt >= MAX_AGE_MS || now < entry.loadedAt) { cache.delete(key); return undefined; }
+      const sourceAt = snapshotDataTimestamp(entry.snapshot.freshness, entry.loadedAt)!;
+      if (now - sourceAt >= MAX_AGE_MS || now < entry.loadedAt) { cache.delete(key); return undefined; }
       cache.delete(key); cache.set(key, entry);
       return entry;
     },
