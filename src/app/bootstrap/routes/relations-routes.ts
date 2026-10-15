@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { createRelation } from "../../../application/use-cases/create-relation.use-case.js";
 import { deleteRelation } from "../../../application/use-cases/delete-relation.use-case.js";
 import type { AdoRuntime } from "../../composition/runtime.js";
+import type { ViewSnapshotCachePort } from '../../../application/ports/view-snapshot-cache.port.js';
 
 import { errorPayload, parseJsonBody, readBody, writeJson } from "./route-helpers.js";
 
@@ -30,7 +31,7 @@ const RELATIONS_PATH = "/phase2/relations";
  * ids; encoding both in the URL would force `?source=...&target=...` and lose
  * symmetry with the POST shape consumed by the same UI mutation hook.
  */
-export function registerRelationsRoutes(ado: AdoRuntime): RelationsRouter {
+export function registerRelationsRoutes(ado: AdoRuntime, snapshotCache?: ViewSnapshotCachePort): RelationsRouter {
   return async (method, pathname, req, res) => {
     if (pathname !== RELATIONS_PATH) {
       return false;
@@ -50,6 +51,8 @@ export function registerRelationsRoutes(ado: AdoRuntime): RelationsRouter {
       return true;
     }
 
+    // Relations resolve their context lazily inside the runtime. Fence all previews conservatively.
+    const finishSnapshotWrite = snapshotCache?.beginWrite();
     try {
       const relations = await ado.relations();
       if (method === "POST") {
@@ -75,7 +78,7 @@ export function registerRelationsRoutes(ado: AdoRuntime): RelationsRouter {
         500,
         errorPayload(error, method === "POST" ? "RELATION_CREATE_FAILED" : "RELATION_DELETE_FAILED")
       );
-    }
+    } finally { finishSnapshotWrite?.(); }
     return true;
   };
 }

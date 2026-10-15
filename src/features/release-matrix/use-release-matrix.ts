@@ -1,4 +1,5 @@
 import { matrixSnapshotCache } from './matrix-snapshot-cache.js';
+import { loadMatrixSnapshotPreview } from './load-matrix-snapshot-preview.js';
 import { snapshotDataTimestamp } from '../../shared/ui/snapshot-data-timestamp.js';
 import { useMatrixSuiteMembership } from './use-matrix-suite-membership.js';
 import { useMatrixTagCatalog } from './use-matrix-tag-catalog.js';
@@ -19,6 +20,7 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
     const [loading, setLoading] = React.useState(true);
     const [lastUpdatedAt, setLastUpdatedAt] = React.useState<number | null>(null);
     const [cachedData, setCachedData] = React.useState(false);
+    const [restoredPreview, setRestoredPreview] = React.useState(false);
     const [membershipGeneration, setMembershipGeneration] = React.useState(0);
     const alive = React.useRef(true);
     const request = React.useRef(0);
@@ -49,9 +51,23 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
             if (cacheKey && !cached) cache.invalidate(cacheKey);
             const readStartedAt = cached?.readStartedAt ?? getMatrixMutationRevision();
             const [versions, flatVersions] = JSON.parse(selectedKey) as [number[], number[]];
+            let freshAccepted = false;
+            if (!cached && reuseCache && expectedContextIdentity) {
+                void loadMatrixSnapshotPreview(port, {setId, planId, contextIdentity: expectedContextIdentity,
+                    signal: controller.signal, versionSuiteIds: versions, flatVersionSuiteIds: flatVersions}).then(preview => {
+                    if (!preview || freshAccepted || controller.signal.aborted || !alive.current || version !== request.current) return;
+                    const store = getMatrixMutationStore(port, setId, planId, expectedContextIdentity);
+                    accepted.current = { store, readStartedAt, selectedKey };
+                    setSnapshot(store.applyConfirmations(preview, readStartedAt));
+                    setLastUpdatedAt(snapshotDataTimestamp(preview.freshness, Date.parse(preview.loadedAt ?? '')));
+                    setCachedData(true);
+                    setRestoredPreview(true);
+                });
+            }
             const value = cached?.snapshot ?? await port.load(setId, controller.signal, versions, flatVersions);
             const store = getMatrixMutationStore(port, setId, value.planId, value.contextIdentity);
             if (alive.current && version === request.current) {
+                freshAccepted = true;
                 if (!cached) store.reconcile(value, readStartedAt);
                 if (!cached && cacheKey && value.contextIdentity === expectedContextIdentity && value.planId === planId)
                     cache.set(cacheKey, {setId, snapshot: value, readStartedAt, loadedAt: Date.now()});
@@ -60,6 +76,7 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
                 setSnapshot(store.applyConfirmations(value, readStartedAt));
                 setLastUpdatedAt(snapshotDataTimestamp(value.freshness, cached?.loadedAt ?? (value.loadedAt ? Date.parse(value.loadedAt) : Date.now())));
                 setCachedData(Boolean(cached || value.freshness?.cacheUsed));
+                setRestoredPreview(false);
                 setError('');
             }
         }
@@ -102,7 +119,7 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
     React.useEffect(() => {
         if (membership.error) setReadNotification(createTransientNotification(membership.error, 'error'));
     }, [membership.error]);
-    const stale = snapshot !== null && (error.length > 0 || accepted.current?.selectedKey !== selectedKey || membership.pending);
+    const stale = snapshot !== null && (restoredPreview || error.length > 0 || accepted.current?.selectedKey !== selectedKey || membership.pending);
     const record = async (input: MatrixWrite) => {
         if (stale || loading) return;
         await mutationStore?.record(input);

@@ -16,7 +16,9 @@ import type { MatrixWriteDiagnostics } from '../../../application/use-cases/reco
 import { readBody, parseJsonBody, writeJson } from './route-helpers.js';
 import { registerReleaseMatrixMembershipRoute } from './release-matrix-membership-route.js';
 import { registerReleaseMatrixTagsRoute } from './release-matrix-tags-route.js';
-export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepositoryPort) {
+import type { ViewSnapshotCachePort } from '../../../application/ports/view-snapshot-cache.port.js';
+import { viewSnapshotScope } from './view-snapshot-scope.js';
+export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepositoryPort, snapshotCache?: ViewSnapshotCachePort) {
     const membershipRoute = registerReleaseMatrixMembershipRoute(ado, sets);
     const tagsRoute = registerReleaseMatrixTagsRoute(ado, sets);
     const pending = new Set<string>();
@@ -28,6 +30,7 @@ export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepository
             return false;
         let lock: string | null = null;
         let createdRunId: number | null = null;
+        let finishSnapshotWrite: (() => void) | undefined;
         const reading = !match[2] && method === 'GET';
         const providedId = req.headers?.['x-matrix-request-id'];
         const requestId = isViewReadRequestId(providedId) ? providedId : randomUUID();
@@ -55,8 +58,6 @@ export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepository
             const fallback = await ado.resolveContext();
             const context = Object.freeze({ organization: set.organization ?? fallback.organization, project: set.project ?? fallback.project });
             const contextIdentity = buildAdoBaseUrl(context).toLowerCase();
-            if (!ado.matrixServices)
-                throw new Error('Release-Matrix ist in dieser Laufzeit nicht verfügbar.');
             if (!match[2]) {
                 const query = new URL(req.url ?? '/', 'http://localhost').searchParams;
                 const selection: { versionSuiteIds?: number[]; flatVersionSuiteIds?: number[] } = {};
@@ -69,9 +70,23 @@ export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepository
                     }
                     selection[field] = [...new Set(parsed)];
                 }
+                const scope = viewSnapshotScope('matrix', contextIdentity, set, selection);
+                res.setHeader('cache-control', 'no-store');
+                if (query.get('cache') === 'only') {
+                    const cached = snapshotCache?.get(scope, controller.signal) ?? null;
+                    if (cached) diagnostics?.addCount('snapshotPreviewHits');
+                    writeJson(res, 200, cached);
+                    diagnostics?.finish('complete');
+                    return true;
+                }
+                if (!ado.matrixServices) throw new Error('Release-Matrix ist in dieser Laufzeit nicht verfügbar.');
+                const read = snapshotCache?.beginRead(scope);
                 const options = { signal: controller.signal, diagnostics, ...selection };
                 const snapshot = await loadReleaseMatrix(planId, ado.matrixServices(context, options), options);
-                writeJson(res, 200, { ...snapshot, contextIdentity });
+                controller.signal.throwIfAborted();
+                const result = { ...snapshot, contextIdentity };
+                read?.store(result, controller.signal);
+                writeJson(res, 200, result);
                 diagnostics?.finish('complete');
                 return true;
             }
@@ -83,6 +98,7 @@ export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepository
                 writeJson(res, 409, { message: 'Der Azure-Kontext hat sich seit dem Laden der Matrix geändert. Bitte die Matrix aktualisieren; es wurde kein Durchlauf erzeugt.' });
                 return true;
             }
+            if (!ado.matrixServices) throw new Error('Release-Matrix ist in dieser Laufzeit nicht verfügbar.');
             const services = ado.matrixServices(context, { writeMetrics });
             const outcomeRead = services.outcomeRead;
             if (!outcomeRead) throw new ApiError(500, body.outcome === 'ResetToActive' ? 'MATRIX_RESET_NOT_ATTEMPTED' : 'MATRIX_WRITE_NOT_ATTEMPTED',
@@ -94,6 +110,7 @@ export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepository
             }
             pending.add(key);
             lock = key;
+            finishSnapshotWrite = snapshotCache?.beginWrite({ contextIdentity, planId });
             const writeDiagnostics: MatrixWriteDiagnostics = { event: entry => console.info('[release-matrix.write]', {
                 requestId, side: 'server', ...entry, elapsedMs: Math.round(performance.now() - writeStartedAt),
             }) };
@@ -121,6 +138,7 @@ export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepository
                 : createdRunId !== null ? {code:'MATRIX_RUN_UNCONFIRMED',details:{runId:createdRunId}} : {}), message: error instanceof Error ? error.message : 'Release-Matrix konnte nicht geladen oder gespeichert werden.' });
         }
         finally {
+            finishSnapshotWrite?.();
             if (writeMetrics) {
                 try { console.info('[release-matrix.write-summary]', { requestId, side: 'server',
                     event: res.statusCode === 200 ? 'confirmed' : 'error', ...writeMetrics.snapshot() }); } catch { /* Diagnostics do not affect writes. */ }

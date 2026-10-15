@@ -2,6 +2,20 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { HttpReleaseMatrixAdapter } from './http-release-matrix.adapter.js';
 describe('matrix browser transport diagnostics', () => {
+    it.each([null, { planId: 1, suites: [], projections: [], pointCounts: {}, contextIdentity: 'context', loadedAt: '2026-10-15T10:00:00Z' }])
+      ('loads optional previews without starting the ordinary full-read transport (%j)', async value => {
+        const fetch = vi.fn(async (_url: string, _init: RequestInit) => ({ ok: true, text: async () => JSON.stringify(value) }));
+        vi.stubGlobal('fetch', fetch);
+        const controller = new AbortController();
+        expect(await new HttpReleaseMatrixAdapter().loadCached('set id', controller.signal, [30, 20], [40])).toEqual(value);
+        expect(fetch).toHaveBeenCalledTimes(1);
+        const [url, init] = fetch.mock.calls[0], parsed = new URL(url, 'http://localhost');
+        expect(parsed.pathname).toBe('/phase2/sets/set%20id/release-matrix');
+        expect(parsed.searchParams.get('cache')).toBe('only');
+        expect(parsed.searchParams.get('versions')).toBe('[30,20]');
+        expect(parsed.searchParams.get('flatVersions')).toBe('[40]');
+        expect(init.signal).toBe(controller.signal);
+      });
     it('transmits separate hierarchy selections for nested and flat release columns',async()=>{
         const fetch=vi.fn(async()=>({ok:true,text:async()=>JSON.stringify({planId:1,suites:[],projections:[]})}));
         vi.stubGlobal('fetch',fetch);

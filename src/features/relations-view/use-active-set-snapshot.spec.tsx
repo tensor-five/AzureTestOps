@@ -100,6 +100,28 @@ describe("useActiveSetSnapshot", () => {
     vi.restoreAllMocks();
   });
 
+  it.each(['result', 'error'] as const)('displays a cached snapshot while the stream continues to its authoritative %s', async finalEvent => {
+    const harness = setupHookHarness(() => useActiveSetSnapshot('set-1'), ports);
+    const snapshot = {
+      set: { id: 'set-1', name: 'Release', planId: '1', rootSuiteId: '1', queryId: 'q' },
+      suiteTree: { id: 1, name: 'Root', parentSuiteId: null, path: 'Root', children: [] },
+      projections: [], workItemsFromQuery: [], loadedAt: '2026-10-15T07:00:00Z'
+    };
+    const subscription = snapshotPort.active()!;
+    act(() => subscription.emit({ type:'cached', snapshot }));
+    expect(harness.result.current.state.snapshot?.loadedAt).toBe(snapshot.loadedAt);
+    expect(harness.result.current.state.snapshot?.freshness).toEqual({sourceReadAt:snapshot.loadedAt,cacheUsed:true});
+    expect(harness.result.current.state.isLoading).toBe(true);
+    expect(subscription.closed).toBe(false);
+    act(() => subscription.emit({type:'progress',progress:{stage:'test-cases',done:0,total:1}}));
+    if(finalEvent === 'result') act(() => subscription.emit({type:'result',snapshot:{...snapshot,loadedAt:'2026-10-15T07:01:00Z'}}));
+    else act(() => subscription.emit({type:'error',message:'Azure unavailable'}));
+    expect(harness.result.current.state.isLoading).toBe(false);
+    expect(subscription.closed).toBe(true);
+    expect(harness.result.current.state.snapshot?.loadedAt).toBe(finalEvent === 'result' ? '2026-10-15T07:01:00Z' : snapshot.loadedAt);
+    harness.unmount();
+  });
+
   it('keeps the same scoped snapshot during refresh and preserves it with a visible read error', async () => {
     let scope = 'set-1:first-query';
     const harness = setupHookHarness(() => useActiveSetSnapshot('set-1', scope), ports);

@@ -2,6 +2,9 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomUUID } from 'node:crypto';
 import { createViewReadDiagnostics, isViewReadRequestId } from '../../../shared/diagnostics/view-read-diagnostics.js';
 import { observeTestManagementReads } from '../../../application/use-cases/observe-test-management-reads.js';
+import type { ViewSnapshotCachePort } from '../../../application/ports/view-snapshot-cache.port.js';
+import { buildAdoBaseUrl } from '../../../shared/azure-devops/azure-rest-client.js';
+import { viewSnapshotScope } from './view-snapshot-scope.js';
 
 import {
   loadActiveSetSnapshot,
@@ -27,6 +30,7 @@ export type ActiveSetSnapshotRouteDeps = {
   ado: AdoRuntime;
   setRepository: SetRepositoryPort;
   adoContext: AdoContextPort;
+  snapshotCache?: ViewSnapshotCachePort;
 };
 
 /**
@@ -73,13 +77,21 @@ export function registerActiveSetSnapshotStreamRoute(
     };
 
     try {
+      const context = Object.freeze({ ...await diagnostics.measure('context', {}, () => deps.ado.resolveContext()) });
+      const selectedId = (setId ?? await deps.setRepository.getActiveId())?.trim();
+      const resolvedSet = selectedId ? await deps.setRepository.getById(selectedId) : null;
+      const capturedSet = resolvedSet ? Object.freeze({ ...resolvedSet }) : undefined;
+      const scope = capturedSet ? viewSnapshotScope('matching', buildAdoBaseUrl(context).toLowerCase(), capturedSet) : undefined;
+      const read = scope ? deps.snapshotCache?.beginRead(scope) : undefined;
+      const cached = scope ? deps.snapshotCache?.get(scope, controller.signal) : null;
+      if (cached) { send('cached', { snapshot: cached }); diagnostics.addCount('snapshotPreviewHits'); }
       const services = deps.ado.snapshotServices
-        ? deps.ado.snapshotServices(await diagnostics.measure('context', {}, () => deps.ado.resolveContext()), controller.signal, diagnostics)
+        ? deps.ado.snapshotServices(context, controller.signal, diagnostics)
         : {testManagement: await deps.ado.testManagement(), testCaseHydration: await deps.ado.testCaseHydration(),
           workItemHydration: await deps.ado.workItemHydration(), savedQuery: await deps.ado.savedQuery()};
       controller.signal.throwIfAborted();
       const snapshot = await loadActiveSetSnapshot(
-        setId ? { setId } : {},
+        { ...(setId ? { setId } : {}), ...(capturedSet ? { resolvedSet: capturedSet } : {}) },
         {
           setRepository: deps.setRepository,
           adoContext: deps.adoContext,
@@ -96,6 +108,8 @@ export function registerActiveSetSnapshotStreamRoute(
         }
       );
 
+      controller.signal.throwIfAborted();
+      read?.store(snapshot, controller.signal);
       send("result", { snapshot });
       diagnostics.progress({ planId: Number(snapshot.set.planId), projectionCount: snapshot.projections.length,
         queryWorkItemCount: snapshot.workItemsFromQuery.length });
