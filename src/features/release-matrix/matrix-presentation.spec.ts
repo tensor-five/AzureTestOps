@@ -1,8 +1,33 @@
 import { describe, it, expect } from 'vitest';
-import { matrixHierarchyFixture, matrixSuite, matrixProjection } from '../../../tests/fixtures/matrix-hierarchy.js';
+import { matrixHierarchyFixture, matrixFlatHierarchyFixture, matrixSuite, matrixProjection } from '../../../tests/fixtures/matrix-hierarchy.js';
 import { catalogRows, matrixGroups, resolveSource, descendantIds, mappingKey, matrixRowKey, versionTitle } from './matrix-presentation.js';
 const context={environment:'TST',content:'Regression'};
 describe('Hierarchical matrix presentation',()=>{
+    it('derives flat-only rows from direct contents and labels their missing environment',()=>{
+        const {snapshot,config,flatColumn}=matrixFlatHierarchyFixture();
+        config.columns=[flatColumn];
+        expect(catalogRows(snapshot,config).map(matrixRowKey).sort()).toEqual(['["","Import",200]','["","Regression",100]','["","Regression",300]']);
+        expect(matrixGroups(snapshot,config).map(group=>group.name)).toEqual(['Ohne Umgebung']);
+        expect(resolveSource(snapshot,config,context,flatColumn).suite?.id).toBe(61);
+        expect(resolveSource(snapshot,config,{environment:'',content:'Nested'},flatColumn).suite).toBeUndefined();
+    });
+    it('compares flat sources with each environment without adding duplicate environment-free rows',()=>{
+        const {snapshot,config,flatColumn}=matrixFlatHierarchyFixture();
+        const rows=catalogRows(snapshot,config).filter(row=>row.content==='Regression'&&row.workItemId===100);
+        expect(rows.map(row=>row.environment).sort()).toEqual(['ACC','TST']);
+        for (const row of rows) expect(resolveSource(snapshot,config,row,flatColumn).suite?.id).toBe(61);
+        expect(catalogRows(snapshot,config).find(row=>row.workItemId===300)?.environment).toBe('');
+        config.columns=config.columns.filter(column=>column.id!==flatColumn.id);
+        expect(catalogRows(snapshot,config).some(row=>row.workItemId===300)).toBe(false);
+    });
+    it('keeps direct duplicate content suites ambiguous and rejects mappings after a hierarchy switch',()=>{
+        const {snapshot,config,flatColumn}=matrixFlatHierarchyFixture();
+        snapshot.suites.push(matrixSuite(64,'Regression',60));
+        expect(resolveSource(snapshot,config,context,flatColumn).ambiguous).toBe(true);
+        config.mappings[mappingKey(context,flatColumn.id)]=61;
+        expect(resolveSource(snapshot,config,context,flatColumn).suite?.id).toBe(61);
+        expect(resolveSource(snapshot,config,context,{...flatColumn,hasEnvironmentLevel:true})).toMatchObject({suite:undefined});
+    });
     it('RM4-01 RM4-04 derives the union solely from visible valid version columns',()=>{
         const {snapshot,config,column}=matrixHierarchyFixture();
         snapshot.projections.push(matrixProjection(32,901),matrixProjection(42,902));

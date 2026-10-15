@@ -13,6 +13,19 @@ function fixture(){
  return {azure,deps};
 }
 describe('selected version reads',()=>{
+ it('loads direct content points for flat releases without descending into nested children',async()=>{
+  const {azure,deps}=fixture();
+  azure.suites.find(s=>s.id===32)!.parentSuite={id:30};
+  azure.suites.find(s=>s.id===33)!.parentSuite={id:30};
+  const cases=vi.spyOn(deps.testManagement,'listTestCasesInSuite');
+  const data=await loadReleaseMatrix(1,deps,{versionSuiteIds:[20],flatVersionSuiteIds:[30]});
+  const selected=new Set(data.suites.filter(s=>data.suites.find(e=>e.id===s.parentSuiteId)?.parentSuiteId===20).map(s=>s.id));
+  for(const suite of data.suites.filter(s=>s.parentSuiteId===30))selected.add(suite.id);
+  expect(new Set(cases.mock.calls.map(call=>call[1]))).toEqual(selected);
+  expect(data.projections.some(p=>p.suiteId===32)).toBe(true);
+  expect(data.projections.some(p=>p.suiteId===35)).toBe(false);
+  expect(data.projections.some(p=>p.suiteId===22)).toBe(true);
+ });
  it('retains all suite metadata while reading cases and points only for selected direct contents',async()=>{
   const {deps}=fixture();const cases=vi.spyOn(deps.testManagement,'listTestCasesInSuite'),points=vi.spyOn(deps.testManagement,'loadPointsForSuite');
   const data=await loadReleaseMatrix(1,deps,{versionSuiteIds:[20]});

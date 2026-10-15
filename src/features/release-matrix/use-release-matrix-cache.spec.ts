@@ -16,6 +16,21 @@ function fixture(){
  return {snapshot,port,mount};
 }
 describe('matrix navigation and selection reads',()=>{
+ it('reloads on a hierarchy change and never reuses a snapshot with the wrong content depth',async()=>{
+  const f=fixture(),hook=await f.mount();
+  const column={id:'release',versionSuiteId:20,visible:true};
+  act(()=>hook.result.current.update({columns:[column]}));
+  await waitFor(()=>expect(f.port.load).toHaveBeenCalledTimes(2));
+  act(()=>hook.result.current.update({columns:[{...column,hasEnvironmentLevel:false}]}));
+  await waitFor(()=>expect(f.port.load).toHaveBeenCalledTimes(3));
+  const flat=f.port.load.mock.calls[2] as unknown as [string,AbortSignal,number[],number[]];
+  expect(flat.slice(2)).toEqual([[],[20]]);
+  await waitFor(()=>expect(hook.result.current.loading).toBe(false));
+  act(()=>hook.result.current.update({columns:[column,{...column,id:'flat',hasEnvironmentLevel:false}]}));
+  await waitFor(()=>expect(f.port.load).toHaveBeenCalledTimes(4));
+  const both=f.port.load.mock.calls[3] as unknown as [string,AbortSignal,number[],number[]];
+  expect(both.slice(2)).toEqual([[20],[20]]);
+ });
  it.each(['Passed','ResetToActive'] as const)('rereads older selection caches after a fresh read confirms an uncertain %s',async outcome=>{
   const initial={...matrixProjection(22,100),testPointId:7,lastOutcome:'Failed',lastRunId:2,lastResultId:3};
   const baseline:MatrixSnapshot={planId:1,contextIdentity:context,suites:[],projections:[initial],pointCounts:{'22:100':1}};

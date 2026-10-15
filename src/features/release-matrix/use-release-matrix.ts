@@ -27,7 +27,9 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
         [port, setId, planId, contextIdentity]);
     const mutation = React.useSyncExternalStore(mutationStore?.subscribe ?? subscribeWithoutStore,
         mutationStore?.getSnapshot ?? getEmptyMutationState);
-    const selectedKey = JSON.stringify([...new Set(config.columns.map(c => c.versionSuiteId).filter(id => id > 0))].sort((a, b) => a - b));
+    const selectedVersions = (withEnvironment: boolean) => [...new Set(config.columns.filter(c =>
+        (c.hasEnvironmentLevel !== false) === withEnvironment).map(c => c.versionSuiteId).filter(id => id > 0))].sort((a,b) => a-b);
+    const selectedKey = JSON.stringify([selectedVersions(true), selectedVersions(false)]);
     const cacheKey = expectedContextIdentity ? JSON.stringify([setId, planId, rootSuiteId, expectedContextIdentity, selectedKey]) : null;
     const accepted = React.useRef<{ store: MatrixMutationStore; readStartedAt: number; selectedKey: string } | null>(null);
     const reload = React.useCallback(async (background = false, reuseCache = false) => {
@@ -45,7 +47,8 @@ export function useReleaseMatrix(setId: string, planId: number, rootSuiteId: num
             const cached = reuseCache && cacheKey && !knownStore?.getSnapshot().blocked.size ? cache.get(cacheKey) : undefined;
             if (cacheKey && !cached) cache.invalidate(cacheKey);
             const readStartedAt = cached?.readStartedAt ?? getMatrixMutationRevision();
-            const value = cached?.snapshot ?? await port.load(setId, controller.signal, JSON.parse(selectedKey) as number[]);
+            const [versions, flatVersions] = JSON.parse(selectedKey) as [number[], number[]];
+            const value = cached?.snapshot ?? await port.load(setId, controller.signal, versions, flatVersions);
             const store = getMatrixMutationStore(port, setId, value.planId, value.contextIdentity);
             if (alive.current && version === request.current) {
                 if (!cached) store.reconcile(value, readStartedAt);

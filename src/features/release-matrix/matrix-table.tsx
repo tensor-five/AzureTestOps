@@ -113,7 +113,7 @@ export function MatrixTable({ snapshot, config, groups, pending, blocked, stale,
                       : `#${row.workItemId}`}
                   </td>
                   <th scope="row" className="matrix-case-title" title={`#${row.workItemId} ${row.title}`}>{row.title}</th>
-                  {!combined && <td className="matrix-context-cell">{grouping === 'environment' ? row.content : row.environment}</td>}
+                  {!combined && <td className="matrix-context-cell">{grouping === 'environment' ? row.content : row.environment || 'Ohne Umgebung'}</td>}
                   {columns.map(column => {
                     const source = sources.get(sourceKey(row, column.id))!;
                     const key = `${source.suite?.id}:${row.workItemId}`;

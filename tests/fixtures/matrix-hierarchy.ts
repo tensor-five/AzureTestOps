@@ -13,3 +13,19 @@ export function matrixHierarchyFixture() {
     const config={...emptyMatrixConfig(1,10),columns:[column,{id:'catalog-version',versionSuiteId:20,visible:true}]};
     return {snapshot,column,config};
 }
+
+export function matrixFlatHierarchyFixture() {
+    const fixture = matrixHierarchyFixture();
+    fixture.snapshot.suites.push(matrixSuite(60,'Flat release',10), matrixSuite(61,'Regression',60),
+        matrixSuite(62,'Import',60), matrixSuite(63,'Nested',61));
+    fixture.snapshot.projections.push(matrixProjection(61,100), matrixProjection(61,300,'Flat-only case'),
+        matrixProjection(62,200,'Empty',[]), matrixProjection(63,999,'Too deep'));
+    for (const projection of fixture.snapshot.projections) {
+        projection.testPointId = projection.suiteId * 1000 + projection.workItemId;
+        projection.lastOutcome = 'Passed';
+        fixture.snapshot.pointCounts[`${projection.suiteId}:${projection.workItemId}`] = 1;
+    }
+    const flatColumn = {id:'flat',versionSuiteId:60,visible:true,hasEnvironmentLevel:false};
+    fixture.config.columns.push(flatColumn);
+    return {...fixture,flatColumn};
+}

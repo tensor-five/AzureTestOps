@@ -3,6 +3,16 @@ import {mkdtemp,rm} from 'node:fs/promises';import os from 'node:os';import path
 import {LowdbUserPreferencesAdapter} from './lowdb-user-preferences.adapter.js';
 import {emptyMatrixConfig} from '../../../domain/release-matrix/matrix-config.js';
 describe('Release matrix preference isolation',()=>{
+  it('preserves per-column hierarchy choices in lowdb across restart',async()=>{
+    vi.stubEnv('NODE_ENV','development');
+    const dir=await mkdtemp(path.join(os.tmpdir(),'matrix-hierarchy-preferences-'));const file=path.join(dir,'preferences.json');
+    try {
+      const config={...emptyMatrixConfig(1,10),columns:[{id:'nested',versionSuiteId:20,visible:true},{id:'flat',versionSuiteId:30,visible:true,hasEnvironmentLevel:false}]};
+      await new LowdbUserPreferencesAdapter(file,'user').mergePreferences({setReleaseMatrices:{first:config}});
+      const saved=(await new LowdbUserPreferencesAdapter(file,'user').getPreferences()).setReleaseMatrices!.first;
+      expect(saved.columns[0].hasEnvironmentLevel !== false).toBe(true);expect(saved.columns[1].hasEnvironmentLevel).toBe(false);
+    } finally {vi.unstubAllEnvs();await rm(dir,{recursive:true,force:true});}
+  });
   it('merges one set and preserves the other set and unrelated preferences across restart',async()=>{
     vi.stubEnv('NODE_ENV','development');
     const dir=await mkdtemp(path.join(os.tmpdir(),'matrix-preferences-'));const file=path.join(dir,'preferences.json');

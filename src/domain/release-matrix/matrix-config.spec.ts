@@ -1,6 +1,13 @@
 import {describe,it,expect} from 'vitest';
 import {emptyMatrixConfig,sanitizeMatrixConfig,uniqueTags} from './matrix-config.js';
 describe('Matrix v3 user configuration',()=>{
+    it('defaults missing or malformed hierarchy flags to enabled and preserves explicit false across saves',()=>{
+        for (const flag of [undefined,null,true,'false',false]) {
+            const clean=sanitizeMatrixConfig({...emptyMatrixConfig(1,10),columns:[{id:'a',versionSuiteId:20,visible:true,hasEnvironmentLevel:flag}]})!;
+            expect(clean.columns[0].hasEnvironmentLevel !== false).toBe(flag !== false);
+            expect(sanitizeMatrixConfig(clean)).toEqual(clean);
+        }
+    });
     it('normalizes test-case filter tag lists preserving first spelling',()=>{
         expect(uniqueTags([' Import ','Smoke','IMPORT',''])).toEqual(['Import','Smoke']);
     });

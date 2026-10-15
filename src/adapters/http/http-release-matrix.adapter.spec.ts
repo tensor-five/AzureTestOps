@@ -2,6 +2,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { HttpReleaseMatrixAdapter } from './http-release-matrix.adapter.js';
 describe('matrix browser transport diagnostics', () => {
+    it('transmits separate hierarchy selections for nested and flat release columns',async()=>{
+        const fetch=vi.fn(async()=>({ok:true,text:async()=>JSON.stringify({planId:1,suites:[],projections:[]})}));
+        vi.stubGlobal('fetch',fetch);
+        await new HttpReleaseMatrixAdapter().load('catalog',undefined,[20],[30]);
+        const query=new URL((fetch.mock.calls as unknown as [string][])[0][0],'http://localhost').searchParams;
+        expect(query.get('versions')).toBe('[20]');expect(query.get('flatVersions')).toBe('[30]');
+    });
     afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
     it('loads one filter membership with its context and abort signal without a matrix read', async () => {
         const value = { planId: 1, suiteId: 43, contextIdentity: 'https://dev.azure.com/org/project', workItemIds: [201] };

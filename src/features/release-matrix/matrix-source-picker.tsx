@@ -20,7 +20,7 @@ export function MatrixSourcePicker({ snapshot, config, row, column, source, disa
     if (source.candidates.length < 2 && !explicit) return null;
     const invalid = !!explicit && !source.candidates.some(suite => suite.id === explicit);
     return <select className="matrix-source-picker"
-      aria-label={`Umgebung für ${row.content} / #${row.workItemId} / ${versionTitle(snapshot, column)}`}
+      aria-label={`${column.hasEnvironmentLevel === false ? 'Suite' : 'Umgebung'} für ${row.content} / #${row.workItemId} / ${versionTitle(snapshot, column)}`}
       value={explicit ?? ''} disabled={disabled} onChange={event => {
           const combinedMappings = { ...config.combinedMappings };
           if (event.target.value) combinedMappings[key] = Number(event.target.value);
@@ -28,7 +28,7 @@ export function MatrixSourcePicker({ snapshot, config, row, column, source, disa
           update({ combinedMappings });
       }}>
       <option value="">{source.candidates.length > 1 ? 'Auswählen …' : 'Automatisch'}</option>
-      {source.candidates.map(suite => <option key={suite.id} value={suite.id}>{snapshot.suites.find(environment => environment.id === suite.parentSuiteId)?.name} · {suite.path} (#{suite.id})</option>)}
+      {source.candidates.map(suite => <option key={suite.id} value={suite.id}>{column.hasEnvironmentLevel !== false && `${snapshot.suites.find(environment => environment.id === suite.parentSuiteId)?.name} · `}{suite.path} (#{suite.id})</option>)}
       {invalid && <option value={explicit}>Suite #{explicit} · ungültig</option>}
     </select>;
 }
