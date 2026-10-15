@@ -1,15 +1,20 @@
 import { parseRetryAfterMilliseconds } from '../utils/retry.js';
 import type { AzureHttpResponse, AzureRestHttpClient } from './azure-rest-client.js';
 import type { MatrixReadDiagnostics } from '../diagnostics/matrix-read-diagnostics.js';
+import { combinedAbortSignal } from '../utils/combined-abort-signal.js';
 /** GET-only cache for one matrix load. Failed responses are evicted so existing retry policy still applies. */
 export function createMatrixReadHttpClient(client: AzureRestHttpClient, options: { signal?: AbortSignal; diagnostics?: MatrixReadDiagnostics }): AzureRestHttpClient {
-    const pending = new Map<string, Promise<AzureHttpResponse>>();
+    const scopes = new Map<AbortSignal | undefined, Map<string, Promise<AzureHttpResponse>>>();
     const failedAt = new Map<string, number>();
-    return { signal: options.signal, get(url) {
-        options.signal?.throwIfAborted();
+    return { signal: options.signal, get(url, callOptions) {
+        const scope = callOptions?.signal ?? options.signal;
+        const signal = combinedAbortSignal(options.signal, scope);
+        signal?.throwIfAborted();
+        let pending = scopes.get(scope);
+        if (!pending) { pending = new Map(); scopes.set(scope, pending); }
         const cached = pending.get(url);
-        if (cached) { options.diagnostics?.addCount('httpCacheHits'); return cached; }
-        const work = () => client.get(url, { signal: options.signal });
+        if (cached) { options.diagnostics?.addCount('httpCacheHits'); return cached.then(response => { signal?.throwIfAborted(); return response; }); }
+        const work = () => client.get(url, { signal }).then(response => { signal?.throwIfAborted(); return response; });
         const parsed = new URL(url);
         const suite = parsed.pathname.match(/\/suites\/(\d+)/i), run = parsed.pathname.match(/\/runs\/(\d+)/i);
         const ids = { ...(suite ? { suiteId: Number(suite[1]) } : {}), ...(run ? { runId: Number(run[1]) } : {}) };

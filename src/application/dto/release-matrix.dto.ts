@@ -3,9 +3,12 @@ import type { TestCaseOutcomeUpdate } from '../../domain/test-management/test-ca
 import type { TestSuiteFlatEntry } from '../../domain/test-management/test-suite-tree.js';
 import type { ManualOutcome } from '../../domain/release-matrix/matrix-config.js';
 import type { TestResult } from '../../domain/test-management/test-result.js';
+import type { DataFreshness } from './data-freshness.dto.js';
 /** Result identity before the outcome aggregator combines result and point data. */
 export type MatrixResultEvidence = Pick<TestResult, 'resultId' | 'runId' | 'workItemId' | 'suiteId' | 'pointId' | 'outcome' | 'completedDate'>;
 export type MatrixData = {
+  freshness?: DataFreshness;
+  loadedAt?: string;
   planId: number; suites: Array<TestSuiteFlatEntry & { suiteType: string | null }>;
   projections: TestCaseProjection[]; pointCounts: Record<string, number>;
   /** Explicit run completion from the same read; absent in older snapshots means unconfirmed. */

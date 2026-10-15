@@ -5,6 +5,13 @@ import type {MatrixSnapshot} from '../../application/dto/release-matrix.dto.js';
 const port=()=>({} as ReleaseMatrixClientPort);
 const entry={setId:'set',snapshot:{} as MatrixSnapshot,readStartedAt:1,loadedAt:100};
 describe('matrix snapshot cache',()=>{
+ it('does not stack another minute of cache reuse on top of an old backend source',()=>{
+  const cache=matrixSnapshotCache(port());
+  const value={...entry,loadedAt:50_000,snapshot:{...entry.snapshot,freshness:{sourceReadAt:new Date(0).toISOString(),cacheUsed:true}}};
+  cache.set('old',value);
+  expect(cache.get('old',59_999)).toBe(value);
+  expect(cache.get('old',60_000)).toBeUndefined();
+ });
  it('expires at sixty seconds, including backwards clock changes',()=>{const cache=matrixSnapshotCache(port());cache.set('a',entry);expect(cache.get('a',60099)).toBe(entry);expect(cache.get('a',60100)).toBeUndefined();cache.set('a',entry);expect(cache.get('a',99)).toBeUndefined();});
  it('isolates clients and supports explicit invalidation',()=>{const a=matrixSnapshotCache(port()),b=matrixSnapshotCache(port());a.set('x',entry);expect(b.get('x',100)).toBeUndefined();a.invalidate('x');expect(a.get('x',100)).toBeUndefined();});
  it('bounds retained contexts and evicts the least recently used',()=>{const cache=matrixSnapshotCache(port());for(let i=0;i<16;i++)cache.set(String(i),entry);cache.get('0',100);cache.set('16',entry);expect(cache.get('0',100)).toBe(entry);expect(cache.get('1',100)).toBeUndefined();});

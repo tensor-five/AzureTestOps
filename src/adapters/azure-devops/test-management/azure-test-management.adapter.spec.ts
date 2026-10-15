@@ -188,6 +188,18 @@ describe("AzureTestManagementAdapter", () => {
     ]);
   });
 
+  it.each([{ value: 'invalid' }, { value: [{ id: 1 }] }, { value: [{ id: 1, testRun: { id: 999 }, testCase: { id: 101 } }] }])
+    ('rejects malformed result pages so they cannot become reusable history: %j', async body => {
+      const { client } = makeStubClient(() => ok(body));
+      await expect(new AzureTestManagementAdapter(client, ctx).loadResultsForRun(5000)).rejects.toThrow('RESULTS_INVALID_RESPONSE');
+    });
+
+  it('rejects a repeated result page instead of growing history indefinitely', async () => {
+    const { client } = makeStubClient(() => ok({ value: [{ id: 1, testRun: { id: 5000 }, testCase: { id: 101 } }] }));
+    await expect(new AzureTestManagementAdapter(client, ctx, { resultsPageSize: 1 }).loadResultsForRun(5000))
+      .rejects.toThrow('RESULTS_REPEATED_PAGE');
+  });
+
   it("uses testCase.id (Work Item ID) over testCaseReferenceId when they diverge", async () => {
     // Real ADO payload: the embedded ids arrive as strings, and the internal
     // `testCaseReferenceId` differs from the Work Item id on `testCase.id`.

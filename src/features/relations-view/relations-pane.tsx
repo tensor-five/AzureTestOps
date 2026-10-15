@@ -296,7 +296,7 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
   const selection = useLineSelection({
     enabled: props.isVisible !== false,
     visibleLineIds:
-      props.hasActiveSet && !props.error && props.snapshot
+      props.hasActiveSet && props.snapshot
         ? renderedLineIds
         : NO_VISIBLE_LINES,
     onDeleteRequested: (lineId) => {
@@ -315,7 +315,7 @@ export function RelationsPane(props: RelationsPaneProps): React.ReactElement {
       </RelationsPaneNotice>
     );
   }
-  if (props.error) {
+  if (props.error && !props.snapshot) {
     return (
       <RelationsPaneNotice title="Snapshot failed">
         <span>{props.error}</span>

@@ -38,6 +38,7 @@ export function useActiveSetSnapshot(setId: string | null, scopeKey = setId): {
   const { activeSetSnapshot } = useClientPorts();
   const [state, setState] = React.useState<SnapshotState>(INITIAL_STATE);
   const subscriptionRef = React.useRef<{ close(): void } | null>(null);
+  const snapshotScope = React.useRef(scopeKey);
 
   const generation = React.useRef(0);
   const currentScope = React.useRef(scopeKey);
@@ -64,11 +65,15 @@ export function useActiveSetSnapshot(setId: string | null, scopeKey = setId): {
     closeSubscription();
     outcomeUpdates.current = [];
     if (!setId) {
+      snapshotScope.current = scopeKey;
       setState({ ...INITIAL_STATE });
       return;
     }
 
-    setState({ snapshot: null, progress: null, isLoading: true, error: null });
+    const retainSnapshot = snapshotScope.current === scopeKey;
+    snapshotScope.current = scopeKey;
+    setState(current => ({ snapshot: retainSnapshot ? current.snapshot : null,
+      progress: null, isLoading: true, error: null }));
 
     const requestGeneration = generation.current;
     subscriptionRef.current = activeSetSnapshot.subscribe(setId, (event) => {
@@ -78,6 +83,7 @@ export function useActiveSetSnapshot(setId: string | null, scopeKey = setId): {
         return;
       }
       if (event.type === "result") {
+        snapshotScope.current = scopeKey;
         setState((current) => ({
           ...current,
           snapshot: { ...event.snapshot, projections: applyConfirmedOutcomes(event.snapshot.projections, outcomeUpdates.current) },
@@ -89,12 +95,7 @@ export function useActiveSetSnapshot(setId: string | null, scopeKey = setId): {
         return;
       }
       // type === "error"
-      setState((current) => {
-        if (current.snapshot) {
-          return current;
-        }
-        return { ...current, isLoading: false, error: event.message };
-      });
+      setState(current => ({ ...current, isLoading: false, error: event.message }));
       closeSubscription();
     });
   }, [setId, scopeKey, closeSubscription, activeSetSnapshot]);
@@ -106,5 +107,6 @@ export function useActiveSetSnapshot(setId: string | null, scopeKey = setId): {
     };
   }, [refresh, closeSubscription]);
 
-  return { state, refresh, applyOutcome };
+  const scopedState = snapshotScope.current === scopeKey ? state : { ...INITIAL_STATE, isLoading: Boolean(setId) };
+  return { state: scopedState, refresh, applyOutcome };
 }

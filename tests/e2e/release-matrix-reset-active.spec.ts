@@ -70,7 +70,7 @@ test('an unconfirmed reset stays locked until a fresh active point is read witho
   await expect(target).toBeDisabled();
   expect(server.azure().writes).toHaveLength(1);
   staleReset = false;
-  await page.getByRole('button', {name: 'Matrix aktualisieren', exact: true}).click();
+  await page.getByRole('button', {name: 'Refresh release matrix', exact: true}).click();
   await expect(target).toHaveValue('Unspecified'); await expect(target).toBeEnabled();
   expect(server.azure().writes).toHaveLength(1);
   await expect(page.getByRole('alert')).toHaveCount(0);

@@ -8,7 +8,7 @@ import { useReleaseMatrix } from './use-release-matrix.js';
 import { MatrixTable } from './matrix-table.js';
 import { MatrixSettings } from './matrix-settings.js';
 import './release-matrix.css';
-export type MatrixRefreshState = { refresh(): void; loading: boolean; pending: boolean; lastUpdatedAt: number | null };
+export type MatrixRefreshState = { refresh(): void; loading: boolean; pending: boolean; lastUpdatedAt: number | null; cachedData: boolean; failed: boolean };
 export function ReleaseMatrixPane({ setId, planId, rootSuiteId, contextIdentity, getWorkItemHref, onRefreshStateChange }: {
     setId: string;
     planId: number;
@@ -23,8 +23,8 @@ export function ReleaseMatrixPane({ setId, planId, rootSuiteId, contextIdentity,
     const [settings, setSettings] = React.useState(false);
     React.useEffect(() => {
         onRefreshStateChange?.({ refresh: () => { void model.reload(); }, loading: model.loading,
-            pending: model.pending.size > 0, lastUpdatedAt: model.lastUpdatedAt });
-    }, [onRefreshStateChange, model.reload, model.loading, model.pending.size, model.lastUpdatedAt]);
+            pending: model.pending.size > 0, lastUpdatedAt: model.lastUpdatedAt, cachedData: model.cachedData, failed: model.readFailed });
+    }, [onRefreshStateChange, model.reload, model.loading, model.pending.size, model.lastUpdatedAt, model.cachedData, model.readFailed]);
     React.useEffect(() => () => onRefreshStateChange?.(null), [onRefreshStateChange]);
     const groups = snapshot ? matrixGroups(snapshot, config) : [];
     const columns = config.columns.filter(c => c.visible);

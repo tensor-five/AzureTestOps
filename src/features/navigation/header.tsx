@@ -35,6 +35,9 @@ export type AppHeaderProps = {
   refreshControl?: React.ReactNode;
   magicSortAction?: React.ReactNode;
   lastUpdatedAt?: number | null;
+  isRefreshing?: boolean;
+  refreshFailed?: boolean;
+  cachedData?: boolean;
 };
 
 /**
@@ -48,7 +51,7 @@ export function AppHeader(props: AppHeaderProps): React.ReactElement {
       <div className="ui-shell-brand-row">
         <div className="ui-shell-brand">
           <h1>AzureTestOps</h1>
-          <LastUpdatedLabel timestamp={props.lastUpdatedAt ?? null} />
+          <LastUpdatedLabel timestamp={props.lastUpdatedAt ?? null} loading={props.isRefreshing} failed={props.refreshFailed} cached={props.cachedData} />
         </div>
       </div>
       <div className="ui-shell-header-actions">

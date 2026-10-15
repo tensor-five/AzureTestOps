@@ -47,7 +47,7 @@ function buildSnapshotPort(): {
 function setupHookHarness<T>(
   useHook: () => T,
   ports: ClientPorts
-): { result: { current: T }; unmount(): void } {
+): { result: { current: T }; rerender(): void; unmount(): void } {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -68,6 +68,9 @@ function setupHookHarness<T>(
 
   return {
     result,
+    rerender: () => {
+      act(() => root.render(<WithClientPorts ports={ports}><Capture /></WithClientPorts>));
+    },
     unmount: () => {
       act(() => {
         root.unmount();
@@ -95,6 +98,32 @@ describe("useActiveSetSnapshot", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it('keeps the same scoped snapshot during refresh and preserves it with a visible read error', async () => {
+    let scope = 'set-1:first-query';
+    const harness = setupHookHarness(() => useActiveSetSnapshot('set-1', scope), ports);
+    const snapshot = {
+      set: { id: 'set-1', name: 'S', planId: '1', rootSuiteId: '1', queryId: 'q' },
+      suiteTree: { id: 1, name: 'Root', parentSuiteId: null, path: 'Root', children: [] },
+      projections: [], workItemsFromQuery: [], loadedAt: '2026-10-15T07:00:00Z'
+    };
+    act(() => snapshotPort.active()!.emit({ type: 'result', snapshot }));
+    act(() => harness.result.current.refresh());
+    expect(harness.result.current.state.snapshot).toEqual(snapshot);
+    expect(harness.result.current.state.isLoading).toBe(true);
+    act(() => snapshotPort.active()!.emit({ type: 'error', message: 'Azure nicht erreichbar' }));
+    expect(harness.result.current.state.snapshot).toEqual(snapshot);
+    expect(harness.result.current.state.error).toBe('Azure nicht erreichbar');
+    expect(harness.result.current.state.isLoading).toBe(false);
+    scope = 'set-1:other-query';
+    // A refresh on the new render must not reuse data from the earlier query/context.
+    harness.rerender();
+    await flushAsync();
+    expect(harness.result.current.state.snapshot).toBeNull();
+    act(() => snapshotPort.active()!.emit({ type: 'error', message: 'Neue Abfrage fehlgeschlagen' }));
+    expect(harness.result.current.state.error).toBe('Neue Abfrage fehlgeschlagen');
+    harness.unmount();
   });
 
   it("subscribes for the active set and tracks loading state", async () => {

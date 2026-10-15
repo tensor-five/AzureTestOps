@@ -1,9 +1,12 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { matrixTestServices } from '../../../tests/fixtures/release-matrix.js';
 import { loadReleaseMatrix } from './load-release-matrix.use-case.js';
 
 describe('matrix canonical hierarchy', () => {
+    afterEach(() => vi.useRealTimers());
     it.each(['missing', 'partial', 'child-first', 'duplicate'] as const)('preserves physical suites, paths and results for %s catalog parents', async mode => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date('2026-10-15T10:00:00Z'));
         const baseline = await loadReleaseMatrix(1, matrixTestServices().services);
         const { services } = matrixTestServices();
         const catalog = await services.testCatalog.listSuitesForPlan(1);

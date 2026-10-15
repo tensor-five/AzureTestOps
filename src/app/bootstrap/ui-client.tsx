@@ -1,4 +1,5 @@
 import { ReleaseMatrixPane, type MatrixRefreshState } from "../../features/release-matrix/release-matrix-pane.js";
+import { snapshotDataTimestamp } from '../../shared/ui/snapshot-data-timestamp.js';
 import { buildAdoBaseUrl } from "../../shared/azure-devops/azure-rest-client.js";
 import * as React from "react";
 import { createRoot } from "react-dom/client";
@@ -112,15 +113,12 @@ function HydratedAppShell(props: {
   const matchingContextIdentity = adoContextState.context
     ? buildAdoBaseUrl(adoContextState.context).toLowerCase() : undefined;
   const ports = useClientPorts();
-  const matchingScopeKey = JSON.stringify([setManagement.activeSetId, activeSet?.planId, matchingContextIdentity]);
+  const matchingScopeKey = JSON.stringify([setManagement.activeSetId, activeSet?.planId, activeSet?.rootSuiteId, activeSet?.queryId, matchingContextIdentity]);
   const { state: snapshotState, refresh: refreshSnapshot, applyOutcome } = useActiveSetSnapshot(
     setManagement.activeSetId, matchingScopeKey
   );
-  const [matchingUpdate, setMatchingUpdate] = React.useState<{ scope: string; timestamp: number | null }>({ scope: '', timestamp: null });
-  React.useEffect(() => {
-    const timestamp = snapshotState.snapshot ? Date.parse(snapshotState.snapshot.loadedAt) : NaN;
-    if (Number.isFinite(timestamp)) setMatchingUpdate({ scope: matchingScopeKey, timestamp });
-  }, [matchingScopeKey, snapshotState.snapshot]);
+  const matchingTimestamp = snapshotDataTimestamp(snapshotState.snapshot?.freshness,
+    snapshotState.snapshot ? Date.parse(snapshotState.snapshot.loadedAt) : null);
 
   useMatrixOutcomeSync(ports.releaseMatrix, setManagement.activeSetId, Number(activeSet?.planId),
     matrixContextIdentity === matchingContextIdentity ? matchingContextIdentity : undefined, applyOutcome);
@@ -199,7 +197,10 @@ function HydratedAppShell(props: {
         themeMode={themeMode}
         onToggleTheme={handleThemeToggle}
         refreshControl={refreshControl}
-        lastUpdatedAt={view === "matrix" ? matrixRefresh?.lastUpdatedAt : matchingUpdate.scope === matchingScopeKey ? matchingUpdate.timestamp : null}
+        lastUpdatedAt={view === "matrix" ? matrixRefresh?.lastUpdatedAt : matchingTimestamp}
+        isRefreshing={view === "matrix" ? matrixRefresh?.loading : snapshotState.isLoading}
+        refreshFailed={view === "matrix" ? matrixRefresh?.failed : Boolean(snapshotState.error)}
+        cachedData={view === "matrix" ? matrixRefresh?.cachedData : snapshotState.snapshot?.freshness?.cacheUsed}
         magicSortAction={view === "matching" ? magicSortAction : null}
         viewSwitcher={<nav aria-label="Ansichten" className="matrix-navigation">
           <button type="button" aria-pressed={view === "matching"} onClick={() => setView("matching")}>Zuordnung</button>
@@ -230,7 +231,7 @@ function HydratedAppShell(props: {
           onMagicSortControlChange={handleMagicSortControlChange}
         /></div>
         {view === "matrix" && (setManagement.activeSetId ? <ReleaseMatrixPane
-          key={JSON.stringify([setManagement.activeSetId, activeSet?.planId, matrixContextIdentity])}
+          key={JSON.stringify([setManagement.activeSetId, activeSet?.planId, activeSet?.rootSuiteId, matrixContextIdentity])}
           setId={setManagement.activeSetId}
           planId={Number(activeSet?.planId)}
           rootSuiteId={Number(activeSet?.rootSuiteId)}

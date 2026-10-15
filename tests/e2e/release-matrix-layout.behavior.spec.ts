@@ -79,7 +79,9 @@ test('V4-B04 RM3-09 completed-run precedence and point fallback still resolve th
     await expect(outcome(page, 'TST', 'Regression', 201)).toHaveValue('Passed');
     server.azure().results.splice(server.azure().results.findIndex(r => r.testRun.id === 3), 1);
     server.azure().control.omitResultSuite = true;
-    await page.getByRole('button', { name: 'Matrix aktualisieren', exact: true }).click();
+    // Reload changed completed results so this refresh exercises the missing-suite point fallback.
+    for (const run of server.azure().runs) if (run.state === 'Completed') run.revision = (run.revision ?? 0) + 1;
+    await page.getByRole('button', { name: 'Refresh release matrix', exact: true }).click();
     await expect(outcome(page, 'TST', 'Regression', 201)).toHaveValue('Passed');
     await expect(outcome(page, 'TST', 'Data Import', 201)).toHaveValue('Passed');
     expect(server.azure().writes).toEqual([]);
