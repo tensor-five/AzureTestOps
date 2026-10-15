@@ -33,11 +33,11 @@ describe('matrix server read diagnosis', () => {
         const log = vi.spyOn(console, 'info').mockImplementation(() => {});
         const f = setup();
         await f.route('GET', path, { headers: { 'x-matrix-request-id': supplied } } as unknown as IncomingMessage, f.res as unknown as ServerResponse);
-        const id = log.mock.calls[0][1].requestId;
+        const id = JSON.parse(log.mock.calls[0][1]).requestId;
         expect(id).toMatch(/^[0-9a-f-]{36}$/);
         if (supplied.startsWith('sensitive')) expect(JSON.stringify(log.mock.calls)).not.toContain(supplied);
         else expect(id).toBe(supplied);
-        expect(log.mock.calls.at(-1)?.[1].event).toBe('complete');
+        expect(JSON.parse(log.mock.calls.at(-1)?.[1]).event).toBe('complete');
         expect(f.res.setHeader).toHaveBeenCalledWith('x-matrix-request-id', id);
         expect(f.res.listenerCount('close')).toBe(0);
     });
@@ -49,7 +49,7 @@ describe('matrix server read diagnosis', () => {
         await vi.waitFor(() => expect(f.matrixServices).toHaveBeenCalledOnce());
         f.res.emit('close');
         expect(f.matrixServices.mock.calls[0][1]?.signal?.aborted).toBe(true);
-        expect(log.mock.calls.at(-1)?.[1].event).toBe('aborted'); expect(vi.getTimerCount()).toBe(0);
+        expect(JSON.parse(log.mock.calls.at(-1)?.[1]).event).toBe('aborted'); expect(vi.getTimerCount()).toBe(0);
         resolve([]); await pending;
         expect(f.res.end).not.toHaveBeenCalled(); expect(f.res.listenerCount('close')).toBe(0);
     });

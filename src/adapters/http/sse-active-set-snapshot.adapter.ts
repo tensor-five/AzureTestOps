@@ -5,6 +5,7 @@ import type {
   ActiveSetSnapshotStreamSubscription
 } from "../../application/ports/client/active-set-snapshot-client.port.js";
 import type { SnapshotProgressEvent } from "../../application/use-cases/load-active-set-snapshot.use-case.js";
+import { createViewReadDiagnostics } from '../../shared/diagnostics/view-read-diagnostics.js';
 
 /**
  * Server-Sent Events adapter implementing {@link ActiveSetSnapshotClientPort}.
@@ -23,20 +24,28 @@ export class SseActiveSetSnapshotAdapter implements ActiveSetSnapshotClientPort 
       return { close: () => undefined };
     }
 
-    const source = new EventSource(
-      `/phase2/active-set/snapshot/stream?setId=${encodeURIComponent(setId)}`
-    );
+    const requestId = crypto.randomUUID();
+    const diagnostics = createViewReadDiagnostics('relations', requestId, 'browser');
+    let source: EventSource;
+    try {
+      source = new EventSource(
+        `/phase2/active-set/snapshot/stream?setId=${encodeURIComponent(setId)}&requestId=${requestId}`
+      );
+    } catch (error) { diagnostics.finish('error'); throw error; }
     let closed = false;
 
     const close = (): void => {
       if (closed) return;
       closed = true;
+      diagnostics.finish('aborted');
       source.close();
     };
 
     source.addEventListener("progress", (event) => {
+      if (closed) return;
       try {
         const data = JSON.parse((event as MessageEvent).data) as SnapshotProgressEvent;
+        diagnostics.phase(data.stage, data.done === data.total);
         onEvent({ type: "progress", progress: data });
       } catch {
         // Ignore malformed events — nothing actionable client-side.
@@ -44,10 +53,14 @@ export class SseActiveSetSnapshotAdapter implements ActiveSetSnapshotClientPort 
     });
 
     source.addEventListener("result", (event) => {
+      if (closed) return;
       try {
         const payload = JSON.parse((event as MessageEvent).data) as { snapshot: ActiveSetSnapshot };
+        diagnostics.progress({ projectionCount: payload.snapshot.projections.length, queryWorkItemCount: payload.snapshot.workItemsFromQuery.length });
+        diagnostics.finish('complete');
         onEvent({ type: "result", snapshot: payload.snapshot });
       } catch {
+        diagnostics.finish('error');
         onEvent({ type: "error", message: "Received malformed snapshot result." });
       } finally {
         close();
@@ -55,12 +68,16 @@ export class SseActiveSetSnapshotAdapter implements ActiveSetSnapshotClientPort 
     });
 
     source.addEventListener("error", (event) => {
+      if (closed) return;
+      diagnostics.finish('error');
       const message = readErrorMessage(event) ?? "Snapshot stream failed.";
       onEvent({ type: "error", message });
       close();
     });
 
     source.onerror = () => {
+      if (closed) return;
+      diagnostics.finish('error');
       onEvent({ type: "error", message: "Snapshot stream connection lost." });
       close();
     };

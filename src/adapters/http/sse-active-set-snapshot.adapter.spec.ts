@@ -51,18 +51,25 @@ describe("SseActiveSetSnapshotAdapter", () => {
   });
 
   afterEach(() => {
+    StubEventSource.lastInstance?.close();
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
   it("opens an EventSource for the given setId", () => {
-    new SseActiveSetSnapshotAdapter().subscribe("set-1", () => undefined);
+    const log = vi.spyOn(console, 'info').mockImplementation(() => {});
+    const subscription = new SseActiveSetSnapshotAdapter().subscribe("set-1", () => undefined);
 
-    expect(StubEventSource.lastInstance?.url).toBe(
-      "/phase2/active-set/snapshot/stream?setId=set-1"
-    );
+    const url = new URL(StubEventSource.lastInstance!.url, 'http://local');
+    expect(url.pathname).toBe('/phase2/active-set/snapshot/stream');
+    expect(url.searchParams.get('setId')).toBe('set-1');
+    expect(url.searchParams.get('requestId')).toBe(log.mock.calls[0][1].requestId);
+    subscription.close();
+    expect(log.mock.calls.at(-1)?.[1].event).toBe('aborted');
   });
 
   it("forwards progress and result events as typed envelopes and closes on result", () => {
+    const log = vi.spyOn(console, 'info').mockImplementation(() => {});
     const events: ActiveSetSnapshotStreamEvent[] = [];
     new SseActiveSetSnapshotAdapter().subscribe("set-1", (event) => events.push(event));
 
@@ -85,6 +92,18 @@ describe("SseActiveSetSnapshotAdapter", () => {
     });
     expect(events[1]).toEqual({ type: "result", snapshot });
     expect(source.closed).toBe(true);
+    expect(log.mock.calls.at(-1)?.[1].event).toBe('complete');
+    const count = events.length;
+    source.dispatchTransportError();
+    expect(events).toHaveLength(count);
+  });
+
+  it('cleans up diagnosis if EventSource construction fails without logging the exception', () => {
+    const log = vi.spyOn(console, 'info').mockImplementation(() => {});
+    vi.stubGlobal('EventSource', class { constructor() { throw new Error('private-token'); } });
+    expect(() => new SseActiveSetSnapshotAdapter().subscribe('set-1', () => {})).toThrow('private-token');
+    expect(log.mock.calls.at(-1)?.[1].event).toBe('error');
+    expect(JSON.stringify(log.mock.calls)).not.toContain('private-token');
   });
 
   it("forwards named error events with the server-supplied message", () => {

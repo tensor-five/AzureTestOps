@@ -1,10 +1,27 @@
 import { createMatrixReadDiagnostics } from '../diagnostics/matrix-read-diagnostics.js';
 import { matrixTestServices } from '../../../tests/fixtures/release-matrix.js';
 import { AzureTestManagementAdapter } from '../../adapters/azure-devops/test-management/azure-test-management.adapter.js';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createMatrixReadHttpClient } from './matrix-read-http-client.js';
 const url = 'https://dev.azure.com/org/project/_apis/test/Plans/1/suites?asTree=true';
 describe('matrix request HTTP sharing', () => {
+    afterEach(() => vi.useRealTimers());
+    it('separates HTTP resource timings, shared reads and observed retry waiting', async () => {
+        vi.useFakeTimers();
+        const sink = vi.fn(), diagnostics = createMatrixReadDiagnostics('read', 'server', sink);
+        const client = { get: vi.fn().mockResolvedValueOnce({ status: 429, json: {}, headers: { 'retry-after': '2' } }).mockResolvedValue({ status: 200, json: {} }) };
+        const read = createMatrixReadHttpClient(client, { diagnostics });
+        const resultUrl = 'https://dev.azure.com/private-org/private-project/_apis/test/Runs/42/results?$top=100';
+        await read.get(resultUrl);
+        await vi.advanceTimersByTimeAsync(2000);
+        await Promise.all([read.get(resultUrl), read.get(resultUrl)]);
+        await read.get('https://dev.azure.com/private-org/private-project/_apis/wit/wiql/private-query');
+        diagnostics.finish('complete');
+        expect(sink.mock.calls.at(-1)?.[0]).toMatchObject({ counts: { httpStarted: 3, httpCompleted: 3, httpStatus429: 1,
+            httpStatus200: 2, httpRetries: 1, httpRetryWaitMs: 2000, httpCacheHits: 1, httpMaxInFlight: 1 },
+            operations: { 'http.results': { calls: 2 }, 'http.query': { calls: 1 } } });
+        expect(JSON.stringify(sink.mock.calls)).not.toContain('private-');
+    });
     it('fetches the full plan tree once even when subtree roots are requested child first', async () => {
         const { azure } = matrixTestServices();
         const get = vi.spyOn(azure.client, 'get');

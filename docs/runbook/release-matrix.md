@@ -71,6 +71,8 @@ Das Coverage-Gate verlangt mindestens 80 Prozent für Zeilen, Statements und Fun
 
 ## Diagnose lang laufender Matrix-Reads
 
+Für vergleichbare Messungen beider Ansichten siehe [Ladezeitdiagnose für Zuordnung und Release-Matrix](view-load-diagnostics.md). Die Abschlussmeldungen enthalten zusätzlich Dauersummen und Maximaldauern je Operation, HTTP-Ressourcenarten, beobachtete Retry-Wartezeiten und Cache-Treffer. Servermeldungen werden als vollständige JSON-Zeilen ausgegeben.
+
 Browserkonsole und lokales Server-Terminal protokollieren `[release-matrix.read]` mit derselben zufälligen `requestId` (Header `x-matrix-request-id`). Der Server übernimmt nur gültige UUID-v4-Werte; sonst erzeugt er selbst eine neue ID. Die Logs enthalten keine Testtitel, Ergebnisinhalte, URLs, Kontextnamen, Tokens oder Authentifizierungsheader.
 
 - `start`: Request begonnen; `side` unterscheidet Browser und Server.
