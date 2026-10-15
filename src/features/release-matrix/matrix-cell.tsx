@@ -50,8 +50,8 @@ export function MatrixCell(props: MatrixCellProps) {
                     const current = outcomeActions.indexOf((keyboardOutcome ?? p.lastOutcome) as OutcomeAction);
                     setKeyboardOutcome(outcomeActions[Math.max(0, Math.min(outcomeActions.length - 1, current + (e.key === "ArrowDown" ? 1 : -1)))]);
                 }
-                if (e.key === "Enter" && keyboardOutcome) {
-                    e.preventDefault();
+                if ((e.key === "Enter" || (e.key === "Tab" && !e.altKey && !e.ctrlKey && !e.metaKey)) && keyboardOutcome) {
+                    if (e.key === "Enter") e.preventDefault();
                     props.onChange(keyboardOutcome);
                     setKeyboardOutcome(null);
                 }

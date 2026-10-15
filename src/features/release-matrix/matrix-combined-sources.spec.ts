@@ -1,10 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { matrixHierarchyFixture, matrixProjection, matrixSuite } from '../../../tests/fixtures/matrix-hierarchy.js';
+import { matrixHierarchyFixture, matrixFlatHierarchyFixture, matrixProjection, matrixSuite } from '../../../tests/fixtures/matrix-hierarchy.js';
 import { combinedMappingKey, createCombinedSourceResolver } from './matrix-combined-sources.js';
 import { catalogRows, effectiveMatrixGrouping, matrixGroups, matrixRowKey } from './matrix-presentation.js';
 
 const row = { content: 'Regression', workItemId: 100 };
 describe('Combined matrix environments', () => {
+    it('resolves mixed-depth columns using physical membership and preserves invalid source guards',()=>{
+        const {snapshot,config,flatColumn}=matrixFlatHierarchyFixture();
+        config.separateEnvironments=false;
+        const resolve=createCombinedSourceResolver(snapshot,config);
+        expect(resolve(row,flatColumn).suite?.id).toBe(61);
+        expect(resolve(row,config.columns[1]).ambiguous).toBe(true);
+        expect(resolve({...row,workItemId:999},flatColumn).missingMembership).toBe(true);
+        expect(resolve(row,{...flatColumn,hasEnvironmentLevel:true}).suite).toBeUndefined();
+        config.combinedMappings={[combinedMappingKey(row,flatColumn.id)]:22};
+        expect(createCombinedSourceResolver(snapshot,config)(row,flatColumn)).toMatchObject({suite:undefined});
+        expect(catalogRows(snapshot,config).filter(item=>item.content==='Regression'&&item.workItemId===100)).toHaveLength(1);
+    });
     it('unifies content and case only across visible versions while keeping physical projections untouched', () => {
         const { snapshot, config } = matrixHierarchyFixture();
         config.separateEnvironments = false;

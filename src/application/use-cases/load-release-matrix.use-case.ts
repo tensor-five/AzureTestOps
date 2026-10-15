@@ -6,11 +6,12 @@ import { isActiveTestPoint } from '../../domain/test-management/active-test-poin
 import { flattenSuiteTree, type TestSuiteNode } from '../../domain/test-management/test-suite-tree.js';
 import { loadTestCaseProjections, type LoadTestCaseProjectionsDeps } from './load-test-case-projections.use-case.js';
 import { createMatrixReadSession } from './matrix-read-session.js';
+import { createMatrixColumnHierarchy } from '../../domain/release-matrix/matrix-column-hierarchy.js';
 export type MatrixReadDeps = LoadTestCaseProjectionsDeps & {
     testCatalog: TestCatalogPort;
 };
 /** Reuses the existing suite/result aggregation without altering its matching rules. */
-export async function loadReleaseMatrix(planId: number, deps: MatrixReadDeps, options: { signal?: AbortSignal; diagnostics?: MatrixReadDiagnostics; versionSuiteIds?: readonly number[] } = {}): Promise<MatrixData> {
+export async function loadReleaseMatrix(planId: number, deps: MatrixReadDeps, options: { signal?: AbortSignal; diagnostics?: MatrixReadDiagnostics; versionSuiteIds?: readonly number[]; flatVersionSuiteIds?: readonly number[] } = {}): Promise<MatrixData> {
     options.signal?.throwIfAborted();
     const catalog = await (options.diagnostics ? options.diagnostics.measure('catalog', { planId }, () => deps.testCatalog.listSuitesForPlan(planId)) : deps.testCatalog.listSuitesForPlan(planId));
     const ids = new Set(catalog.map(s => s.id));
@@ -43,13 +44,13 @@ export async function loadReleaseMatrix(planId: number, deps: MatrixReadDeps, op
     const snapshot: MatrixData = { planId, suites: [], projections: [], pointCounts: {}, suiteMemberships: {} };
     const suiteTypes = new Map(catalog.map(suite => [suite.id, suite.suiteType]));
     const allSuites = [...trees.values()].flatMap(flattenSuiteTree);
-    const byId = new Map(allSuites.map(s => [s.id, s]));
-    const selected = options.versionSuiteIds ? new Set(options.versionSuiteIds) : null;
-    // Rows use direct version → environment → content hierarchy. Keep the complete catalog for selection.
-    const includedSuiteIds = selected ? new Set(allSuites.filter(s => {
-        const environment = s.parentSuiteId === null ? undefined : byId.get(s.parentSuiteId);
-        return environment?.parentSuiteId !== null && environment?.parentSuiteId !== undefined && selected.has(environment.parentSuiteId);
-    }).map(s => s.id)) : undefined;
+    const hierarchy = createMatrixColumnHierarchy(allSuites);
+    // Keep all metadata, but read memberships and points only at each selected column's content level.
+    const selections = options.versionSuiteIds || options.flatVersionSuiteIds ? [
+        ...(options.versionSuiteIds ?? []).map(versionSuiteId => ({versionSuiteId, hasEnvironmentLevel:true})),
+        ...(options.flatVersionSuiteIds ?? []).map(versionSuiteId => ({versionSuiteId, hasEnvironmentLevel:false})),
+    ] : undefined;
+    const includedSuiteIds = selections ? new Set(selections.flatMap(column => hierarchy(column).contents.map(entry => entry.suite.id))) : undefined;
     for (const root of trees.values()) {
         const loaded = await loadTestCaseProjections({ planId, rootSuiteId: root.id, includedSuiteIds }, session);
         for (const run of loaded.runs) if (run.state === 'Completed') completedRunIds.add(run.runId);

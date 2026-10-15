@@ -1,4 +1,4 @@
-export type MatrixColumn = { id: string; versionSuiteId: number; visible: boolean };
+export type MatrixColumn = { id: string; versionSuiteId: number; visible: boolean; hasEnvironmentLevel?: boolean };
 export type MatrixGrouping = 'environment' | 'content';
 export type MatrixGroupState = Record<MatrixGrouping, string[]>;
 export const DEFAULT_MATRIX_TITLE_COLUMN_WIDTH = 350;
@@ -53,7 +53,8 @@ export function sanitizeMatrixConfig(raw: unknown): MatrixConfig | null {
     const columns = new Map<string, MatrixColumn>();
     if (!legacy && Array.isArray(raw.columns)) for (const c of raw.columns) {
         if (!record(c) || !string(c.id).trim() || columns.has(string(c.id))) continue;
-        columns.set(string(c.id), {id:string(c.id),versionSuiteId:positive(c.versionSuiteId)?c.versionSuiteId:0,visible:c.visible!==false});
+        columns.set(string(c.id), {id:string(c.id),versionSuiteId:positive(c.versionSuiteId)?c.versionSuiteId:0,visible:c.visible!==false,
+            ...(c.hasEnvironmentLevel === false ? {hasEnvironmentLevel:false} : {})});
     }
     const mappings: Record<string, number> = {};
     if (!legacy && record(raw.mappings)) for (const [key,id] of Object.entries(raw.mappings))

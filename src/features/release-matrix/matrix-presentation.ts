@@ -1,5 +1,6 @@
 import type { MatrixSnapshot } from '../../application/dto/release-matrix.dto.js';
 import type { MatrixColumn, MatrixConfig } from '../../domain/release-matrix/matrix-config.js';
+import { createMatrixColumnHierarchy } from '../../domain/release-matrix/matrix-column-hierarchy.js';
 export type MatrixRow = { environment: string; content: string; workItemId: number; title: string; tags: string[]; combinedEnvironments?: true };
 export type MatrixGroup = { id: string; name: string; rows: MatrixRow[] };
 export type MatrixRowContext = Pick<MatrixRow, 'environment' | 'content'>;
@@ -29,33 +30,41 @@ export function visibleVersionColumns(snapshot: MatrixSnapshot, config: MatrixCo
     return config.columns.filter(column=>column.visible&&column.versionSuiteId>0&&suiteIds.has(column.versionSuiteId));
 }
 export function resolveSource(snapshot: MatrixSnapshot, config: MatrixConfig, row: MatrixRowContext, column: MatrixColumn) {
-    const version = snapshot.planId === config.planId ? snapshot.suites.find(s=>s.id===column.versionSuiteId) : undefined;
+    const hierarchy = createMatrixColumnHierarchy(snapshot.suites)(column);
+    const version = snapshot.planId === config.planId ? hierarchy.version : undefined;
     const environmentIds = new Set(version ? snapshot.suites.filter(s=>s.parentSuiteId===version.id&&s.name===row.environment).map(s=>s.id) : []);
-    const candidates = [...new Map(snapshot.suites.filter(s=>s.parentSuiteId!==null&&environmentIds.has(s.parentSuiteId)&&s.name===row.content).map(s=>[s.id,s])).values()];
+    const candidates = version ? hierarchy.contents.filter(entry => entry.suite.name === row.content &&
+        (column.hasEnvironmentLevel === false || entry.environment === row.environment)).map(entry => entry.suite) : [];
     const explicit = config.mappings[mappingKey(row,column.id)];
     const suite = explicit ? candidates.find(s=>s.id===explicit) : candidates.length===1?candidates[0]:undefined;
     const ambiguous = !explicit&&candidates.length>1;
     const reason = !version ? (column.versionSuiteId?'Versions-Suite ist im aktiven Plan ungültig.':'Versions-Suite auswählen.') : suite ? ''
         : explicit ? 'Gespeicherte Suite-Zuordnung ist ungültig. Bitte erneut auswählen.'
-        : ambiguous ? 'Suite zuordnen: mehrere direkte Pfade mit derselben Umgebung und demselben Inhalt.'
+        : ambiguous ? 'Suite zuordnen: mehrere direkte Pfade mit demselben Inhalt.'
+        : column.hasEnvironmentLevel === false ? 'Inhaltliche Suite fehlt direkt unter dieser Version.'
         : environmentIds.size ? 'Inhaltliche Suite fehlt unter dieser Versions- und Umgebungs-Suite.' : 'Umgebungs-Suite fehlt unter dieser Version.';
     return {suite,candidates,ambiguous,reason};
 }
-/** Selected version roots supply direct environment/content memberships; physical projections remain untouched. */
+/** Each column determines whether content sits directly below its version or below an environment. */
 export function catalogRows(snapshot: MatrixSnapshot, config: MatrixConfig): MatrixRow[] {
-    const versionIds = new Set(visibleVersionColumns(snapshot,config).map(column=>column.versionSuiteId));
-    const environments = new Map(snapshot.suites.filter(suite=>suite.parentSuiteId!==null&&versionIds.has(suite.parentSuiteId)).map(suite=>[suite.id,suite]));
-    const contents = new Map(snapshot.suites.filter(suite=>suite.parentSuiteId!==null&&environments.has(suite.parentSuiteId)).map(suite=>[suite.id,suite]));
+    const hierarchy = createMatrixColumnHierarchy(snapshot.suites);
+    const contents = new Map<number, Array<{ content: string; environment: string }>>();
+    for (const column of visibleVersionColumns(snapshot, config)) for (const {suite, environment} of hierarchy(column).contents) {
+        const contexts = contents.get(suite.id) ?? [];
+        contexts.push({content:suite.name, environment});
+        contents.set(suite.id, contexts);
+    }
     const rows = new Map<string,MatrixRow>();
     for (const projection of snapshot.projections) {
-        const content = contents.get(projection.suiteId);
-        const environment = content?.parentSuiteId == null ? undefined : environments.get(content.parentSuiteId);
-        if (!content||!environment) continue;
-        const row: MatrixRow = {environment:config.separateEnvironments === false ? '' : environment.name,content:content.name,workItemId:projection.workItemId,title:projection.title,tags:projection.tags,
-            ...(config.separateEnvironments === false ? {combinedEnvironments:true as const} : {})};
-        if (!rows.has(matrixRowKey(row))) rows.set(matrixRowKey(row),row);
+        for (const context of contents.get(projection.suiteId) ?? []) {
+            const row: MatrixRow = {environment:config.separateEnvironments === false ? '' : context.environment,content:context.content,workItemId:projection.workItemId,title:projection.title,tags:projection.tags,
+                ...(config.separateEnvironments === false ? {combinedEnvironments:true as const} : {})};
+            if (!rows.has(matrixRowKey(row))) rows.set(matrixRowKey(row),row);
+        }
     }
-    return [...rows.values()];
+    // A flat source compares against each existing environment row; only flat-only cases need their own row.
+    const contextualCases = new Set([...rows.values()].filter(row => row.environment !== '').map(row => JSON.stringify([row.content,row.workItemId])));
+    return [...rows.values()].filter(row => row.environment !== '' || !contextualCases.has(JSON.stringify([row.content,row.workItemId])));
 }
 const normalizedTag = (tag:string)=>tag.trim().toLocaleLowerCase();
 export function matrixGroups(snapshot: MatrixSnapshot, config: MatrixConfig): MatrixGroup[] {
@@ -69,5 +78,5 @@ export function matrixGroups(snapshot: MatrixSnapshot, config: MatrixConfig): Ma
     const names = [...new Set(rows.map(row=>row[grouping]))].sort((a,b)=>a.localeCompare(b));
     const order = config.groupOrderByMode[grouping];
     const rank = (name:string)=>{const index=order.indexOf(name);return index<0?Infinity:index;};
-    return names.map(name=>({id:name,name,rows:rows.filter(row=>row[grouping]===name)})).sort((a,b)=>rank(a.id)-rank(b.id));
+    return names.map(name=>({id:name,name:grouping==='environment'&&name===''?'Ohne Umgebung':name,rows:rows.filter(row=>row[grouping]===name)})).sort((a,b)=>rank(a.id)-rank(b.id));
 }

@@ -57,16 +57,18 @@ export function registerReleaseMatrixRoutes(ado: AdoRuntime, sets: SetRepository
             if (!ado.matrixServices)
                 throw new Error('Release-Matrix ist in dieser Laufzeit nicht verfügbar.');
             if (!match[2]) {
-                const requested = new URL(req.url ?? '/', 'http://localhost').searchParams.get('versions');
-                let versionSuiteIds: number[] | undefined;
-                if (requested !== null) {
+                const query = new URL(req.url ?? '/', 'http://localhost').searchParams;
+                const selection: { versionSuiteIds?: number[]; flatVersionSuiteIds?: number[] } = {};
+                for (const [parameter, field] of [['versions', 'versionSuiteIds'], ['flatVersions', 'flatVersionSuiteIds']] as const) {
+                    const requested = query.get(parameter);
+                    if (requested === null) continue;
                     const parsed = parseJsonBody(requested);
                     if (!Array.isArray(parsed) || !parsed.every(id => Number.isSafeInteger(id) && id > 0)) {
                         writeJson(res, 400, {message: 'Ungültige Versionsauswahl.'}); return true;
                     }
-                    versionSuiteIds = [...new Set(parsed)];
+                    selection[field] = [...new Set(parsed)];
                 }
-                const options = { signal: controller.signal, diagnostics, versionSuiteIds };
+                const options = { signal: controller.signal, diagnostics, ...selection };
                 const snapshot = await loadReleaseMatrix(planId, ado.matrixServices(context, options), options);
                 writeJson(res, 200, { ...snapshot, contextIdentity });
                 diagnostics?.finish('complete');

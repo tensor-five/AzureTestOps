@@ -3,11 +3,14 @@ import type { ReleaseMatrixClientPort } from '../../application/ports/client/rel
 import type { MatrixSnapshot, MatrixWrite, MatrixActionResult, MatrixSuiteMembership, MatrixTagCatalog } from '../../application/dto/release-matrix.dto.js';
 import { jsonFetch } from './json-fetch.js';
 export class HttpReleaseMatrixAdapter implements ReleaseMatrixClientPort {
-    async load(setId: string, signal?: AbortSignal, versionSuiteIds?: readonly number[]): Promise<MatrixSnapshot> {
+    async load(setId: string, signal?: AbortSignal, versionSuiteIds?: readonly number[], flatVersionSuiteIds?: readonly number[]): Promise<MatrixSnapshot> {
         const requestId = crypto.randomUUID();
         const diagnostics = createMatrixReadDiagnostics(requestId, 'browser');
         try {
-            const snapshot = await jsonFetch<MatrixSnapshot>(this.path(setId) + (versionSuiteIds ? `?versions=${encodeURIComponent(JSON.stringify(versionSuiteIds))}` : ''), { method: 'GET', signal, headers: { 'x-matrix-request-id': requestId } });
+            const query = new URLSearchParams();
+            if (versionSuiteIds) query.set('versions', JSON.stringify(versionSuiteIds));
+            if (flatVersionSuiteIds?.length) query.set('flatVersions', JSON.stringify(flatVersionSuiteIds));
+            const snapshot = await jsonFetch<MatrixSnapshot>(this.path(setId) + (query.size ? `?${query}` : ''), { method: 'GET', signal, headers: { 'x-matrix-request-id': requestId } });
             diagnostics.progress({ planId: snapshot.planId, suiteCount: snapshot.suites.length, projectionCount: snapshot.projections.length });
             diagnostics.finish('complete');
             return snapshot;

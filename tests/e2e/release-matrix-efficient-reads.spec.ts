@@ -11,7 +11,7 @@ test('returning to the matrix reuses its recent read and explicit refresh gets c
  await page.getByRole('button',{name:'Zuordnung',exact:true}).click();await open(page);
  await expect(outcome(page,'TST','Regression',201)).toHaveValue('Failed');expect(reads).toBe(1);
  server.azure().results.find(r=>r.testSuite.id===22&&r.testCase.id===201)!.outcome='Blocked';
- await page.getByRole('button',{name:'Matrix aktualisieren',exact:true}).click();
+ await page.getByRole('button',{name:'Refresh release matrix',exact:true}).click();
  await expect(outcome(page,'TST','Regression',201)).toHaveValue('Blocked');expect(reads).toBe(2);
 });
 test('an external suite filter reads only membership and leaves version outcomes intact',async({page})=>{

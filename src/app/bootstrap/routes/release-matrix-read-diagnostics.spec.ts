@@ -15,6 +15,19 @@ function setup() {
     return { services, matrixServices, res, route };
 }
 describe('matrix server read diagnosis', () => {
+    it('passes flat hierarchy selections through to the physical Azure read',async()=>{
+        const f=setup();
+        const cases=vi.spyOn(f.services.testManagement,'listTestCasesInSuite');
+        await f.route('GET',path,{url:path+'?versions=[]&flatVersions=[20]',headers:{}} as IncomingMessage,f.res as unknown as ServerResponse);
+        expect(cases).toHaveBeenCalled();
+        expect(new Set(cases.mock.calls.map(call=>call[1]))).toEqual(new Set([21,22,23]));
+    });
+    it.each(['[-1]','["20"]','{}','null'])('rejects malformed flat hierarchy selections before loading Azure suites: %s',async value=>{
+        const f=setup();
+        await f.route('GET',path,{url:path+'?versions=[]&flatVersions='+encodeURIComponent(value),headers:{}} as IncomingMessage,f.res as unknown as ServerResponse);
+        expect((f.res as unknown as ServerResponse).statusCode).toBe(400);
+        expect(f.matrixServices).not.toHaveBeenCalled();
+    });
     afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); });
     it.each(['b83911a1-1699-4c0e-a87b-903cb5d64c7c', 'sensitive-token-never-log'])('validates client correlation before logging (%s)', async supplied => {
         const log = vi.spyOn(console, 'info').mockImplementation(() => {});
